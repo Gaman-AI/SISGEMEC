@@ -1,0 +1,145 @@
+# coding-preference.mdc
+
+```markdown
+# Coding Preference Rules
+
+## Description
+This rule ensures that SISGEMEC follows unified coding standards across **FastAPI (BE)**, **React + TypeScript (FE)**, and **Supabase (PostgreSQL + RLS)**.  
+The goal is to guarantee maintainability, readability, and security while ensuring consistency across frontend, backend, and database layers.
+
+## Behavior
+- **Code Style & Conventions**:
+  - UI texts in `es-MX`; technical names (paths, types, enums) in English.
+  - Naming:
+    - Variables/functions → `camelCase`
+    - Components/classes/interfaces/DTOs → `PascalCase`
+    - Feature files → `kebab-case` (e.g., `ticket-form.tsx`)
+  - Imports:
+    - External modules (React, zod, etc.)
+    - Shared (`@lib`, `@components`)
+    - Features (`@features/...`)
+  - Comments:
+    - Short and actionable; docstrings on public functions and complex components.
+    - “Why over what”: explain non-obvious decisions (performance, security).
+  - Formatting:
+    - Enforced with **ESLint + Prettier**, no warnings in CI.
+    - Explicit `any` forbidden.
+
+- **Error Handling & Logging**:
+  - Standardized error model `{code, message, details, traceId}` across FE/BE.
+  - No PII in logs/messages. Show `traceId` in UI for support.
+  - Error map:
+    - 400/422 → validation (field-level + summary).
+    - 401 → redirect to login.
+    - 403 → “Permisos insuficientes”.
+    - 409 → version conflict (ETag).
+    - 429 → rate limit (suggest retry).
+  - Logs:
+    - Structured (JSON); propagate `traceId` FE → BE → DB.
+    - No secrets/tokens/PII. Levels: info / warn / error.
+
+- **API & Contracts**:
+  - Contract-first: **OpenAPI is the single source of truth**.
+  - Idempotency: `Idempotency-Key` on POST creating resources.
+  - Concurrency: `ETag/If-Match` on PATCH/PUT; handle `409`.
+  - Pagination: stable by `created_at, id`; filters by `status, assigneeId, equipmentId, fechas`.
+  - Types:
+    - Prefer codegen from OpenAPI.
+    - If no codegen, reflect DTO contract names (no divergences).
+
+- **Folder Structure (FE)**:
+  src/
+    components/        # Shared UI (shadcn wrappers)
+    features/
+      auth/
+      equipos/
+      tickets/
+      reportes/
+        components/
+        services/
+        pages/
+    lib/               # http client, utils, common hooks
+    types/             # Only if no codegen
+
+  - API clients per domain: `src/features/<domain>/services/api/*.client.ts`.
+  - UI states required: `loading / empty / error / success`.
+
+- **Folder Structure (BE)**:
+  app/
+    api/               # FastAPI routers per domain
+    core/              # config, security, middlewares
+    services/          # business logic
+    repositories/      # DB access (parametrized SQL)
+    schemas/           # Pydantic request/response
+    workers/           # jobs export/others
+
+  - Separation of concerns: routers thin; logic in `services/`; DB access only in `repositories/`.
+  - Responses normalized with `{code,message,details,traceId}`.
+
+- **Commits & PR Workflow**:
+  - Commits:
+    - Conventional format: `feat(tickets): estado in_progress`.
+    - One logical change per commit; clear messages.
+  - PRs:
+    - Small, with description, checklist, linked tasks.
+    - Require: lint, unit/integration tests, contract check, security scan.
+
+- **Use of AI**:
+  - Record AI-generated changes in `development-log.md` (prompt → output → fix).
+  - Run **LLM-Sec Checklist (Annex B)** on AI-generated code before merge.
+
+- **Security & Secrets**:
+  - Enforce **RLS** by role on sensitive tables.
+  - Tokens/secrets only in BE (env vars); never in FE or repo.
+  - Apply CORS per environment; use `httpOnly` cookies if session-based.
+  - Sanitization: avoid `dangerouslySetInnerHTML`; sanitize inputs before export (CSV/Excel).
+
+- **Accessibility & UX**:
+  - A11y: roles/aria, aria-live for errors/progress, managed focus, AA contrast, keyboard nav.
+  - Forms: labels bound, per-field + summary errors.
+  - UX errors: clear, no PII, recovery action.
+  - I18N: es-MX texts; DD/MM/YYYY formats; local timezone.
+
+- **Performance**:
+  - FE:
+    - Code-splitting heavy routes; `memo/useCallback` when useful.
+    - Lazy load expensive components (tables, report viewers).
+  - BE:
+    - Indexed queries (`status, assignee_id, equipment_id, created_at`).
+    - Streams for CSV; async jobs for XLSX/PDF exports.
+    - Target P95 latency 300–450 ms.
+
+- **Tooling Snippets**:
+  - **tsconfig.json**:
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true
+  - **ESLint**:
+    "@typescript-eslint/no-explicit-any": "error",
+    "consistent-type-imports": "error",
+    "jsx-no-useless-fragment": "warn"
+  - **HTTP Wrapper (FE)**:
+    - Normalize errors `{code,message,details,traceId}`.
+    - Auto-add `Idempotency-Key` and `If-Match` headers when applicable.
+
+## Examples
+- **Commit Example**:  
+  `fix(reports): handle ETag version conflict on XLSX export`
+- **Error Example**:  
+  Response → `{ "code": 409, "message": "Version conflict", "details": {}, "traceId": "abc123" }`
+
+## Acceptance Checklist
+- ✅ No explicit `any`; ESLint/Prettier clean in CI.  
+- ✅ API clients 1:1 with OpenAPI; no invented fields.  
+- ✅ Idempotency-Key (POST) + ETag/If-Match (PATCH/PUT) implemented.  
+- ✅ Complete UI states (loading/empty/error/success) + AA accessibility.  
+- ✅ Structured logs, no PII; traceId propagated.  
+- ✅ PRs include tests (unit/integration/E2E as needed) + security scans.  
+- ✅ AI-generated code documented in `development-log.md` + passed LLM-Sec Checklist.  
+
+## Open Questions
+- Should we enforce codegen strictly (no manual DTOs)?  
+- Should we adopt **Vitest + Playwright** for full E2E, or keep Cypress?  
+- Where to store/export the error **map** for reusability across FE/BE?  
+
+```

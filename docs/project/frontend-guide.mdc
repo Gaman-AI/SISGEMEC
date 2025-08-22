@@ -1,0 +1,128 @@
+# Frontend Guide — SISGEMEC
+
+## 1. Introducción
+El frontend de **SISGEMEC** provee una interfaz moderna para la gestión de equipos, solicitudes de servicio y reportes.  
+Está construido en **React + TypeScript**, con **TailwindCSS** para estilos, y se conecta al backend (FastAPI) mediante APIs REST.
+
+**Principales objetivos del frontend:**
+- Autenticación y acceso seguro vía Supabase Auth.
+- Interfaz intuitiva para responsables, técnicos y administradores.
+- Visualización de reportes con gráficas interactivas.
+- Gestión completa de solicitudes y equipos.
+
+---
+
+## 2. High-Level Frontend Interaction
+```mermaid
+graph TD
+    subgraph FrontendApp [React + TypeScript]
+        FE_Auth[Auth Module Supabase Client]
+        FE_UI[UI Components Tailwind]
+        FE_State[State Management Zustand/Context]
+        FE_API[API Client fetch/axios]
+        FE_Viz[Visualizations Recharts]
+    end
+    subgraph BackendSystem [FastAPI]
+        MainAPI[Main Backend API /api/*]
+    end
+    subgraph ExternalServices
+        SupabaseAuth[(Supabase Auth)]
+        SupabaseDB[(Supabase DB)]
+        SupabaseStore[(Supabase Storage)]
+    end
+    FE_Auth --> SupabaseAuth
+    FE_API --> MainAPI
+    MainAPI --> SupabaseDB
+    MainAPI --> SupabaseStore
+    FE_UI & FE_State & FE_Viz --> FE_API
+```
+
+---
+
+## 3. Core Architecture
+**Estructura principal del frontend:**
+
+```mermaid
+flowchart TD
+  A[SISGEMEC Frontend] --> B[Login & Auth Guard]
+  A --> C[Main Layout]
+  C --> SB[Sidebar Navigation]
+  C --> MA[Main Area]
+  SB --> S1[Equipos]
+  SB --> S2[Solicitudes]
+  SB --> S3[Reportes]
+  SB --> S4[Mi Equipo/Historial]
+  MA --> EQ[Equipos CRUD]
+  MA --> SOL[Solicitudes de Servicio]
+  MA --> REP[Reportes y Gráficas]
+```
+
+---
+
+## 4. Technology Stack
+- **UI Framework**: React 18 + Vite (Next.js opcional).
+- **Estilos**: TailwindCSS, Headless UI.
+- **Gestión de estado**: Zustand o Context API.
+- **Gráficas**: Recharts.
+- **Auth Client**: Supabase JS Client.
+- **API Client**: fetch/axios.
+
+---
+
+## 5. Service Request Flow (Frontend)
+```mermaid
+sequenceDiagram
+    participant Responsable
+    participant Frontend
+    participant Backend
+    participant SupabaseDB
+    Responsable->>Frontend: Ingresa solicitud
+    Frontend->>+Backend: POST /api/solicitudes (JWT)
+    Backend->>+SupabaseDB: Insert solicitud
+    SupabaseDB-->>Backend: OK (id)
+    Backend-->>Frontend: Confirmación
+    Frontend-->>Responsable: Solicitud enviada
+```
+
+---
+
+## 6. Key Frontend Components
+- **Login / Auth Guard**: Maneja sesión con Supabase Auth.
+- **Sidebar Navigation**: Menú lateral dinámico (según rol).
+- **Upload & Forms**: Formularios de solicitudes de servicio.
+- **Data Tables**: Listado de equipos, solicitudes, reportes.
+- **Charts & Reports**: Gráficas interactivas con Recharts.
+- **Notifications**: Alertas para responsables sobre respuestas.
+
+---
+
+## 7. Analytics Dashboard
+```mermaid
+flowchart LR
+  A[Backend /api/reportes] --> B[Frontend API Client]
+  B --> C[State Management]
+  C --> D[Dashboard Components]
+  D --> E[Recharts]
+  E --> F[Visualizations]
+```
+
+---
+
+## 8. AI/Chat Interface (futuro opcional)
+- **Uso previsto**: Notificaciones inteligentes y asistencia en la gestión de equipos.  
+- **Flujo**: Frontend → FastAPI → OpenAI API → respuesta en UI.
+
+---
+
+## 9. Authentication Context
+- Todas las llamadas al backend incluyen `Authorization: Bearer <JWT>`.  
+- El backend valida token y aplica reglas RLS en Supabase.  
+- Roles distintos muestran menús distintos (admin/técnico vs responsable).  
+
+---
+
+## 10. QA & Testing (Frontend)
+- **Unit Testing**: Jest + Testing Library (componentes y estado).  
+- **E2E Testing**: Cypress (login, solicitudes, reportes).  
+- **Performance**: Lighthouse (tiempos de carga, PWA futuro).  
+- **Accesibilidad**: axe-core (WCAG 2.1 AA).  

@@ -1,0 +1,99 @@
+# docker.mdc
+
+```markdown
+# Docker Integration Rules
+
+## Description
+This rule ensures that the SISGEMEC system (FastAPI backend, React/Next.js frontend, and Supabase/PostgreSQL database) follows Docker containerization standards for building and deploying the application, guaranteeing consistency, scalability, and maintainability across development, staging, and production environments.
+
+## Behavior
+- **Containers**:
+  - Containerize all critical services: FastAPI API, Frontend (React/Next.js or Vite), and PostgreSQL (via Supabase or official image).
+  - Use multi-stage Dockerfiles to reduce image size and ensure secure, efficient builds.
+  - Enforce non-root users in runtime containers for better security.
+
+- **Volumes**:
+  - Use Docker volumes for persistent storage of database data, logs, and file exports.
+  - Ensure that logs are written to stdout/stderr for container monitoring instead of local disk.
+  - Mount volumes for development (node_modules, __pycache__ excluded via .dockerignore).
+
+- **Networking**:
+  - Define dedicated Docker networks to allow secure communication between API ↔ Database ↔ Frontend.
+  - Expose only required ports (8000 for FastAPI, 80/5173 for frontend).
+  - Apply CORS and firewall rules at container or reverse-proxy level.
+
+## Example Dockerfile (Backend: FastAPI)
+FROM python:3.11-slim AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+
+FROM gcr.io/distroless/python3-debian12 AS runtime
+WORKDIR /app
+COPY --from=builder /usr/local /usr/local
+COPY --from=builder /app /app
+USER 65532:65532
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+## Example Dockerfile (Frontend: React/Vite)
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package.json pnpm-lock.yaml* ./
+RUN corepack enable && corepack prepare pnpm@latest --activate || true
+RUN pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm build
+
+FROM nginx:1.27-alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY infra/nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx","-g","daemon off;"]
+
+## Docker Compose Example
+version: "3.9"
+services:
+  api:
+    build: ./backend
+    container_name: sisgemec_api
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE=${SUPABASE_SERVICE_ROLE}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    networks:
+      - sisgemec_net
+
+  web:
+    build: ./frontend
+    container_name: sisgemec_web
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+    networks:
+      - sisgemec_net
+
+  db:
+    image: supabase/postgres
+    container_name: sisgemec_db
+    environment:
+      - POSTGRES_PASSWORD=mysecretpassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sisgemec_net
+
+volumes:
+  postgres_data:
+
+networks:
+  sisgemec_net:
+    driver: bridge
+
+```

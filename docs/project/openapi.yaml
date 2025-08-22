@@ -1,0 +1,421 @@
+openapi: 3.0.3
+info:
+  title: SISGEMEC API
+  version: "0.1.0"
+  description: >
+    Contrato inicial de la API de SISGEMEC. Autenticación con **JWT de Supabase**.
+    Este contrato sirve como base para **verificación de contratos** entre FE/BE.
+servers:
+  - url: http://localhost:8000
+    description: Local (dev)
+tags:
+  - name: auth
+    description: Perfil autenticado y utilidades de sesión
+  - name: equipos
+    description: Gestión de equipos (inventario)
+  - name: solicitudes
+    description: Solicitudes de servicio
+  - name: servicios
+    description: Servicios realizados por técnicos
+  - name: reportes
+    description: Consultas y exportación de reportes
+
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      tags: [auth]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /api/v1/profile:
+    get:
+      summary: Obtener perfil del usuario autenticado
+      tags: [auth]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Perfil del usuario autenticado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Usuario"
+        "401":
+          description: No autenticado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /api/v1/equipos:
+    get:
+      summary: Listar equipos (filtrados por rol/RLS)
+      tags: [equipos]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+          description: Búsqueda por serie, marca o modelo
+      responses:
+        "200":
+          description: Lista de equipos
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/EquipoOut" }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    post:
+      summary: Crear equipo
+      tags: [equipos]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EquipoIn" }
+      responses:
+        "201":
+          description: Equipo creado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EquipoOut" }
+        "400": { description: Datos inválidos, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /api/v1/equipos/{id}:
+    get:
+      summary: Obtener equipo por ID
+      tags: [equipos]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/EquipoOut" } } } }
+        "404": { description: No encontrado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    put:
+      summary: Actualizar equipo
+      tags: [equipos]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EquipoIn" }
+      responses:
+        "200": { description: Actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/EquipoOut" } } } }
+        "404": { description: No encontrado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    delete:
+      summary: Eliminar equipo
+      tags: [equipos]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Eliminado }
+        "404": { description: No encontrado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /api/v1/solicitudes:
+    get:
+      summary: Listar solicitudes (según rol)
+      tags: [solicitudes]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: estado
+          schema:
+            type: string
+            enum: [pendiente, en_proceso, finalizado, asignado, cerrado, cancelado]
+        - in: query
+          name: equipo_id
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Lista de solicitudes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SolicitudOut" }
+    post:
+      summary: Crear solicitud
+      tags: [solicitudes]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SolicitudIn" }
+      responses:
+        "201":
+          description: Solicitud creada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SolicitudOut" }
+        "400": { description: Datos inválidos, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /api/v1/solicitudes/{id}:
+    get:
+      summary: Obtener solicitud por ID
+      tags: [solicitudes]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/SolicitudOut" } } } }
+        "404": { description: No encontrada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    put:
+      summary: Actualizar estado/respuesta de solicitud
+      tags: [solicitudes]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                estado:
+                  type: string
+                  enum: [pendiente, asignado, en_proceso, resuelto, cerrado, cancelado]
+                respuesta:
+                  type: string
+              additionalProperties: false
+      responses:
+        "200": { description: Actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/SolicitudOut" } } } }
+        "404": { description: No encontrada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /api/v1/servicios:
+    get:
+      summary: Listar servicios
+      tags: [servicios]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: solicitud_id
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Lista de servicios
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ServicioOut" }
+    post:
+      summary: Registrar servicio de atención
+      tags: [servicios]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ServicioIn" }
+      responses:
+        "201":
+          description: Servicio registrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ServicioOut" }
+
+  /api/v1/reportes:
+    get:
+      summary: Consultar reportes (agregados/consultas)
+      tags: [reportes]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: tipo
+          schema:
+            type: string
+            enum: [equipos, solicitudes, servicios, historico]
+        - in: query
+          name: desde
+          schema: { type: string, format: date }
+        - in: query
+          name: hasta
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Resultados de reporte
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ReporteOut" }
+
+  /api/v1/reportes/export:
+    post:
+      summary: Exportar reporte (Excel/PDF)
+      tags: [reportes]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReporteExportRequest" }
+      responses:
+        "202":
+          description: Exportación en proceso (o entregada)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  archivo_url:
+                    type: string
+                    example: https://supabase.storage/exports/reporte_2025_01.xlsx
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        code: { type: string, example: INTERNAL_ERROR }
+        message: { type: string, example: Ha ocurrido un error. }
+        details: { type: object, additionalProperties: true }
+        traceId: { type: string, example: trace-1234 }
+      required: [code, message]
+
+    Usuario:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        nombre: { type: string }
+        correo: { type: string, format: email }
+        rol:
+          type: string
+          enum: [admin, tecnico, responsable]
+        created_at: { type: string, format: date-time }
+
+    EquipoIn:
+      type: object
+      properties:
+        numero_serie: { type: string }
+        marca: { type: string }
+        modelo: { type: string }
+        estado:
+          type: string
+          enum: [nuevo, buen_estado, regular, reparado, baja]
+        responsable_id: { type: string, format: uuid }
+      required: [numero_serie, marca, modelo, estado, responsable_id]
+      additionalProperties: false
+
+    EquipoOut:
+      allOf:
+        - $ref: "#/components/schemas/EquipoIn"
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            created_at: { type: string, format: date-time }
+
+    SolicitudIn:
+      type: object
+      properties:
+        equipo_id: { type: string, format: uuid }
+        descripcion: { type: string }
+      required: [equipo_id, descripcion]
+      additionalProperties: false
+
+    SolicitudOut:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        equipo_id: { type: string, format: uuid }
+        responsable_id: { type: string, format: uuid }
+        descripcion: { type: string }
+        estado:
+          type: string
+          enum: [pendiente, asignado, en_proceso, resuelto, cerrado, cancelado]
+        respuesta:
+          type: string
+          nullable: true
+        created_at: { type: string, format: date-time }
+
+    ServicioIn:
+      type: object
+      properties:
+        solicitud_id: { type: string, format: uuid }
+        tecnico_id: { type: string, format: uuid }
+        fecha_inicio: { type: string, format: date-time }
+        fecha_fin:
+          type: string
+          format: date-time
+          nullable: true
+        notas:
+          type: string
+          nullable: true
+        evidencia_url:
+          type: string
+          nullable: true
+      required: [solicitud_id, tecnico_id, fecha_inicio]
+
+    ServicioOut:
+      allOf:
+        - $ref: "#/components/schemas/ServicioIn"
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+
+    ReporteOut:
+      type: object
+      properties:
+        tipo:
+          type: string
+          enum: [inventario, solicitudes, servicios, historico]
+        filtros:
+          type: object
+          additionalProperties: true
+        generado_por: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+
+    ReporteExportRequest:
+      type: object
+      properties:
+        tipo:
+          type: string
+          enum: [equipos, solicitudes, servicios, historico]
+        filtros:
+          type: object
+          additionalProperties: true
+        formato:
+          type: string
+          enum: [xlsx, pdf]
+      required: [tipo, formato]
+      additionalProperties: false
+
+security:
+  - bearerAuth: []

@@ -1,0 +1,125 @@
+# Backend Structure — SISGEMEC
+
+## 1. Introducción
+**Objetivos del Backend SISGEMEC:**
+- Gestionar equipos, usuarios, solicitudes y servicios.
+- Exponer APIs REST seguras para el frontend.
+- Procesar reportes y exportaciones (Excel, PDF).
+- Autenticación y autorización con **Supabase Auth (JWT + RLS)**.
+- Arquitectura escalable con **FastAPI + Docker**.
+
+**Funcionalidades principales:**
+- CRUD de usuarios, equipos, solicitudes, servicios.
+- Seguimiento de solicitudes → técnicos asignados actualizan estados.
+- Reportes con filtros y exportación.
+- Notificaciones internas y, en futuro, vía correo.
+
+---
+
+## 2. System Architecture
+El backend está compuesto por **un único servicio en FastAPI** (a diferencia del modelo “dos servicios” de referencia).
+
+```mermaid
+graph TD
+    subgraph User_Interaction
+        U[Frontend React]
+    end
+    subgraph Backend [FastAPI API]
+        direction LR
+        API[Endpoints /api/*]
+        AUTH[JWT Validation]
+        CRUD[Equipos, Solicitudes, Servicios]
+        REPORTS[Reportes/Exportes]
+    end
+    subgraph External_Services
+        SUPA_DB[(Supabase PostgreSQL)]
+        SUPA_STORE[(Supabase Storage)]
+        SUPA_AUTH[(Supabase Auth)]
+    end
+    U --> API
+    API --> AUTH
+    API --> CRUD
+    API --> REPORTS
+    CRUD --> SUPA_DB
+    REPORTS --> SUPA_DB
+    API --> SUPA_STORE
+    AUTH --> SUPA_AUTH
+```
+
+---
+
+## 3. Database Management
+- **Motor principal**: Supabase PostgreSQL.  
+- **Tablas clave**: usuarios, equipos, solicitudes, servicios, reportes.  
+- **Raw files**: Supabase Storage (para exportes Excel/PDF).  
+- **RLS**: aplicado en Supabase para restringir accesos por rol.  
+
+---
+
+## 4. API Design & Endpoints
+🔹 **Usuarios / Autenticación**  
+- `POST /api/login` → login via Supabase Auth.  
+- `GET /api/profile` → datos del usuario autenticado.  
+
+🔹 **Equipos**  
+- `GET /api/equipos` → listar equipos.  
+- `POST /api/equipos` → crear equipo.  
+- `PUT /api/equipos/{id}` → actualizar.  
+- `DELETE /api/equipos/{id}` → eliminar.  
+
+🔹 **Solicitudes**  
+- `POST /api/solicitudes` → responsable crea solicitud.  
+- `GET /api/solicitudes` → listar solicitudes (según rol).  
+- `PUT /api/solicitudes/{id}` → actualizar estado/respuesta.  
+
+🔹 **Servicios**  
+- `POST /api/servicios` → técnico registra servicio.  
+- `GET /api/servicios` → historial de servicios.  
+
+🔹 **Reportes**  
+- `GET /api/reportes` → listar resultados con filtros.  
+- `POST /api/reportes/export` → exportar Excel/PDF.  
+
+---
+
+## 5. Hosting & Infraestructura
+- **Contenedores**: Docker (FastAPI backend + React frontend).  
+- **Base de datos y storage**: Supabase (PostgreSQL + Storage + Auth).  
+- **Frontend**: Vercel (primario).  
+- **CI/CD**: GitHub Actions (build, test, deploy).  
+
+---
+
+## 6. Security
+- **Autenticación**: JWT de Supabase Auth.  
+- **Autorización**: Control por rol (admin, técnico, responsable).  
+- **RLS**: Supabase limita acceso a datos según `auth.uid()`.  
+
+**Cifrado:**
+- En tránsito → HTTPS/TLS.  
+- En reposo → cifrado nativo de Supabase.  
+
+---
+
+## 7. Data Flow (Solicitud de Servicio)
+```mermaid
+sequenceDiagram
+    participant Responsable
+    participant FE as Frontend (React)
+    participant BE as Backend (FastAPI)
+    participant DB as Supabase DB
+    Responsable->>FE: Crear Solicitud
+    FE->>BE: POST /api/solicitudes (JWT)
+    BE->>BE: Validar JWT y rol
+    BE->>DB: Insert solicitud
+    DB-->>BE: OK
+    BE-->>FE: Confirmación
+    FE-->>Responsable: Solicitud registrada
+```
+
+---
+
+## 8. Monitoring & Maintenance
+- **Logging**: configurado en FastAPI (rotación de logs + consola).  
+- **Monitoreo**: Supabase logs + GitHub Actions checks.  
+- **Próximos pasos**: integración con Sentry para errores.  

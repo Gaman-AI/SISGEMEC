@@ -1,0 +1,123 @@
+# auth-config.mdc
+
+```markdown
+# Auth Config Rules
+
+This document incorporates directives from:
+- **PRD & Tech Stack**: FastAPI backend, Supabase (PostgreSQL + RLS), React + TypeScript frontend.
+- **Schema Design & DB Rules**: Tablas `equipos`, `tickets`, `tickets_hist` y políticas RLS por rol.
+- **Implementation Plan**: CI gates, error model unificado y metas de seguridad/rendimiento.
+- **Cursorrules**: Consistencia de contratos (OpenAPI ↔ DB) y manejo de errores sin PII.
+- **Cursor Context & Memory Bank**: Registrar decisiones y cambios en `cursor-context.md`, `prompts-library.md`, `development-log.md`.
+
+---
+
+## Identity Provider & Model
+- **Identity**: Supabase Auth (email/contraseña).  
+  - Opcional: Google OAuth en fase posterior.
+- **Roles (claim role)**: `admin`, `tecnico`, `usuario`.  
+- **JWT**: emitido por Supabase; incluir `sub` (user_id), `role`, `iat`, `exp`.  
+- **Lifespan**:  
+  - `access_token`: corto (≈15–30 min).  
+  - `refresh_token`: rotatorio (≈7–30 días).  
+- **Storage**:  
+  - Preferir **httpOnly cookie** en backend-proxy o uso del SDK de Supabase (sin exponer tokens en JS).  
+  - Si se usa `Authorization: Bearer`, nunca persistir en `localStorage`.
+
+---
+
+## Authorization (Roles & RLS)
+
+### Usuario
+- `equipos`: lectura de **sus equipos**.  
+- `tickets`: crear; leer los propios o de sus equipos; **no editar ajenos**.
+
+### Técnico
+- `tickets`: leer/actualizar asignados (estado, notas).  
+- Puede leer equipos relacionados.  
+
+### Admin
+- Acceso completo: lectura/escritura/borrado en módulos autorizados.
+
+### RLS (resumen)
+- Activo en `equipos`, `tickets`, `tickets_hist` con políticas por rol (ver `.cursor/rules/db.mdc`).  
+- Todas las rutas de API deben respetar estas políticas (**sin bypass** en SQL/RPC).  
+
+---
+
+## Tokens & Sessions
+- **Rotación**: refrescar tokens antes de expirar; invalidar en logout/reset.  
+- **Revocación**: lista en backend (si se emiten tokens propios) o confiar en Supabase.  
+- **Clock skew**: tolerancia ±60s en validaciones `exp/iat`.  
+- **CSRF**:  
+  - Con cookies httpOnly: requerir CSRF token en métodos mutadores (POST/PATCH/DELETE).  
+  - Con header Bearer: CSRF no aplica, pero reforzar rate limiting.  
+
+---
+
+## Auth Endpoints & Flows (OpenAPI)
+- `POST /auth/login` → `200 {accessToken?, expiresIn?, user}` ó `204` si SDK maneja sesión.  
+  - `429` on brute-force; `401` credenciales inválidas.  
+- `POST /auth/logout` → `204`.  
+- `POST /auth/refresh` → `200 {accessToken, expiresIn}`.  
+- `POST /auth/password/reset-request` → `204` (respuesta genérica, sin revelar si el email existe).  
+- `POST /auth/password/reset` → `204` (token de un solo uso).  
+- `GET /auth/profile` → `200 {id, email, role}`; `401` si no autenticado.  
+
+🔑 **Errores normalizados**: `{code, message, details, traceId}` en todas las rutas.
+
+---
+
+## Security Controls
+- **Rate limiting**: login/reset (5–10 req/min/IP). Bloqueo 15 min tras 5 fallos.  
+- **Password policy**: longitud mínima, mezcla de clases, bloqueo tras intentos fallidos.  
+- **Secrets**: solo en variables de entorno; nunca en cliente/repos.  
+- **CORS**: configurado por entorno; cookies con `SameSite=Lax|Strict`, `Secure` en HTTPS.  
+- **ETag/If-Match**: para actualizar recursos sensibles (ej. perfil), evitar sobrescritura concurrente.  
+- **Auditoría**: registrar login/logout, cambios de rol, resets, creación/actualización de tickets (via `tickets_hist` o `audit_logs`).  
+- **PII**: no loggear correos/identificadores en claro; mascar en errores/logs.  
+
+---
+
+## UI & Error Handling (FE)
+- Estados de pantalla: `loading / empty / error / success`.  
+- Mostrar banners de error con **traceId**; mensajes sin PII.  
+- **401** → redirigir a login.  
+- **403** → “Permisos insuficientes”.  
+- **429** → sugerir reintento.  
+- Persistir solo metadatos no sensibles (ej. rol) en memoria/estado; nunca tokens si cookies httpOnly.  
+
+---
+
+## Testing & Monitoring
+- **Unit (BE)**: validación de payloads y decodificación/renovación de JWT.  
+- **Integration**: flujos `login → crear ticket → listar` con usuarios de prueba por rol (ver RLS).  
+- **E2E**: Playwright → login, acceso por rol, 401/403/429.  
+- **Seguridad**: pruebas de rate-limit, timing, enumeración de usuarios (reset-request).  
+- **Observabilidad**: métricas → intentos fallidos, éxito de refresh, latencia P95 de `/auth/*`. Logs con traceId.  
+
+---
+
+## Acceptance Checklist
+- ✔ Roles (`admin`, `tecnico`, `usuario`) definidos y propagados en JWT/claims.  
+- ✔ RLS activo en tablas principales y probado por rol.  
+- ✔ Endpoints de auth implementados y documentados en OpenAPI.  
+- ✔ Errores normalizados `{code, message, details, traceId}`.  
+- ✔ Rate limiting y bloqueo ante fuerza bruta activos.  
+- ✔ Cookies httpOnly o Bearer definido (una sola estrategia, documentada).  
+- ✔ Reset de contraseña sin revelar existencia de usuario.  
+- ✔ Auditoría de eventos críticos habilitada.  
+- ✔ Pruebas unit/integration/E2E verdes; sin High/Critical en auditorías.  
+
+---
+
+## Open Questions
+- Estrategia final de sesión: **cookies httpOnly vía backend proxy** vs **Authorization: Bearer con SDK**.  
+- ¿Habilitar Google OAuth en MVP o fase posterior?  
+- Umbrales exactos de **rate limit** y bloqueo.  
+- Política de expiración/rotación de **refresh tokens**.  
+- Atributos extra en claims (¿tenant_id/org_id?) en caso de multi-tenant futuro.  
+
+---
+
+```

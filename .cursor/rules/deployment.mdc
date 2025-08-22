@@ -1,0 +1,114 @@
+# deployment.mdc
+
+```markdown
+# Deployment & Infrastructure Rules
+
+This document incorporates directives from:
+- **PRD & Tech Stack**: Next.js (Vercel) / React+Vite (Zeabur), FastAPI backend.
+- **Database & Auth Rules**: Supabase (PostgreSQL + RLS), roles y JWT.
+- **Implementation Plan**: CI/CD gates, control de entornos, auditoría de seguridad.
+- **Cursorrules & Cursor Context**: Registro de variables, infraestructura y cambios en `cursor-context.md`.
+
+---
+
+## Environment Variables
+
+### Next.js / Vercel
+- `NEXT_PUBLIC_SUPABASE_URL=env://SUPABASE_URL`  
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY=env://SUPABASE_ANON_KEY`
+
+### Vite / SPA
+- `VITE_SUPABASE_URL=env://SUPABASE_URL`  
+- `VITE_SUPABASE_ANON_KEY=env://SUPABASE_ANON_KEY`
+
+### Backend (FastAPI)
+- `OPENAI_API_KEY=env://OPENAI_KEY@vault` → **solo backend**; jamás en FE.  
+- `SUPABASE_SERVICE_ROLE=env://SUPABASE_SERVICE_ROLE@vault` → usar solo si imprescindible.  
+- `DATABASE_URL=env://POSTGRES_URL`  
+- `RAG_ENABLED=true|false`  
+- `EXPORT_JOBS_ENABLED=true|false`  
+
+🔑 Variables con `@vault` deben provenir de un gestor seguro (no repositorios/cliente).
+
+---
+
+## Infrastructure
+
+### Frontend
+- **Next.js → Vercel**: usar SSR/ISR en listados y reportes.  
+- **React+Vite → Zeabur**: build estático, distribuido en CDN.  
+
+### Backend
+- **Zeabur**: FastAPI + workers/jobs como entorno principal.  
+- **AWS ECS (opcional)**: fallback para contenedorización BE/FE.  
+
+### Monitoring
+- **Datadog RUM** (opcional en FE, sujeto a presupuesto).  
+- **Supabase logs y métricas DB**: base para alertas de latencia/errores.  
+
+---
+
+## CI/CD
+
+### Tests Requeridos (gates)
+- **ESLint/TypeScript** (FE).  
+- **Auth flow test**: E2E → login → crear ticket → listar (401/403/429).  
+- **RAG smoke test**: si `RAG_ENABLED=true` → indexar doc sintético y ejecutar búsqueda.  
+- **Contract Check**: validar OpenAPI ↔ implementación antes de release.  
+
+### Release Tags
+- Formato: `vX.Y.Z-sisgemec` (en lugar de `-esg`).  
+
+---
+
+## Enhancements (alineados a SISGEMEC)
+- **Secure File Ingestion (MVP)**: permitir PDF/XLSX/CSV para exportes; adjuntos opcionales en tickets.  
+  - Validación de tamaño/mime.  
+  - URLs firmadas.  
+  - Sin PII.  
+- **Enhanced Document Processing (opcional)**: OCR/tablas para manuales y documentos técnicos.  
+- **Reporting mejorado**: filtros, previsualización y export CSV/XLSX/PDF (streaming o jobs).  
+- **Seguridad**: Google OAuth opcional post-MVP; RLS estricto por rol (`Usuario`, `Técnico`, `Admin`).  
+- **Audit Trail**: registrar uploads, ediciones, descargas y cambios de estado en `tickets_hist` o `audit_logs`.  
+- **Arquitectura preparada**: metadatos por equipo/ticket y soporte RAG opcional para FAQ/búsqueda.  
+
+---
+
+## New Features (opcionales)
+- **Chatbot integrado** (`CHATBOT_ENABLED=true`):  
+  - Asistente para búsquedas/FAQ y guías de mantenimiento.  
+  - Guardrails activos.  
+  - Sin PII en prompts/respuestas.  
+- **Visual Analytics Dashboard**: métricas operativas (tickets por estado, tiempo de resolución, incidencias top) y export rápida.  
+
+---
+
+## Adoption Notes
+- Si se usa **Next.js** → desplegar en **Vercel** (FE) y mantener **Zeabur** (BE).  
+- Si se usa **Vite** → FE también puede ir a Zeabur/CDN.  
+- Mantener **cost caps** para OpenAI y fallback de embeddings definidos en el Plan Financiero.  
+- Documentar en `cursor-context.md` cualquier ajuste de variables o infraestructura para consistencia en generación de código.  
+
+---
+
+## Acceptance Checklist
+- ✔ Variables de entorno documentadas y seguras (uso de `@vault` cuando aplique).  
+- ✔ Infraestructura definida: FE en Vercel/Zeabur, BE en Zeabur (fallback AWS ECS opcional).  
+- ✔ Monitoreo básico configurado (Supabase logs, alertas de latencia/errores).  
+- ✔ CI/CD con lint, pruebas de flujo Auth, contract check y smoke tests de RAG (si aplica).  
+- ✔ Export seguro de archivos (sin PII, URLs firmadas, validación mime/tamaño).  
+- ✔ Reporting con filtros, previsualización y export en CSV/XLSX/PDF.  
+- ✔ Auditoría de operaciones críticas en `tickets_hist` o `audit_logs`.  
+
+---
+
+## Open Questions
+- ¿Se define Next.js (Vercel) como frontend definitivo o se mantiene Vite (Zeabur)?  
+- ¿Se habilita Google OAuth en MVP o en fase posterior?  
+- ¿Se activa OCR/tablas en el MVP o solo si hay casos de uso?  
+- ¿Estrategia final de costos para OpenAI embeddings (fallback automático)?  
+- ¿Política de expiración para archivos en Storage y adjuntos de tickets?  
+
+---
+
+```

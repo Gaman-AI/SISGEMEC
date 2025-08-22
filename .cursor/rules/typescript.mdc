@@ -1,0 +1,106 @@
+# typescript.mdc
+
+```markdown
+# TypeScript Rules
+
+This document incorporates directives from:
+- **PRD & Tech Stack**: Emphasizing a modern TypeScript + React (Vite or Next.js) environment aligned with OpenAPI and Supabase.
+- **Frontend Guidelines**: Ensuring alignment with React/Tailwind/shadcn/ui best practices and accessibility.
+- **Implementation Plan**: Recommending environment setup, CI gates, and performance targets (E2E ≤ 3s; BE P95 300–450ms).
+- **Cursorrules**: Maintaining code consistency, error normalization, and reusability by domain (auth, equipos, tickets, reportes).
+- **System Prompts for Cursor Context & Prompts Library**: Encouraging structured documentation and code referencing for continuity (`cursor-context.md`, `prompts-library.md`, `development-log.md`).
+
+---
+
+## General Guidelines
+- **Strict Mode**: Always enable `strict` in `tsconfig.json` to leverage TypeScript’s full type-safety capabilities (ref: *Implementation Plan*).
+- **Project Organization**: Adhere to the recommended domain-first structure in the *Frontend Guidelines* (e.g., separate components, features por dominio, `lib`, y `services/api`).
+- **Memory Bank Context**: When referencing code across multiple sessions, store and retrieve project details from `cursor-context.md`, `prompts-library.md`, and log IA usage in `development-log.md`.
+
+---
+
+## Best Practices
+
+1. **Strong Typing**
+   - Explicitly define types for variables, function parameters, and return values.
+   - **Avoid `any`** (use `unknown` only with proper narrowing) (ref: *Cursorrules*).
+
+2. **Interfaces vs. Types**
+   - Prefer `interface` for object shapes, but use `type` when advanced composition or unions are required.
+
+3. **Naming Conventions**
+   - CamelCase for variables/functions, PascalCase for classes/interfaces/components (ref: *Frontend Guidelines*).
+
+4. **Error Handling**
+   - Wrap critical or external API calls in `try-catch` blocks.  
+   - Normalize to `{code, message, details, traceId}` and avoid PII (ref: *Implementation Plan* and *Backend logging*).
+
+5. **Async/Await**
+   - Use `async/await` to simplify asynchronous code and reduce nesting (ref: *Tech Stack Document* suggests modern ES6+ patterns).
+
+6. **Import Ordering**
+   - Group imports by:
+     1. Node/third-party modules
+     2. Shared/internal libs (`@lib`, `@components`)
+     3. Feature modules (`@features/...`)
+
+---
+
+## Code Quality & Testing
+
+- **Linting & Formatting**
+  - Follow Prettier and ESLint configurations recommended in the *Implementation Plan*.  
+  - Block PRs on lint errors or explicit `any`.
+
+- **Unit & Integration Tests**
+  - Use Vitest/Jest + React Testing Library to test React components and hooks.  
+  - Reference the *Testing Strategy* and prompts context for QA.  
+  - Store test files adjacent to their corresponding modules to keep context easily accessible.
+
+---
+
+## Collaboration & Memory Bank Usage
+
+- **Context Recovery**
+  - Before coding or reviewing PRs, reference the Markdown docs (`cursor-context.md`, `prompts-library.md`, e.g., `activeContext.md`) to ensure alignment with the current project state (ref: *Memory Bank equivalent*).
+
+- **Version Control**
+  - Use Git branches (`feature/`, `dev/`, `release/vX.X`) as outlined in the *Implementation Plan* (cuando el repositorio esté disponible).
+
+- **Documentation**
+  - Update relevant `.mdc` files and prompts docs whenever new patterns or conventions are introduced (ref: *System Prompts for Cursor Integration*).
+
+---
+
+## Project Context
+
+- This project is **SISGEMEC** (Gestión y Mantenimiento de Equipos) using React + TypeScript on the frontend and FastAPI/Python with Supabase (PostgreSQL + RLS) on the backend.
+- Must support features like file uploads (imágenes, CSV/XLSX/PDF), notifications via Google APIs (correo/calendario), and reporting exports (Excel/PDF).
+- **Performance targets**:  
+  - E2E ≤ 3s for the critical flow.  
+  - Backend endpoints P95 300–450ms with normalized errors.
+- **New Enhancements**:  
+  - Role-based access (Usuario/Técnico/Admin).  
+  - Unified audit logging with `traceId`.  
+  - Strict OpenAPI ↔ DB contract alignment.
+
+---
+
+## Style
+
+- **ES6+ Syntax**: Embrace modern TypeScript/JavaScript features (destructuring, optional chaining, nullish coalescing).
+- **Import Grouping**:
+  1. Node modules
+  2. Third-party libraries (e.g., shadcn/ui, OpenAI SDK)
+  3. Local modules/components (`@components`, `@features`, `@lib`)
+
+---
+
+## Testing
+
+- Use Vitest/Jest (or similar) for unit tests. Ensure coverage for core modules (forms, API clients, data processing hooks).
+- Consider Playwright for end-to-end testing (e.g., login, crear ticket, verificar listado y estados de error/acceso).
+
+---
+
+```

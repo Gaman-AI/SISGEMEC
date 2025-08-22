@@ -1,0 +1,157 @@
+# testing-strategy.mdc
+
+```markdown
+# Testing Strategy Rules
+
+This document incorporates directives from:
+- **PRD & Tech Stack**: FastAPI backend, Supabase (PostgreSQL + RLS), React + TypeScript frontend.
+- **Implementation Plan & Quality Gates**: Performance targets (E2E ≤ 3s; BE P95 300–450ms), CI gates, freeze/rollback.
+- **Database Rules & Auth Config**: Contratos OpenAPI ↔ DB, RLS por rol (`usuario`, `tecnico`, `admin`).
+- **Frontend Guidelines & TypeScript Rules**: Estados de UI (`loading/empty/error/success`), accesibilidad, error model `{code, message, details, traceId}`.
+- **LLM-Sec Review Checklist**: Control de cambios generados por IA y mitigación de alucinaciones.
+- **Cursor Context & Prompts Library**: Registro en `development-log.md` y uso de snippets “dorados”.
+
+---
+
+## Test Scope & Pyramid
+- **Pirámide de pruebas**: Unit (base) > Integration (media) > E2E (cima).
+- **Cobertura objetivo**:  
+  - Unit: [Missing Information]%  
+  - Integration: [Missing Information]%  
+  - E2E: flujos críticos obligatorios.  
+- **Dominios SISGEMEC**: autenticación/roles, equipos, tickets/servicios, historial, reportes/export.
+
+---
+
+## Unit Tests (FE & BE)
+
+### Frontend (React + TS)
+- **Componentes y hooks**: validación de formularios, estados `loading/empty/error/success`.
+- **Adaptadores de API**: normalización de errores `{code,message,details,traceId}`; manejo de `Idempotency-Key` (POST) y `If-Match` (PATCH).
+- **Utilidades**: `@lib/http`, formateo de fechas, helpers de accesibilidad.
+
+### Backend (FastAPI)
+- **Schemas Pydantic**: validación 400/422, formateo de errores.
+- **Reglas de negocio**: cambios de estado de ticket, idempotencia, validación de ETag.
+- **Utilidades**: uuid/time, control de permisos a nivel de servicio.
+
+---
+
+## Integration Tests
+
+### Frontend
+- Con **MSW** simulando OpenAPI:
+  - Listados con filtros/paginación, vacíos/errores 401/403/409.
+  - Formularios con errores por campo y resumen 422.
+  - Verificación de contratos: requests/responses no deben incluir campos fuera de OpenAPI.
+
+### Backend
+- Con **TestClient** y DB temporal/esquema efímero:
+  - Endpoints principales (auth, equipos, tickets, reportes).
+  - RLS por rol (JWT con claims role: usuario/tecnico/admin).
+  - Casos de concurrencia: If-Match válido → 200; ETag desfasado → 409.
+  - Idempotencia en POST (misma `Idempotency-Key` no duplica registros).
+
+---
+
+## End-to-End (E2E)
+- Herramientas: **Playwright** (o Cypress).
+- **Flujos críticos**:
+  - Login → crear ticket → listar → cambiar estado.
+  - Export: generar CSV/XLSX/PDF y verificar descarga (sin PII).
+- **Errores y accesibilidad**:
+  - Banners con `traceId`.
+  - Navegación por teclado.
+  - Contraste AA.
+- **Seguridad UX**:
+  - 401 → redirigir a login.
+  - 403 → “Permisos insuficientes”.
+  - 429 → sugerir reintento.
+
+---
+
+## Performance & Benchmarks
+- **Objetivos**: BE endpoints P95 ≤ 300–450 ms; flujo E2E ≤ 3 s.
+- **Herramientas**: k6/Locust para backend; métricas de tiempo percibido en E2E (Playwright).
+- **Escenarios**:
+  - Listados de tickets con paginación.
+  - Filtros por estado/fechas.
+  - Exportes medianos.  
+- **Reglas de regresión**: fallo de pipeline si P95 sube > 15% vs baseline.
+
+---
+
+## Security Testing
+- **Auth/Rate limit**: login y reset-request (5–10 req/min/IP), lock tras 5 fallos.  
+- **RLS**: verificar que cada rol accede solo a lo permitido.  
+- **Inyección**: SQL paramétrico, protección path traversal en Storage, sanitización en reportes.  
+- **Dependencias/SAST**: `npm audit`, `pip-audit`, Bandit sin High/Critical.  
+
+### IA-specific
+- **OpenAPI drift**: tests comparan rutas/campos implementados vs contrato.  
+- Rechazar endpoints “inventados” por IA.  
+- Registrar en `development-log.md` (prompt → salida → fallo → fix).  
+
+---
+
+## Test Data & Fixtures
+- **Datos sintéticos** sin PII.  
+- **Semillas** para equipos, tickets, usuarios de prueba.  
+- **Entornos**: `.env.test` sin secretos reales.  
+- **Storage**: bucket de pruebas con TTL corto.  
+- **Determinismo**: fijar reloj/UUID cuando aplique.  
+
+---
+
+## Coverage & Quality Gates
+- **Umbrales**:
+  - Unit: [Missing Information]%  
+  - Integration: [Missing Information]%  
+  - E2E: flujos críticos cubiertos.  
+- **Bloqueos de PR** si:  
+  - Cobertura < umbral.  
+  - Pruebas fallidas.  
+  - Divergencia OpenAPI ↔ implementación.  
+  - Auditorías con High/Critical.  
+
+---
+
+## CI Pipeline (mínimo)
+- **Lint/Format**: ESLint/Prettier + ruff/black (si aplica).  
+- **Unit**: FE/BE.  
+- **Integration**: FE con MSW, BE con DB temporal.  
+- **Contract Check**: validación OpenAPI schema.  
+- **Security**: npm audit, pip-audit, Bandit.  
+- **E2E**: Playwright en entorno efímero.  
+- **Performance smoke**: k6 corto en endpoints clave.  
+- **Artefactos**: reportes JUnit/HTML, coverage, videos/screenshots E2E.  
+
+---
+
+## Reporting & Observability
+- Exportar JUnit + coverage y publicar en CI (badges opcionales).  
+- **Trazabilidad** con `traceId` desde pruebas E2E hasta logs BE.  
+- **Tablero de tendencias**: cobertura, tiempos P95, tasa de error, fallos por suite.  
+
+---
+
+## Collaboration & Memory Bank Usage
+- Actualizar `cursor-context.md` ante cambios en contratos/estados de UI que afecten pruebas.  
+- Añadir snippets en `prompts-library.md` para generación de pruebas.  
+- Registrar uso de IA en `development-log.md`; pasar **LLM-Sec Checklist** en PRs con código generado.  
+
+---
+
+## Acceptance Checklist
+- ✔ Flujos E2E críticos cubiertos (login → crear ticket → listar → cambiar estado).  
+- ✔ Unit/Integration cubren validaciones, errores normalizados y contratos OpenAPI.  
+- ✔ RLS probado por rol (usuario/tecnico/admin).  
+- ✔ Exportes probados (CSV/XLSX/PDF) sin PII y con límites de tamaño.  
+- ✔ Benchmarks configurados; sin regresión > 15% P95 vs baseline.  
+- ✔ Auditorías sin High/Critical; SAST limpio.  
+- ✔ Reportes de CI disponibles (JUnit, coverage, artefactos E2E).  
+- ✔ Registro de cambios IA en `development-log.md` y checklist LLM-Sec en PR.  
+
+---
+
+```

@@ -1,0 +1,81 @@
+# db.mdc
+
+```markdown
+# Database Rules
+
+This document integrates:
+- **Schema Design Document**: Core table structures, indexing, and RLS mapping.
+- **Backend Structure & Implementation Plan**: Guidelines for FastAPI, Supabase, migrations, and row-level security.
+- **Cursorrules**: Security and compliance best practices.
+- **Memory Bank**: Consistent references to evolving schema details and contracts (OpenAPI ↔ DB).
+
+---
+
+## Supabase & PostgreSQL Guidelines
+
+### Primary Data Store
+- Usar **PostgreSQL de Supabase** para datos estructurados (tablas: `equipos`, `tickets`, `tickets_hist`, referencias a `auth.users`) según el *Schema Design Document*.
+- **Enforce RLS** (Row-Level Security) con control de acceso por rol (**Usuario**, **Técnico**, **Admin**) (ref: *Backend Structure & Schema Design*).
+
+### Vector Storage & Indexing *(Opcional / Futuro)*
+- Si se introduce RAG o búsqueda por similitud, crear tabla `rag_chunks` (o equivalente) con columna de **embedding** usando **pgvector**.
+- Usar índices recomendados (p.ej., **ivfflat** con listas adecuadas) para rendimiento en consultas de recuperación (ref: *Implementation Plan*).
+
+---
+
+## Migration & Versioning
+
+### Naming Conventions
+- Formato de migraciones: `YYYYMMDDHHMMSS_description.sql`  
+  - Ej.: `20250906132435_create_tickets.sql` (ref: *Implementation Plan*).
+- Mantener registro **cronológico** en carpeta `migrations/` (o directorio de **Supabase CLI**).
+
+### Schema Evolution
+- Ejecutar migraciones vía **CI/CD** para preservar integridad y permitir **rollback** (ref: *Cursorrules*).
+- Documentar cambios de esquema y **diffs de contrato** en `memory-bank/activeContext.md` (ref: *Memory Bank*).
+
+---
+
+## Data Integrity & Security
+
+### Transactions
+- Envolver inserciones/actualizaciones/eliminaciones multi-paso en **transacciones** para garantizar **atomicidad** (ref: *Backend Structure*).
+
+### Validation & Constraints
+- Definir **NOT NULL**, **CHECK/enum** para estados/eventos, **UNIQUE** (ej. `equipos.serial`), y **FKs** con acciones apropiadas **ON UPDATE/DELETE** (ref: *Schema Design Document*).
+- Validar payloads en la capa de aplicación (**FastAPI/Pydantic**) antes de escribir (ref: *Implementation Plan*).
+
+### Encryption & RLS
+- Usar **TLS ≥ 1.2** en tránsito; cifrado en reposo de Supabase/Postgres según políticas de entorno.
+- Aplicar **RLS por tabla**:
+  - **Usuario**: acceso a **sus propios** registros.
+  - **Técnico**: acceso a **registros asignados**.
+  - **Admin**: **acceso total**.  
+  *(ref: *Schema Design Document*)*
+
+---
+
+## Logging & Monitoring
+
+### Audit Trails
+- Mantener `audit_logs` (o aprovechar `tickets_hist` para eventos de dominio) para rastrear acciones de usuario/sistema: autenticación, creación/actualización de tickets, exportaciones y cambios de configuración (ref: *Implementation Plan*).
+
+### Error Handling
+- Centralizar el logging de errores de BD (p.ej., **Sentry**).  
+- Propagar un modelo de error **normalizado** a la API: `{code, message, details, traceId}`.
+
+### Performance Monitoring
+- Analizar periódicamente consultas críticas con **EXPLAIN ANALYZE**.  
+- Revisar uso de índices en filtros como `status`, `assignee_id`, `equipment_id`, `created_at`.
+
+---
+
+## New Considerations for MVP
+
+### Attachments & Reporting Readiness
+- Si se almacenan adjuntos de tickets, usar **Supabase Storage** (bucket por entorno), con nombres de archivo **UUID** y **sin PII** en rutas.
+- Añadir índices “amigables para reportes” y considerar una **materialized view** de solo lectura para exportes comunes (filtros por fecha/estado) alineada con **OpenAPI**.
+
+---
+
+```

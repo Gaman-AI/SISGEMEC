@@ -1,0 +1,133 @@
+# supabase.mdc
+
+```markdown
+# Supabase Rules
+
+This document incorporates directives from:
+- **PRD & Tech Stack**: FastAPI backend, Supabase (PostgreSQL + RLS), React + TypeScript frontend.
+- **Database Rules & Schema Design**: Tablas `equipos`, `tickets`, `tickets_hist`, índices y constraints; alineación con OpenAPI.
+- **Auth Config Rules**: Roles (`admin`, `tecnico`, `usuario`), JWT/claims y políticas RLS.
+- **Implementation Plan**: CI gates, auditorías de seguridad y objetivos de rendimiento/observabilidad.
+- **Cursorrules / Memory Bank**: Trazabilidad de cambios (OpenAPI ↔ DB) y registro en `development-log.md`.
+
+---
+
+## Auth & RLS (Row-Level Security)
+
+### Identity
+- Supabase Auth: email/contraseña; Google OAuth opcional post-MVP.
+- Roles: `admin`, `tecnico`, `usuario` (propagados en claim `role` del JWT).
+
+### RLS Obligatorio en tablas principales
+- **equipos**:
+  - **usuario**: lectura de sus equipos.
+  - **tecnico**: lectura de equipos vinculados a tickets asignados.
+  - **admin**: acceso completo.
+
+- **tickets**:
+  - **usuario**: crear; leer propios o de sus equipos.
+  - **tecnico**: leer/actualizar asignados (estado, notas).
+  - **admin**: acceso completo.
+
+- **tickets_hist**:
+  - Lectura según visibilidad del ticket origen.
+  - Inserción: solo admin/sistema.
+
+- **Funciones/RPC**: solo si no rompen RLS. Documentar permisos y tests por rol.
+- **Vistas**: aplicar RLS también en vistas materializadas/convencionales si exponen datos restringidos.
+
+---
+
+## Database & Schema
+
+### Constraints
+- **NOT NULL**, **FK** con `ON DELETE` apropiado, **UNIQUE** (ej. `equipos.serial`).
+- **CHECK/enum** para `status` y eventos.
+
+### Índices recomendados
+- `tickets(status)`, `tickets(assignee_id, status)`, `tickets(created_at DESC)`.
+- `tickets_hist(ticket_id, created_at)`.
+- `equipos(owner_id)`, `equipos(serial)` UNIQUE.
+
+### Paginación estable
+- Basada en `created_at`, `id`.
+
+### OpenAPI Alignment
+- Todo cambio de esquema → **migración + actualización de contrato OpenAPI**.
+
+---
+
+## Storage (Archivos)
+- **Buckets** por entorno (`dev`, `stg`, `prod`).
+- **Nombres de archivo UUID**; sin PII en rutas.
+- **Tipos permitidos (MVP)**: imágenes (png/jpg), CSV/XLSX/PDF para reportes/exports.  
+  *(Extensiones adicionales ver `procesamiento-archivos.mdc`)*.
+- **Política de acceso**: URLs firmadas con expiración corta; validación de tamaño/mime en backend.
+- **Auditoría**: registrar subidas, descargas y eliminaciones con `traceId`.
+
+---
+
+## Performance & Observability
+- **Rendimiento**: endpoints P95 = 300–450 ms; revisar consultas críticas con `EXPLAIN ANALYZE` mensual.
+- **Pool**: ajustar límites por entorno; evitar N+1 (preferir joins indexados).
+- **Logs**: estructurados sin PII; `traceId` propagado FE → BE → DB.
+- **Métricas**: latencia por endpoint, tasa de error, throughput; alertas configuradas por umbral.
+
+---
+
+## Security
+- **RLS** activo en todas las tablas sensibles; pruebas por rol en CI.
+- **Secrets**: solo en variables de entorno; nunca en cliente/repos.
+- **TLS** en tránsito; cifrado en reposo (gestión del proveedor).
+- **Auditorías**: `npm audit` / `pip-audit` / Bandit sin High/Critical antes de release.
+- **Modelo de error**: `{code, message, details, traceId}` en API; sin stack traces expuestos.
+
+---
+
+## Migrations & Versioning
+- **Convención**: `YYYYMMDDHHMMSS_description.sql`  
+  - Ejemplo: `20250906132435_create_tickets.sql`.
+- **Carpeta**: `migrations/` (o Supabase CLI default).  
+- **CI/CD**: aplicar migraciones en despliegue; rollback documentado.
+- **Registro**: cambios mayores en `memory-bank/activeContext.md` y `development-log.md`.
+
+---
+
+## API & OpenAPI Alignment
+- **Contratos primero**: rutas/campos nacen en OpenAPI → DB/BE/FE alineados.
+- **ETag/If-Match**: en recursos mutables para evitar sobrescritura concurrente.
+- **Idempotency-Key**: en POST relevantes.
+- **Validación BE** (Pydantic) antes de escribir.
+- **Errores**: siempre normalizados.
+
+---
+
+## Testing
+- **Unit (BE)**: validación de payloads, serialización y mapeo OpenAPI.
+- **Integration**: consultas con datos sintéticos; verificar RLS por rol.
+- **E2E**: flujo `login → crear ticket → listar` con usuarios `usuario/tecnico/admin`.
+- **Performance**: pruebas de carga básicas en endpoints de listados/reportes.
+
+---
+
+## Acceptance Checklist
+- ✔ RLS activo y probado en `equipos`, `tickets`, `tickets_hist`.  
+- ✔ Índices creados según filtros/joins más comunes.  
+- ✔ Storage configurado por entorno; nombres UUID; sin PII en paths.  
+- ✔ Migraciones versionadas y aplicadas vía CI; rollback definido.  
+- ✔ OpenAPI actualizado y consistente con el esquema.  
+- ✔ Logs estructurados + métricas (P95, errores) con `traceId`.  
+- ✔ Auditorías de seguridad sin High/Critical.  
+- ✔ Tests unit/integration/E2E verdes; consultas críticas revisadas con `EXPLAIN`.  
+
+---
+
+## Open Questions
+- ¿Crear tabla de **materialized views** para reportes frecuentes (tickets por estado/fecha)?  
+- ¿Límites exactos de tamaño/tipo en **Storage** (por entorno)?  
+- ¿Adoptar **pgvector** en fase posterior (RAG opcional)?  
+- ¿Estrategia de **multi-tenant** futura (claims adicionales como `org_id`)?  
+
+---
+
+```

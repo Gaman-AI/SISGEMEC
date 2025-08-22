@@ -1,0 +1,156 @@
+# Database Schema Design — SISGEMEC
+
+## 1. Introducción
+Este documento define el **diseño de la base de datos de SISGEMEC**, incluyendo tablas, relaciones y seguridad.  
+La base de datos utiliza **Supabase PostgreSQL** para el almacenamiento estructurado, y **Supabase Storage** para archivos adjuntos (ej. exportes de reportes).
+
+---
+
+## 2. Database Overview
+- **Base de datos principal:** Supabase PostgreSQL.
+- **Propósito:**
+    - Gestionar usuarios, equipos, solicitudes de servicio y reportes.
+    - Controlar accesos mediante Row-Level Security (RLS).
+- **Almacenamiento de archivos:** Supabase Storage (exportes Excel/PDF).
+
+---
+
+## 3. Tablas principales
+
+### 🔹 Tabla `usuarios`
+| Campo | Tipo | Descripción |
+| --- | --- | --- |
+| id | UUID (PK) | Identificador del usuario |
+| nombre | TEXT | Nombre completo |
+| correo | TEXT (único) | Correo empresarial |
+| rol | TEXT (enum: admin, tecnico, responsable) | Rol del usuario |
+| created_at | TIMESTAMPTZ | Fecha de creación |
+
+---
+
+### 🔹 Tabla `equipos`
+| Campo | Tipo | Descripción |
+| --- | --- | --- |
+| id | UUID (PK) | Identificador del equipo |
+| usuario_id | UUID (FK → usuarios.id) | Responsable asignado |
+| tipo | TEXT | Tipo de equipo (Laptop, PC, etc.) |
+| marca | TEXT | Marca |
+| modelo | TEXT | Modelo |
+| num_serie | TEXT (único) | Número de serie |
+| estado | TEXT (enum: Nuevo, Buen estado, Regular, Reparado, Baja) | Estado físico |
+| fecha_ingreso | DATE | Fecha de alta |
+
+---
+
+### 🔹 Tabla `solicitudes`
+| Campo | Tipo | Descripción |
+| --- | --- | --- |
+| id | UUID (PK) | Identificador de la solicitud |
+| usuario_id | UUID (FK → usuarios.id) | Responsable que crea la solicitud |
+| equipo_id | UUID (FK → equipos.id) | Equipo asociado |
+| descripcion | TEXT | Motivo de la solicitud |
+| estado | TEXT (enum: pendiente, en_proceso, finalizado) | Estado actual |
+| respuesta | TEXT | Respuesta del técnico |
+| created_at | TIMESTAMPTZ | Fecha de creación |
+
+---
+
+### 🔹 Tabla `servicios`
+| Campo | Tipo | Descripción |
+| --- | --- | --- |
+| id | UUID (PK) | Identificador del servicio |
+| solicitud_id | UUID (FK → solicitudes.id) | Origen de la solicitud |
+| tecnico_id | UUID (FK → usuarios.id) | Técnico asignado |
+| fecha_inicio | DATE | Inicio del servicio |
+| fecha_fin | DATE | Fin del servicio |
+| estado | TEXT (enum: en_atencion, atendido) | Estado del seguimiento |
+
+---
+
+### 🔹 Tabla `reportes`
+| Campo | Tipo | Descripción |
+| --- | --- | --- |
+| id | UUID (PK) | Identificador del reporte |
+| usuario_id | UUID (FK → usuarios.id) | Usuario que genera reporte |
+| tipo | TEXT | Tipo de reporte (equipos, solicitudes, servicios) |
+| filtros | JSONB | Parámetros de filtrado |
+| exportado | BOOLEAN | Si fue exportado o no |
+| created_at | TIMESTAMPTZ | Fecha de generación |
+
+---
+
+## 4. Relaciones (ERD)
+```mermaid
+erDiagram
+    usuarios ||--o{ equipos : "usuario_id"
+    usuarios ||--o{ solicitudes : "usuario_id"
+    usuarios ||--o{ servicios : "tecnico_id"
+    solicitudes ||--o{ servicios : "solicitud_id"
+    equipos ||--o{ solicitudes : "equipo_id"
+    usuarios ||--o{ reportes : "usuario_id"
+
+    usuarios {
+        UUID id PK
+        text nombre
+        text correo
+        text rol
+        timestamptz created_at
+    }
+    equipos {
+        UUID id PK
+        UUID usuario_id FK
+        text tipo
+        text marca
+        text modelo
+        text num_serie
+        text estado
+        date fecha_ingreso
+    }
+    solicitudes {
+        UUID id PK
+        UUID usuario_id FK
+        UUID equipo_id FK
+        text descripcion
+        text estado
+        text respuesta
+        timestamptz created_at
+    }
+    servicios {
+        UUID id PK
+        UUID solicitud_id FK
+        UUID tecnico_id FK
+        date fecha_inicio
+        date fecha_fin
+        text estado
+    }
+    reportes {
+        UUID id PK
+        UUID usuario_id FK
+        text tipo
+        jsonb filtros
+        boolean exportado
+        timestamptz created_at
+    }
+```
+---
+
+## 5. Indexing & Optimization
+**Índices recomendados:**
+```sql
+CREATE INDEX ON equipos (num_serie);
+CREATE INDEX ON solicitudes (estado);
+CREATE INDEX ON servicios (fecha_inicio, fecha_fin);
+```
+- **Full-Text Search (opcional)**: en `solicitudes.descripcion` para búsqueda rápida.
+
+---
+
+## 6. Security & Compliance
+- **Row-Level Security (RLS):**
+  - Los responsables solo pueden ver sus equipos y solicitudes.
+  - Los técnicos solo ven solicitudes asignadas.
+  - Los admins tienen acceso completo.
+
+- **Cifrado:**
+  - Datos en reposo → Supabase (AES-256).  
+  - Datos en tránsito → TLS/HTTPS.  

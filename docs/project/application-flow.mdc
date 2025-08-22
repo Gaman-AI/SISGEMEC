@@ -1,0 +1,132 @@
+# Application Flow — SISGEMEC
+
+## 1. General Description
+**Propósito y Objetivos**  
+SISGEMEC es un sistema web para la **gestión de mantenimiento de equipos de cómputo**, que permite a responsables, técnicos y administradores:
+- Registrar y dar seguimiento a solicitudes de servicio.
+- Administrar inventario de equipos.
+- Generar reportes y exportes (Excel/PDF).
+- Notificar a responsables sobre actualizaciones de estado.
+
+**Beneficios clave:**
+- Flujo automatizado de solicitudes y servicios.
+- Autenticación segura mediante Supabase Auth (JWT).
+- Control de acceso por roles (Admin, Técnico, Responsable).
+- Dashboard interactivo para equipos, solicitudes y reportes.
+- Arquitectura escalable y modular con FastAPI + React + Supabase.
+
+---
+
+## 2. User Registration & Login
+**Acceso y autenticación**
+- Los usuarios (responsables, técnicos o admins) inician sesión vía **Supabase Auth** (correo empresarial + contraseña).
+- El frontend recibe un **JWT**, que se envía en cada petición al Backend.
+- FastAPI valida el token y aplica permisos según el rol del usuario.
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant Frontend
+  participant SupabaseAuth
+  participant Backend
+  User->>Frontend: Ingresa correo y contraseña
+  Frontend->>SupabaseAuth: Verifica credenciales
+  SupabaseAuth-->>Frontend: Retorna JWT
+  Frontend->>Backend: API Request (Bearer JWT)
+  Backend->>Backend: Verifica JWT y rol
+  Backend-->>Frontend: Respuesta autorizada
+```
+
+---
+
+## 3. Service Request Flow
+**Flujo de Solicitudes de Servicio**
+- Responsable crea solicitud desde el frontend.
+- El backend la guarda en Supabase (tabla `solicitudes`).
+- Técnicos/administradores reciben la solicitud y la actualizan con estado/respuesta.
+- Responsable recibe notificación de actualización.
+
+```mermaid
+sequenceDiagram
+  participant Responsable
+  participant Frontend
+  participant Backend
+  participant SupabaseDB
+  participant Tecnico
+  Responsable->>Frontend: Crear solicitud
+  Frontend->>Backend: POST /api/solicitudes (JWT)
+  Backend->>SupabaseDB: Insert nueva solicitud
+  SupabaseDB-->>Backend: OK (solicitud_id)
+  Backend-->>Frontend: Confirmación
+  Tecnico->>Backend: GET /api/solicitudes pendientes
+  Backend->>SupabaseDB: Consulta solicitudes
+  SupabaseDB-->>Backend: Resultados
+  Backend-->>Tecnico: Listado
+```
+
+---
+
+## 4. Equipment & Service History
+- Los responsables pueden ver su equipo asignado y su historial de servicios.
+- Los técnicos y admins gestionan todos los equipos desde el dashboard.
+
+---
+
+## 5. Dashboard & Reporting
+- **Dashboard**: vista principal con menú lateral (solo admins/técnicos).
+- **Responsables**: ven solo solicitudes, equipo y cerrar sesión.
+- **Reportes**: FastAPI expone `/api/reportes` con filtros por fecha, responsable, técnico, número de serie.
+- **Exportación**: a Excel/PDF con librerías Python (`openpyxl`, `reportlab`).
+
+```mermaid
+flowchart LR
+  A[Supabase DB] -->|Data| B[FastAPI /api/reportes]
+  B -->|JSON| C[Frontend Dashboard]
+  C -->|Render| D[Gráficas y tablas]
+  B -->|Export| E[Excel/PDF]
+```
+
+---
+
+## 6. Error Handling
+- **Errores de login**: Supabase Auth devuelve mensajes claros.
+- **Errores de permisos**: FastAPI responde con `403 Unauthorized`.
+- **Errores de conexión**: Backend maneja reintentos y mensajes de estado.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Login : Usuario inicia sesión
+    Login --> Error : Credenciales inválidas
+    Login --> Dashboard : Autenticación OK
+    Error --> Idle : Usuario reintenta
+```
+
+---
+
+## 7. System Architecture
+```mermaid
+graph TD
+  subgraph User
+    U[Responsable/Admin/Técnico]
+  end
+  subgraph Frontend [React + Tailwind]
+    FE[UI & State Mgmt]
+  end
+  subgraph Backend [FastAPI API]
+    API[Endpoints /api/*]
+    AUTH[JWT Validation]
+    REPORTS[Reportes/Exportes]
+    SERVICES[Solicitudes/Servicios]
+  end
+  subgraph Supabase
+    DB[(PostgreSQL RLS)]
+    STORAGE[(Storage Archivos)]
+    AUTH_SUPA[Auth]
+  end
+  U --> FE
+  FE --> API
+  API --> DB
+  API --> STORAGE
+  API --> AUTH_SUPA
+```

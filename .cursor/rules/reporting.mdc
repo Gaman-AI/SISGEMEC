@@ -1,0 +1,116 @@
+# reporting.mdc
+
+```markdown
+# Reporting Rules
+
+This document incorporates directives from:
+- **PRD & Tech Stack**: FastAPI backend, Supabase (PostgreSQL + RLS), React + TypeScript frontend.
+- **Schema Design & Database Rules**: Contract-first (OpenAPI ↔ DB), índices para filtros y fechas.
+- **Auth Config Rules**: Visibilidad por rol (Usuario/Técnico/Admin) y RLS aplicada a fuentes de datos.
+- **Testing Strategy Rules**: E2E crítico, benchmarks y validación de exportes sin PII.
+- **Cursorrules & Cursor Context**: Errores normalizados, trazabilidad con `traceId`, registro en `development-log.md`.
+
+---
+
+## Export & API Guidelines
+
+### Supported Formats (MVP)
+- **CSV** (streaming).  
+- **XLSX** (OpenPyXL).  
+- **PDF** ([Missing Information: library]).  
+
+**Naming convention**:  
+`report_{type}_{yyyy-mm-dd}_{HHMM}_{traceId|reqId}.ext`
+
+### Endpoints (OpenAPI)
+- `GET /reports?type=&from=&to=&format=csv|xlsx|pdf&status=&equipmentId=&assigneeId=&limit=`  
+- **Validation**: parámetros obligatorios por tipo; rangos de fecha válidos; `limit` con tope (ej. 10k filas CSV).  
+- **AuthZ/RLS**: resultados filtrados automáticamente por rol y políticas.  
+
+### Large Exports
+- **CSV**: streaming (chunked) desde servidor.  
+- **XLSX/PDF**: job asíncrono →  
+  - `POST /reports/jobs`  
+  - `GET /reports/jobs/{id}` (status/result URL).  
+- URLs de descarga firmadas con expiración corta.  
+
+---
+
+## Data Selection & Filters
+- Filtros obligatorios por tipo de reporte.  
+  - Ejemplo: `type=tickets → from, to, status?, assigneeId?`.  
+- **Orden estable**: `created_at DESC, id DESC`.  
+- Columnas alineadas al contrato (OpenAPI).  
+- **Sin PII**: campos sensibles anonimizados o redactados (ej. email → `u***@dominio`).  
+
+---
+
+## Security & Compliance
+- No PII en archivos exportados; mascar campos sensibles.  
+- RLS efectiva en todas las consultas de origen.  
+- **Prohibido bypass** vía SQL dinámico.  
+- **Rate limiting** en generación masiva; backoff en colas de jobs.  
+- **Error Model**: `{code, message, details, traceId}` (sin stack traces).  
+- **Audit Logs**: registrar petición de export, parámetros (sin PII), tamaño final, éxito/fallo y `traceId`.  
+
+---
+
+## Performance & Scaling
+- **Targets**: export mediano (≤ 5k filas) ≤ 2s (CSV).  
+- **XLSX/PDF**: vía job asíncrono (SLA interno [Missing Information]).  
+- **Memory/CPU**: paginar consultas, usar cursores, no cargar todo en memoria para CSV.  
+- **Indexing**: columnas de filtros (`status`, `assignee_id`, `equipment_id`, `created_at`) deben tener índices.  
+- **Concurrency**: limitar jobs activos por usuario; cola simple (FIFO) [Missing Information: runner/queue].  
+
+---
+
+## UI/UX for Reporting
+- **Left Panel (Filters)**: rango de fechas, status, assignee, equipment. Botón *Generate*.  
+- **Main Area**: tabla previa (preview) paginada; estados `loading/empty/error/success`.  
+- **Downloads**:  
+  - CSV: descarga inmediata (stream).  
+  - XLSX/PDF: mostrar estado del job (`queued/running/done/failed`) con reintento.  
+- **Errors**: banner accesible con mensaje y `traceId`; acciones de recuperación.  
+- **Accessibility**: navegación por teclado, foco, `aria-live` en progreso/errores.  
+
+---
+
+## Implementation Details (BE)
+- **CSV (stream)**: iterar filas; escapar delimitadores; `text/csv; charset=utf-8`.  
+- **XLSX**: OpenPyXL con hoja única por reporte (o varias si type compuesto); congelar encabezados; anchos auto.  
+- **PDF**: plantilla con encabezados/footers, fecha y número de páginas ([Missing Information: lib]).  
+- **Sanitization**: limpiar títulos/inputs; prefijar `'` en CSV/Excel cuando aplique (prevención de inyección).  
+- **Observability**: log de filas emitidas, bytes escritos, tiempo total; incluir `traceId`.  
+
+---
+
+## Testing
+- **Unit (BE)**: formateo de filas, sanitización, límites de tamaño.  
+- **Integration (BE)**: filtros y RLS por rol; CSV streaming correcto; jobs XLSX/PDF con estado.  
+- **FE Integration**: manejo de estados (`loading/empty/error/success`); descarga efectiva con nombre de archivo correcto.  
+- **E2E**: flujo completo → login → aplicar filtros → generar CSV/XLSX/PDF → descargar; asserts de accesibilidad.  
+- **Performance**: export mediano (dataset sintético) ≤ 2 s (CSV).  
+
+---
+
+## Acceptance Checklist
+- ✔ OpenAPI actualizado para `/reports` y `/reports/jobs*`.  
+- ✔ CSV en streaming y jobs para XLSX/PDF operativos con URLs firmadas.  
+- ✔ Filtros requeridos validados; sin PII; campos sensibles enmascarados.  
+- ✔ Índices en columnas de filtro; orden estable aplicado.  
+- ✔ Auditoría de exportes con `traceId`; errores normalizados.  
+- ✔ UI con estados completos y progreso de jobs; accesibilidad AA.  
+- ✔ Pruebas unit/integration/E2E verdes; benchmark CSV mediano ≤ 2 s.  
+- ✔ Gates de CI: sin High/Critical; contrato OpenAPI coherente.  
+
+---
+
+## Open Questions
+- ¿Biblioteca de PDF? (ReportLab / WeasyPrint / otra).  
+- ¿Límite exacto de filas por export e imposición por formato/rol?  
+- ¿Runner/Queue para jobs? (celery / arq / edge functions / otro).  
+- ¿Política de retención y expiración de archivos de export en Storage?  
+
+---
+
+```
