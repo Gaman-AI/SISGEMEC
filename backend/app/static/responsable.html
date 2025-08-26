@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>SISGEMEC 2.0 — Responsable</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; background:#0b1220; color:#eef2ff; padding:24px; }
+    h1 { margin-top:0; font-size:20px; }
+    .row { display:flex; gap:12px; align-items:center; }
+    button, input, textarea { padding:8px 12px; background:#111827; border:1px solid #374151; color:#fff; border-radius:8px; }
+    button { background:#334155; border:1px solid #475569; cursor:pointer; }
+    table { width:100%; border-collapse: collapse; margin-top:16px; }
+    th, td { border-bottom:1px solid #1f2937; padding:8px 10px; text-align:left; font-size:14px; }
+    .card { background:#0f172a; padding:16px; border-radius:12px; margin-top:16px; }
+    .warn { color:#fecaca; font-size:13px; }
+    label { font-size:13px; color:#c7d2fe; display:block; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <div class="row">
+    <h1>Mi equipo (RESPONSABLE)</h1>
+    <div style="flex:1"></div>
+    <button id="logout">Salir</button>
+  </div>
+  <div id="warn" class="warn"></div>
+
+  <table id="tbl">
+    <thead><tr><th>ID</th><th>Serie</th><th>Marca</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="card">
+    <strong>Crear servicio para un equipo mío</strong>
+    <label for="equipo_id">equipo_id</label>
+    <input id="equipo_id" placeholder="UUID/ID del equipo" />
+    <label for="descripcion">Descripción</label>
+    <textarea id="descripcion" rows="3" placeholder="Describe la falla o solicitud..."></textarea>
+    <button id="crear">Crear servicio</button>
+    <div id="out" class="warn"></div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem("sb_token");
+    const warn = document.getElementById("warn");
+    const tbody = document.querySelector("#tbl tbody");
+    const out = document.getElementById("out");
+    if (!token) { window.location.href = "/static/login.html"; }
+
+    document.getElementById("logout").onclick = () => {
+      localStorage.removeItem("sb_token");
+      window.location.href = "/static/login.html";
+    };
+
+    async function loadEquipos() {
+      const resp = await fetch("/equipos", { headers: { "Authorization": `Bearer ${token}` }});
+      if (!resp.ok) {
+        warn.textContent = "Error al cargar mis equipos. ¿RLS/rol RESPONSABLE correcto?";
+        return;
+      }
+      const data = await resp.json();
+      tbody.innerHTML = (data || []).map(eq => `
+        <tr>
+          <td>${eq.id ?? ""}</td>
+          <td>${eq.numero_serie ?? eq.serie ?? ""}</td>
+          <td>${eq.marca ?? ""}</td>
+        </tr>
+      `).join("");
+    }
+
+    async function crearServicio() {
+      out.textContent = "";
+      const equipo_id = document.getElementById("equipo_id").value.trim();
+      const descripcion = document.getElementById("descripcion").value.trim();
+      if (!equipo_id) { out.textContent = "Indica equipo_id"; return; }
+
+      const resp = await fetch("/servicios", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ equipo_id, descripcion })
+      });
+      if (!resp.ok) {
+        const t = await resp.text();
+        out.textContent = "Error al crear servicio: " + t;
+        return;
+      }
+      const data = await resp.json();
+      out.textContent = "Servicio creado: " + (data?.id ?? JSON.stringify(data));
+    }
+
+    document.getElementById("crear").onclick = crearServicio;
+    loadEquipos();
+  </script>
+</body>
+</html>

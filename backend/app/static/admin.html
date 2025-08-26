@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>SISGEMEC 2.0 — Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; background:#0b1220; color:#eef2ff; padding:24px; }
+    .row { display:flex; gap:12px; align-items:center; }
+    button { padding:8px 12px; background:#334155; border:1px solid #475569; color:#fff; border-radius:8px; cursor:pointer; }
+    table { width:100%; border-collapse: collapse; margin-top:16px; }
+    th, td { border-bottom:1px solid #1f2937; padding:8px 10px; text-align:left; font-size:14px; }
+    h1 { margin-top:0; font-size:20px; }
+    .warn { color:#fecaca; font-size:13px; }
+  </style>
+</head>
+<body>
+  <div class="row">
+    <h1>Dashboard ADMIN</h1>
+    <div style="flex:1"></div>
+    <button id="logout">Salir</button>
+  </div>
+  <div id="warn" class="warn"></div>
+  <table id="tbl">
+    <thead><tr><th>ID</th><th>Serie</th><th>Marca</th><th>Responsable</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const token = localStorage.getItem("sb_token");
+    const warn = document.getElementById("warn");
+    const tbody = document.querySelector("#tbl tbody");
+    if (!token) { window.location.href = "/static/login.html"; }
+
+    document.getElementById("logout").onclick = () => {
+      localStorage.removeItem("sb_token");
+      window.location.href = "/static/login.html";
+    };
+
+    async function loadEquipos() {
+      const resp = await fetch("/equipos", { headers: { "Authorization": `Bearer ${token}` }});
+      if (!resp.ok) {
+        warn.textContent = "Error al cargar equipos. ¿RLS/rol ADMIN correcto?";
+        return;
+      }
+      const data = await resp.json();
+      tbody.innerHTML = (data || []).map(eq => `
+        <tr>
+          <td>${eq.id ?? ""}</td>
+          <td>${eq.numero_serie ?? eq.serie ?? ""}</td>
+          <td>${eq.marca ?? ""}</td>
+          <td>${eq.responsable_email ?? eq.responsable ?? ""}</td>
+        </tr>
+      `).join("");
+    }
+    loadEquipos();
+  </script>
+</body>
+</html>
