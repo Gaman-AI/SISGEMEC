@@ -93,27 +93,28 @@ export default function EquiposList() {
 
   return (
     <div className="space-y-5">
+      {/* Header + acción */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Equipos</h1>
+        <h1 className="text-4xl font-bold tracking-tight">Equipos</h1>
         <Link
           to="/equipos/nuevo"
-          className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
         >
           + Nuevo Equipo
         </Link>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros compactos */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
         <input
           placeholder="Buscar marca, modelo o serie"
-          className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+          className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm outline-none ring-0 focus:border-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:focus:border-gray-600"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && setPage(1)}
         />
         <select
-          className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+          className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm dark:border-gray-700 dark:bg-gray-900"
           value={estadoId}
           onChange={(e) => { setEstadoId(e.target.value === '' ? '' : Number(e.target.value)); setPage(1); }}
         >
@@ -121,7 +122,7 @@ export default function EquiposList() {
           {estados.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
         </select>
         <select
-          className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+          className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm dark:border-gray-700 dark:bg-gray-900"
           value={respId}
           onChange={(e) => { setRespId(e.target.value); setPage(1); }}
         >
@@ -130,71 +131,78 @@ export default function EquiposList() {
         </select>
         <input
           type="date"
-          className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+          className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm dark:border-gray-700 dark:bg-gray-900"
           value={desde}
           onChange={(e) => { setDesde(e.target.value); setPage(1); }}
         />
         <input
           type="date"
-          className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+          className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm dark:border-gray-700 dark:bg-gray-900"
           value={hasta}
           onChange={(e) => { setHasta(e.target.value); setPage(1); }}
         />
       </div>
 
-      {/* Tabla */}
-      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-100 text-left text-gray-700 dark:bg-gray-900 dark:text-gray-300">
-            <tr>
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Tipo</th>
-              <th className="px-3 py-2">Marca</th>
-              <th className="px-3 py-2">Modelo</th>
-              <th className="px-3 py-2">Serie</th>
-              <th className="px-3 py-2">Ingreso</th>
-              <th className="px-3 py-2">Responsable</th>
-              <th className="px-3 py-2">Estado</th>
-              <th className="px-3 py-2 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td className="px-3 py-6 text-center" colSpan={9}>Cargando…</td></tr>
-            ) : rows.length === 0 ? (
-              <tr><td className="px-3 py-6 text-center" colSpan={9}>No se encontraron equipos con los filtros aplicados.</td></tr>
-            ) : (
-              rows.map((r) => (
-                <tr key={r.equipo_id} className="border-t border-gray-100 dark:border-gray-800">
-                  <td className="px-3 py-2">{r.equipo_id}</td>
-                  <td className="px-3 py-2">{r.tipo_equipo || '-'}</td>
-                  <td className="px-3 py-2">{r.marca || '-'}</td>
-                  <td className="px-3 py-2">{r.modelo || '-'}</td>
-                  <td className="px-3 py-2">{r.num_serie || '-'}</td>
-                  <td className="px-3 py-2">{r.fecha_ingreso?.slice(0,10) || '-'}</td>
-                  <td className="px-3 py-2">{r.responsable_nombre || '-'}</td>
-                  <td className="px-3 py-2"><BadgeEstado nombre={r.estado_nombre || null} /></td>
-                  <td className="px-3 py-2 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => nav(`/equipos/${r.equipo_id}/editar`)}
-                        className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => onDelete(r.equipo_id)}
-                        className="rounded-md border px-2 py-1 text-xs text-red-700 hover:bg-red-50 dark:border-gray-700 dark:text-red-400 dark:hover:bg-red-950"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      {/* Card tabla */}
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="sticky top-0 z-10 bg-gray-100/80 text-left text-gray-700 backdrop-blur dark:bg-gray-900/70 dark:text-gray-300">
+              <tr>
+                <th className="px-4 py-3">ID</th>
+                <th className="px-4 py-3">Tipo</th>
+                <th className="px-4 py-3">Marca</th>
+                <th className="px-4 py-3">Modelo</th>
+                <th className="px-4 py-3">Serie</th>
+                <th className="px-4 py-3">Ingreso</th>
+                <th className="px-4 py-3">Responsable</th>
+                <th className="px-4 py-3">Estado</th>
+                <th className="px-4 py-3 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td className="px-4 py-8 text-center" colSpan={9}>Cargando…</td></tr>
+              ) : error ? (
+                <tr><td className="px-4 py-8 text-center text-rose-600" colSpan={9}>{error}</td></tr>
+              ) : rows.length === 0 ? (
+                <tr><td className="px-4 py-8 text-center" colSpan={9}>No se encontraron equipos con los filtros aplicados.</td></tr>
+              ) : (
+                rows.map((r) => (
+                  <tr
+                    key={r.equipo_id}
+                    className="border-t border-gray-100 transition hover:bg-gray-50/80 even:bg-gray-50/60 dark:border-gray-800 dark:hover:bg-white/5 dark:even:bg-white/5"
+                  >
+                    <td className="px-4 py-3">{r.equipo_id}</td>
+                    <td className="px-4 py-3">{r.tipo_equipo || '-'}</td>
+                    <td className="px-4 py-3">{r.marca || '-'}</td>
+                    <td className="px-4 py-3">{r.modelo || '-'}</td>
+                    <td className="px-4 py-3">{r.num_serie || '-'}</td>
+                    <td className="px-4 py-3">{r.fecha_ingreso?.slice(0,10) || '-'}</td>
+                    <td className="px-4 py-3">{r.responsable_nombre || '-'}</td>
+                    <td className="px-4 py-3"><BadgeEstado nombre={r.estado_nombre || null} /></td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => nav(`/equipos/${r.equipo_id}/editar`)}
+                          className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => onDelete(r.equipo_id)}
+                          className="rounded-lg border border-rose-300 px-2.5 py-1.5 text-xs text-rose-700 hover:bg-rose-50 dark:border-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Paginación */}
@@ -202,21 +210,21 @@ export default function EquiposList() {
         <div>Página {page} de {totalPages} · {count} registros</div>
         <div className="space-x-2">
           <button
-            className="rounded-md border px-3 py-1 disabled:opacity-50 dark:border-gray-700"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 disabled:opacity-50 dark:border-gray-700"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
           >
             Anterior
           </button>
           <button
-            className="rounded-md border px-3 py-1 disabled:opacity-50 dark:border-gray-700"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 disabled:opacity-50 dark:border-gray-700"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages}
           >
             Siguiente
           </button>
           <button
-            className="rounded-md border px-3 py-1 dark:border-gray-700"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 dark:border-gray-700"
             onClick={load}
           >
             Refrescar
