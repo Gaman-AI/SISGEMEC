@@ -28,8 +28,6 @@ export default function EquiposList() {
   const [q, setQ] = React.useState('');
   const [estadoId, setEstadoId] = React.useState<number | ''>('');
   const [respId, setRespId] = React.useState<string | ''>('');
-  const [desde, setDesde] = React.useState('');
-  const [hasta, setHasta] = React.useState('');
 
   // catálogos
   const [estados, setEstados] = React.useState<{ id: number; nombre: string }[]>([]);
@@ -61,8 +59,7 @@ export default function EquiposList() {
       search: q,
       estado_equipo_id: estadoId === '' ? null : Number(estadoId),
       responsable_id: respId === '' ? null : respId,
-      fecha_desde: desde || null,
-      fecha_hasta: hasta || null,
+      // fechas eliminadas
     });
     if (res.error) {
       setError(res.error.message || 'Error al listar equipos');
@@ -73,7 +70,7 @@ export default function EquiposList() {
       setCount(res.count || 0);
     }
     setLoading(false);
-  }, [page, pageSize, q, estadoId, respId, desde, hasta]);
+  }, [page, pageSize, q, estadoId, respId]);
 
   React.useEffect(() => {
     load();
@@ -104,8 +101,8 @@ export default function EquiposList() {
         </Link>
       </div>
 
-      {/* Filtros compactos */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+      {/* Filtros (sin fechas) */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <input
           placeholder="Buscar marca, modelo o serie"
           className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm outline-none ring-0 focus:border-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:focus:border-gray-600"
@@ -113,6 +110,7 @@ export default function EquiposList() {
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && setPage(1)}
         />
+
         <select
           className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm dark:border-gray-700 dark:bg-gray-900"
           value={estadoId}
@@ -121,6 +119,7 @@ export default function EquiposList() {
           <option value="">Todos los estados</option>
           {estados.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
         </select>
+
         <select
           className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm dark:border-gray-700 dark:bg-gray-900"
           value={respId}
@@ -129,18 +128,6 @@ export default function EquiposList() {
           <option value="">Todos los responsables</option>
           {responsables.map((r) => <option key={r.user_id} value={r.user_id}>{r.full_name}</option>)}
         </select>
-        <input
-          type="date"
-          className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm dark:border-gray-700 dark:bg-gray-900"
-          value={desde}
-          onChange={(e) => { setDesde(e.target.value); setPage(1); }}
-        />
-        <input
-          type="date"
-          className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm dark:border-gray-700 dark:bg-gray-900"
-          value={hasta}
-          onChange={(e) => { setHasta(e.target.value); setPage(1); }}
-        />
       </div>
 
       {/* Card tabla */}

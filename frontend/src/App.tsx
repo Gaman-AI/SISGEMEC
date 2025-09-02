@@ -1,38 +1,46 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import AppShell from './layout/AppShell';
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-import EquiposList from './pages/equipos/EquiposList';
-import EquiposForm from './pages/equipos/EquiposForm';
+import { ThemeProvider } from "./lib/theme-provider";
+import AppLayout from "./components/layout/AppLayout";
 
-import UsersList from './pages/usuarios/UsersList';
-import UsersForm from './pages/usuarios/UsersForm';
+// Páginas existentes (relativas)
+import EquiposList from "./pages/equipos/EquiposList";
+import EquiposForm from "./pages/equipos/EquiposForm";
+import UsersList from "./pages/usuarios/UsersList";
+import UsersForm from "./pages/usuarios/UsersForm";
+
+// NUEVO: Dashboard
+import DashboardPage from "./pages/dashboard/DashboardPage";
 
 export default function App() {
   return (
-    <AppShell>
-      <Routes>
-        {/* Ruta de prueba rápida */}
-        <Route path="/health" element={<div>OK</div>} />
+    <ThemeProvider defaultTheme="light">
+      <BrowserRouter>
+        <AppLayout>
+          <Routes>
+            {/* Inicio → Dashboard (cámbialo a /equipos si quieres mantenerlo) */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-        {/* Inicio → Equipos */}
-        <Route path="/" element={<Navigate to="/equipos" replace />} />
+            {/* Dashboard */}
+            <Route path="/dashboard" element={<DashboardPage />} />
 
-        {/* Equipos */}
-        <Route path="/equipos" element={<EquiposList />} />
-        <Route path="/equipos/nuevo" element={<EquiposForm />} />
-        <Route path="/equipos/:id/editar" element={<EquiposForm />} />
+            {/* Equipos */}
+            <Route path="/equipos" element={<EquiposList />} />
+            <Route path="/equipos/nuevo" element={<EquiposForm />} />
+            <Route path="/equipos/:id/editar" element={<EquiposForm />} />
 
-        {/* Usuarios */}
-        <Route path="/usuarios" element={<UsersList />} />
-        <Route path="/usuarios/nuevo" element={<UsersForm />} />
-        <Route path="/usuarios/:id/editar" element={<UsersForm />} />
+            {/* Usuarios */}
+            <Route path="/usuarios" element={<UsersList />} />
+            <Route path="/usuarios/nuevo" element={<UsersForm />} />
+            <Route path="/usuarios/:id/editar" element={<UsersForm />} />
 
-        {/* 404 */}
-        <Route path="*" element={<div className="p-6">404</div>} />
-      </Routes>
-    </AppShell>
+            {/* Salud y 404 */}
+            <Route path="/health" element={<div>OK</div>} />
+            <Route path="*" element={<div className="p-6">404</div>} />
+          </Routes>
+        </AppLayout>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
-
-
