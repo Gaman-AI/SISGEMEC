@@ -10,6 +10,62 @@ import BadgeRole from '../../components/BadgeRole';
 import BadgeActive from '../../components/BadgeActive';
 import ConfirmDialog from '../../components/ConfirmDialog';
 
+import { Button } from '@/components/ui/button';
+import {
+  Plus,
+  Search,
+  ListFilter,
+  UserRound,
+  ChevronDown,
+  X,
+  Building2,
+  PencilLine,
+} from 'lucide-react';
+
+/* ---------- FancySelect: nativo con look shadcn + iconos ---------- */
+type FancySelectProps = {
+  id?: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+};
+function FancySelect({ id, value, onChange, placeholder, icon, children }: FancySelectProps) {
+  return (
+    <div className="relative">
+      {icon && (
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/80">
+          {icon}
+        </span>
+      )}
+
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`
+          h-11 w-full appearance-none rounded-xl
+          border border-input bg-white
+          ${icon ? 'pl-10' : 'pl-3'} pr-9
+          text-sm shadow-sm transition
+          hover:bg-slate-50
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2
+          ring-offset-background
+        `}
+      >
+        <option value="">{placeholder}</option>
+        {children}
+      </select>
+
+      <ChevronDown
+        className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/80"
+        aria-hidden
+      />
+    </div>
+  );
+}
+
 export default function UsersList() {
   // filtros
   const [search, setSearch] = React.useState('');
@@ -69,113 +125,242 @@ export default function UsersList() {
     }
   };
 
+  const limpiarFiltros = () => {
+    setSearch('');
+    setRole('');
+    setActive('');
+    setDepartment('');
+    setPage(1);
+  };
+  const hayFiltros = search || role !== '' || active !== '' || department;
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-4xl font-bold tracking-tight">Usuarios</h1>
-        <Link
-          to="/usuarios/nuevo"
-          className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-        >
-          + Nuevo usuario
+        <Link to="/usuarios/nuevo" aria-label="Registrar nuevo usuario">
+          <Button
+            className="
+              group inline-flex items-center gap-2 rounded-xl
+              bg-gradient-to-b from-slate-900 to-slate-700
+              text-white shadow-sm
+              hover:from-slate-800 hover:to-slate-600
+              active:from-slate-900 active:to-slate-700
+              focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2
+              px-4 py-2.5 text-sm font-semibold
+            "
+          >
+            <Plus className="h-4 w-4 transition-transform group-hover:scale-110" />
+            <span>Nuevo usuario</span>
+          </Button>
         </Link>
       </div>
 
-      {/* Filtros */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-        <input
-          placeholder="Buscar nombre, email o área"
-          className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm outline-none ring-0 focus:border-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:focus:border-gray-600"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && setPage(1)}
-        />
-        <select
-          className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm dark:border-gray-700 dark:bg-gray-900"
-          value={role}
-          onChange={(e) => { setRole((e.target.value || '') as UserRole | ''); setPage(1); }}
-        >
-          <option value="">Todos los roles</option>
-          <option value="ADMIN">ADMIN</option>
-          <option value="TECNICO">TECNICO</option>
-          <option value="RESPONSABLE">RESPONSABLE</option>
-        </select>
-        <select
-          className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm dark:border-gray-700 dark:bg-gray-900"
-          value={active === '' ? '' : active ? '1' : '0'}
-          onChange={(e) => {
-            const v = e.target.value;
-            setActive(v === '' ? '' : v === '1');
-            setPage(1);
-          }}
-        >
-          <option value="">Todos</option>
-          <option value="1">Activos</option>
-          <option value="0">Inactivos</option>
-        </select>
-        <input
-          placeholder="Departamento"
-          className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm outline-none ring-0 focus:border-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:focus:border-gray-600"
-          value={department}
-          onChange={(e) => setDepartment(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && setPage(1)}
-        />
+      {/* -------- Filtros (card slate) -------- */}
+      <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-4 shadow-sm md:p-5">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          {/* Buscar */}
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/80">
+              <Search className="h-4 w-4" />
+            </span>
+            <input
+              placeholder="Buscar nombre, email o área"
+              className="
+                h-11 w-full rounded-xl border border-input bg-white pl-10 pr-9 text-sm
+                shadow-sm transition outline-none
+                hover:bg-slate-50
+                focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2
+                ring-offset-background
+              "
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && setPage(1)}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => { setSearch(''); setPage(1); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground/70 hover:bg-slate-100"
+                aria-label="Limpiar búsqueda"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Rol */}
+          <FancySelect
+            id="role"
+            value={role || ''}
+            onChange={(val) => { setRole((val || '') as UserRole | ''); setPage(1); }}
+            placeholder="Todos los roles"
+            icon={<UserRound className="h-4 w-4" />}
+          >
+            <option value="ADMIN">ADMIN</option>
+            <option value="TECNICO">TECNICO</option>
+            <option value="RESPONSABLE">RESPONSABLE</option>
+          </FancySelect>
+
+          {/* Activo */}
+          <FancySelect
+            id="active"
+            value={active === '' ? '' : active ? '1' : '0'}
+            onChange={(val) => { setActive(val === '' ? '' : val === '1'); setPage(1); }}
+            placeholder="Todos"
+            icon={<ListFilter className="h-4 w-4" />}
+          >
+            <option value="1">Activos</option>
+            <option value="0">Inactivos</option>
+          </FancySelect>
+
+          {/* Departamento */}
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/80">
+              <Building2 className="h-4 w-4" />
+            </span>
+            <input
+              placeholder="Departamento"
+              className="
+                h-11 w-full rounded-xl border border-input bg-white pl-10 pr-3 text-sm
+                shadow-sm transition outline-none
+                hover:bg-slate-50
+                focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2
+                ring-offset-background
+              "
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && setPage(1)}
+            />
+          </div>
+        </div>
+
+        {/* chips + limpiar */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {hayFiltros ? (
+            <>
+              <span className="text-xs text-muted-foreground">Filtros activos:</span>
+              {search && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700">
+                  búsqueda: “{search}”
+                </span>
+              )}
+              {role && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700">
+                  rol: {role}
+                </span>
+              )}
+              {active !== '' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700">
+                  estado: {active ? 'Activos' : 'Inactivos'}
+                </span>
+              )}
+              {department && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700">
+                  depto: {department}
+                </span>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={limpiarFiltros}
+                className="ml-1 h-8 rounded-full px-3 text-xs text-slate-700 hover:bg-slate-100"
+              >
+                Limpiar
+              </Button>
+            </>
+          ) : (
+            <span className="text-xs text-muted-foreground">Usa los filtros para refinar la lista.</span>
+          )}
+        </div>
       </div>
 
-      {/* Tabla */}
-      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+      {/* -------------------- Tabla estilizada -------------------- */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="sticky top-0 z-10 bg-gray-100/80 text-left text-gray-700 backdrop-blur dark:bg-gray-900/70 dark:text-gray-300">
-              <tr>
-                <th className="px-4 py-3">Nombre</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Departamento</th>
-                <th className="px-4 py-3">Teléfono</th>
-                <th className="px-4 py-3">Ubicación</th>
-                <th className="px-4 py-3">Rol</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3 text-right">Acciones</th>
+          <table className="min-w-full table-fixed text-sm">
+            <colgroup>
+              <col className="w-[220px]" />
+              <col className="w-[260px]" />
+              <col className="w-[180px]" />
+              <col className="w-[140px]" />
+              <col className="w-[160px]" />
+              <col className="w-[120px]" />
+              <col className="w-[120px]" />
+              <col className="w-[160px]" />
+            </colgroup>
+
+            {/* ENCABEZADO resaltado en slate-100 */}
+            <thead
+              className="
+                sticky top-0 z-10 text-left
+                bg-slate-100/90 backdrop-blur
+                border-b border-slate-200
+              "
+            >
+              <tr className="text-[13px] uppercase tracking-wide text-slate-600">
+                <th className="px-4 py-3 font-semibold">Nombre</th>
+                <th className="px-4 py-3 font-semibold">Email</th>
+                <th className="px-4 py-3 font-semibold">Departamento</th>
+                <th className="px-4 py-3 font-semibold">Teléfono</th>
+                <th className="px-4 py-3 font-semibold">Ubicación</th>
+                <th className="px-4 py-3 font-semibold">Rol</th>
+                <th className="px-4 py-3 font-semibold">Estado</th>
+                <th className="px-4 py-3 text-right font-semibold">Acciones</th>
               </tr>
             </thead>
-            <tbody>
+
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td className="px-4 py-8 text-center" colSpan={8}>Cargando…</td></tr>
+                <tr>
+                  <td className="px-4 py-8 text-center text-slate-500" colSpan={8}>
+                    Cargando…
+                  </td>
+                </tr>
               ) : error ? (
-                <tr><td className="px-4 py-8 text-center text-rose-600" colSpan={8}>{error}</td></tr>
+                <tr>
+                  <td className="px-4 py-8 text-center text-rose-600" colSpan={8}>
+                    {error}
+                  </td>
+                </tr>
               ) : rows.length === 0 ? (
-                <tr><td className="px-4 py-8 text-center" colSpan={8}>No se encontraron usuarios.</td></tr>
+                <tr>
+                  <td className="px-4 py-10 text-center text-slate-500" colSpan={8}>
+                    No se encontraron usuarios.
+                  </td>
+                </tr>
               ) : (
-                rows.map((u) => (
+                rows.map((u, idx) => (
                   <tr
                     key={u.user_id}
-                    className="border-t border-gray-100 transition hover:bg-gray-50/80 even:bg-gray-50/60 dark:border-gray-800 dark:hover:bg-white/5 dark:even:bg-white/5"
+                    className={`
+                      transition
+                      ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}
+                      hover:bg-slate-50
+                    `}
                   >
-                    <td className="px-4 py-3">{u.full_name}</td>
-                    <td className="px-4 py-3">{u.email ?? '-'}</td>
-                    <td className="px-4 py-3">{u.department ?? '-'}</td>
-                    <td className="px-4 py-3">{u.phone ?? '-'}</td>
-                    <td className="px-4 py-3">{u.location ?? '-'}</td>
+                    <td className="px-4 py-3 text-slate-700">{u.full_name}</td>
+                    <td className="px-4 py-3 text-slate-700">{u.email ?? '-'}</td>
+                    <td className="px-4 py-3 text-slate-700">{u.department ?? '-'}</td>
+                    <td className="px-4 py-3 text-slate-700">{u.phone ?? '-'}</td>
+                    <td className="px-4 py-3 text-slate-700">{u.location ?? '-'}</td>
                     <td className="px-4 py-3"><BadgeRole role={u.role} /></td>
                     <td className="px-4 py-3"><BadgeActive active={u.active} /></td>
                     <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-3">
                         <Link
                           to={`/usuarios/${u.user_id}/editar`}
-                          className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                          className="inline-flex items-center gap-1.5 text-sm text-slate-700 hover:text-slate-900"
                         >
-                          Editar
+                          <PencilLine className="h-4 w-4" />
+                          <span>Editar</span>
                         </Link>
                         <button
                           onClick={() => onToggleActive(u)}
-                          className={`rounded-lg border px-2.5 py-1.5 text-xs ${
-                            u.active
-                              ? 'border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/40'
-                              : 'border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/40'
-                          }`}
+                          className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-700"
                         >
-                          {u.active ? 'Desactivar' : 'Activar'}
+                          <span>{u.active ? 'Desactivar' : 'Activar'}</span>
                         </button>
                       </div>
                     </td>
@@ -189,28 +374,36 @@ export default function UsersList() {
 
       {/* Paginación */}
       <div className="flex items-center justify-between text-sm">
-        <div>Página {page} de {totalPages} · {count} registros</div>
-        <div className="space-x-2">
-          <button
-            className="rounded-lg border border-gray-300 px-3 py-1.5 disabled:opacity-50 dark:border-gray-700"
+        <div className="text-slate-600">
+          Página {page} de {totalPages} · {count} registros
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-lg"
             onClick={() => setPage((prev: number) => Math.max(1, prev - 1))}
             disabled={page <= 1}
           >
             Anterior
-          </button>
-          <button
-            className="rounded-lg border border-gray-300 px-3 py-1.5 disabled:opacity-50 dark:border-gray-700"
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-lg"
             onClick={() => setPage((prev: number) => Math.min(totalPages, prev + 1))}
             disabled={page >= totalPages}
           >
             Siguiente
-          </button>
-          <button
-            className="rounded-lg border border-gray-300 px-3 py-1.5 dark:border-gray-700"
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-lg"
             onClick={load}
           >
             Refrescar
-          </button>
+          </Button>
         </div>
       </div>
     </div>
