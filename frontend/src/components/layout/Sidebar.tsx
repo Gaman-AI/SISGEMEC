@@ -8,6 +8,8 @@ import {
   LayoutDashboard,
   Users,
   Laptop,
+  ListChecks,
+  Wrench,
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
@@ -25,6 +27,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { label: "Usuarios", to: "/usuarios", icon: Users },
   { label: "Equipos", to: "/equipos", icon: Laptop },
+  { label: "Tipos de Servicio", to: "/tipos-servicio", icon: ListChecks },
+  { label: "Servicios", to: "/servicios", icon: Wrench },
 ];
 
 export default function Sidebar() {
