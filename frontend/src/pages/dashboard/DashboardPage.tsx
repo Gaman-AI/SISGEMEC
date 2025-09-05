@@ -5,6 +5,10 @@ import { Separator } from "../../components/ui/separator";
 import { Monitor, Users as UsersIcon, Wrench, Ticket } from "lucide-react";
 import { listEquipos } from "../../data/equipos.repository";
 
+/* ⬇️ NUEVO: imports para navegar y botón */
+import { useNavigate } from "react-router-dom";
+import { Button } from "../../components/ui/button";
+
 /** Tipado mínimo del retorno que necesitamos aquí (no rompe nada) */
 type ListEquiposResp =
   | { data: unknown[] | null; count: number | null; error?: { message?: string } | null }
@@ -25,6 +29,9 @@ export default function DashboardPage() {
   const [usuariosActivos, setUsuariosActivos] = React.useState<number>(0);
   const [mantenimientosSemana, setMantenimientosSemana] = React.useState<number>(0);
   const [solicitudesAbiertas, setSolicitudesAbiertas] = React.useState<number>(0);
+
+  /* ⬇️ NUEVO: hook para navegar */
+  const navigate = useNavigate();
 
   React.useEffect(() => {
     (async () => {
@@ -150,6 +157,13 @@ export default function DashboardPage() {
                 <div className="text-3xl font-bold">{solicitudesAbiertas}</div>
                 <div className="text-xs text-muted-foreground mt-1">
                   Abiertas y pendientes de atención
+                </div>
+
+                {/* ⬇️ NUEVO: botón de acceso directo a la bandeja */}
+                <div className="mt-4">
+                  <Button className="rounded-xl" onClick={() => navigate("/solicitudes")}>
+                    Abrir bandeja
+                  </Button>
                 </div>
               </CardContent>
             </Card>

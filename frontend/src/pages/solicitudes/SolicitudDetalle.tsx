@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getSolicitudById, updateSolicitudEstado, linkSolicitudToServicio } from "@/data/solicitudes.repository";
-import { estadoSolicitudPillClasses } from "@/data/solicitudes.types";
+import { ESTADOS_SOLICITUD_LABEL } from "@/data/solicitudes.types";
 import { Button } from "@/components/ui/button";
 
 function useToast() {
@@ -40,7 +40,7 @@ export default function SolicitudDetalle() {
 
   const changeEstado = async (next: number, msg: string) => {
     if (!id) return;
-    const { ok, error } = await updateSolicitudEstado(Number(id), next);
+    const { ok, error } = await updateSolicitudEstado(Number(id), next as any);
     if (error || !ok) return show(error?.message || "Error", "error");
     show(msg);
     load();
@@ -70,7 +70,11 @@ export default function SolicitudDetalle() {
           <div className="text-sm text-slate-700">Equipo: {row.equipo_label}</div>
           <div className="text-sm text-slate-700">Responsable: {row.solicitante_nombre || '-'}</div>
           <div className="text-sm text-slate-700">Descripción: {row.descripcion || '-'}</div>
-          <div className="text-sm text-slate-700">Estado: <span className={estadoSolicitudPillClasses(row.estado_solicitud_id)}>{row.estado_solicitud_nombre}</span></div>
+          <div className="text-sm text-slate-700">Estado: 
+            <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-xs text-slate-700 ml-2">
+              {row.estado_solicitud_nombre}
+            </span>
+          </div>
 
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" className="rounded-xl" onClick={() => changeEstado(2, "Marcada en revisión")}>En revisión</Button>

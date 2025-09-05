@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { listSolicitudesAdmin } from "@/data/solicitudes.repository";
-import { PAGE_SIZE_SOLICITUDES, estadoSolicitudPillClasses } from "@/data/solicitudes.types";
+import { PAGE_SIZE_SOLICITUDES, ESTADOS_SOLICITUD_LABEL } from "@/data/solicitudes.types";
 import type { SolicitudRow } from "@/data/solicitudes.types";
 import { Button } from "@/components/ui/button";
 import { Search, Filter, X } from "lucide-react";
@@ -108,7 +108,11 @@ export default function SolicitudesList() {
                   <td className="px-4 py-3">{new Date(r.created_at || '').toLocaleDateString()}</td>
                   <td className="px-4 py-3">{r.equipo_label || '-'}</td>
                   <td className="px-4 py-3">{r.solicitante_nombre || '-'}</td>
-                  <td className="px-4 py-3"><span className={estadoSolicitudPillClasses(r.estado_solicitud_id)}>{r.estado_solicitud_nombre || '-'}</span></td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-xs text-slate-700">
+                      {r.estado_solicitud_nombre || '-'}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <Button variant="outline" className="rounded-xl" onClick={() => navigate(`/solicitudes/${r.solicitud_id}`)}>Revisar</Button>
                   </td>

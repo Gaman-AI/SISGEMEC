@@ -57,7 +57,7 @@ function FancySelect({ id, value, onChange, placeholder, icon, children }: Fancy
         className={`
           h-11 w-full appearance-none rounded-xl
           border border-input bg-white
-          ${icon ? 'pl-10' : 'pl-3'} pr-9
+          ${icon ? "pl-10" : "pl-3"} pr-9
           text-sm shadow-sm outline-none
           transition-colors
           focus:border-gray-400 focus:ring-0
@@ -92,10 +92,12 @@ export default function ServiciosList() {
   const [toDate, setToDate] = React.useState("");
 
   // Catálogos
-  const [estados, setEstados] = React.useState<Array<{estado_servicio_id: number; nombre: string}>>([]);
-  const [tipos, setTipos] = React.useState<Array<{tipo_servicio_id: number; nombre: string}>>([]);
-  const [tecnicos, setTecnicos] = React.useState<Array<{user_id: string; full_name: string | null}>>([]);
-  const [equipos, setEquipos] = React.useState<Array<{equipo_id: number; tipo_equipo: string | null; marca: string | null; modelo: string | null; num_serie: string | null}>>([]);
+  const [estados, setEstados] = React.useState<Array<{ estado_servicio_id: number; nombre: string }>>([]);
+  const [tipos, setTipos] = React.useState<Array<{ tipo_servicio_id: number; nombre: string }>>([]);
+  const [tecnicos, setTecnicos] = React.useState<Array<{ user_id: string; full_name: string | null }>>([]);
+  const [equipos, setEquipos] = React.useState<
+    Array<{ equipo_id: number; tipo_equipo: string | null; marca: string | null; modelo: string | null; num_serie: string | null }>
+  >([]);
 
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE_SERVICIOS));
 
@@ -103,52 +105,57 @@ export default function ServiciosList() {
     try {
       // Cargar catálogos en paralelo
       const [estadosRes, tiposRes, tecnicosRes, equiposRes] = await Promise.all([
-        fetch('/api/estados-servicio').then(r => r.json()).catch(() => [
-          {estado_servicio_id: 1, nombre: 'Pendiente'},
-          {estado_servicio_id: 2, nombre: 'En atención'},
-          {estado_servicio_id: 3, nombre: 'Atendido'}
-        ]),
-        fetch('/api/tipos-servicio').then(r => r.json()).catch(() => []),
-        fetch('/api/tecnicos').then(r => r.json()).catch(() => []),
-        fetch('/api/equipos').then(r => r.json()).catch(() => [])
+        fetch("/api/estados-servicio")
+          .then((r) => r.json())
+          .catch(() => [
+            { estado_servicio_id: 1, nombre: "Pendiente" },
+            { estado_servicio_id: 2, nombre: "En atención" },
+            { estado_servicio_id: 3, nombre: "Atendido" },
+          ]),
+        fetch("/api/tipos-servicio").then((r) => r.json()).catch(() => []),
+        fetch("/api/tecnicos").then((r) => r.json()).catch(() => []),
+        fetch("/api/equipos").then((r) => r.json()).catch(() => []),
       ]);
-      
+
       setEstados(estadosRes);
       setTipos(tiposRes);
       setTecnicos(tecnicosRes);
       setEquipos(equiposRes);
     } catch (e) {
-      console.error('Error cargando catálogos:', e);
+      console.error("Error cargando catálogos:", e);
     }
   }, []);
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    
-    const params = {
-      page,
-      pageSize: PAGE_SIZE_SERVICIOS,
-      search: search.trim() || undefined,
-      estadoId,
-      tipoId,
-      tecnicoId,
-      equipoId,
-      fromDate: fromDate || undefined,
-      toDate: toDate || undefined,
-    };
+  const load = React.useCallback(
+    async () => {
+      setLoading(true);
+      setError(null);
 
-    const res = await listServicios(params);
-    if (res.error) {
-      setError(res.error);
-      setRows([]);
-      setCount(0);
-    } else {
-      setRows(res.data);
-      setCount(res.count);
-    }
-    setLoading(false);
-  }, [page, search, estadoId, tipoId, tecnicoId, equipoId, fromDate, toDate]);
+      const params = {
+        page,
+        pageSize: PAGE_SIZE_SERVICIOS,
+        search: search.trim() || undefined,
+        estadoId,
+        tipoId,
+        tecnicoId,
+        equipoId,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
+      };
+
+      const res = await listServicios(params);
+      if (res.error) {
+        setError(res.error);
+        setRows([]);
+        setCount(0);
+      } else {
+        setRows(res.data);
+        setCount(res.count);
+      }
+      setLoading(false);
+    },
+    [page, search, estadoId, tipoId, tecnicoId, equipoId, fromDate, toDate]
+  );
 
   React.useEffect(() => {
     loadCatálogos();
@@ -176,9 +183,14 @@ export default function ServiciosList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-4xl font-bold tracking-tight">Servicios</h1>
-        <Button onClick={() => navigate('/servicios/nuevo')} className="rounded-xl">
-          + Nuevo servicio
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" className="rounded-xl" onClick={() => navigate('/solicitudes')}>
+            Solicitudes de servicio
+          </Button>
+          <Button onClick={() => navigate('/servicios/nuevo')} className="rounded-xl">
+            + Nuevo servicio
+          </Button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -199,7 +211,7 @@ export default function ServiciosList() {
               placeholder="Buscar por equipo, descripción, técnico..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && setPage(1)}
+              onKeyDown={(e) => e.key === "Enter" && setPage(1)}
             />
           </div>
 
@@ -249,7 +261,7 @@ export default function ServiciosList() {
           >
             {tecnicos.map((t) => (
               <option key={t.user_id} value={t.user_id}>
-                {t.full_name || 'Sin nombre'}
+                {t.full_name || "Sin nombre"}
               </option>
             ))}
           </FancySelect>
@@ -266,7 +278,7 @@ export default function ServiciosList() {
           >
             {equipos.map((e) => (
               <option key={e.equipo_id} value={e.equipo_id}>
-                {[e.tipo_equipo, e.marca, e.modelo, e.num_serie].filter(Boolean).join(' - ')}
+                {[e.tipo_equipo, e.marca, e.modelo, e.num_serie].filter(Boolean).join(" - ")}
               </option>
             ))}
           </FancySelect>
@@ -318,7 +330,7 @@ export default function ServiciosList() {
             )}
             {estadoId && (
               <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs text-blue-800">
-                Estado: {estados.find(e => e.estado_servicio_id === estadoId)?.nombre}
+                Estado: {estados.find((e) => e.estado_servicio_id === estadoId)?.nombre}
                 <button onClick={() => setEstadoId(undefined)} className="hover:text-blue-600">
                   <X className="h-3 w-3" />
                 </button>
@@ -326,7 +338,7 @@ export default function ServiciosList() {
             )}
             {tipoId && (
               <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs text-blue-800">
-                Tipo: {tipos.find(t => t.tipo_servicio_id === tipoId)?.nombre}
+                Tipo: {tipos.find((t) => t.tipo_servicio_id === tipoId)?.nombre}
                 <button onClick={() => setTipoId(undefined)} className="hover:text-blue-600">
                   <X className="h-3 w-3" />
                 </button>
@@ -334,7 +346,7 @@ export default function ServiciosList() {
             )}
             {tecnicoId && (
               <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs text-blue-800">
-                Admin asignado: {tecnicos.find(t => t.user_id === tecnicoId)?.full_name}
+                Admin asignado: {tecnicos.find((t) => t.user_id === tecnicoId)?.full_name}
                 <button onClick={() => setTecnicoId(undefined)} className="hover:text-blue-600">
                   <X className="h-3 w-3" />
                 </button>
@@ -342,7 +354,7 @@ export default function ServiciosList() {
             )}
             {equipoId && (
               <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs text-blue-800">
-                Equipo: {equipos.find(e => e.equipo_id === equipoId)?.num_serie}
+                Equipo: {equipos.find((e) => e.equipo_id === equipoId)?.num_serie}
                 <button onClick={() => setEquipoId(undefined)} className="hover:text-blue-600">
                   <X className="h-3 w-3" />
                 </button>
@@ -350,16 +362,19 @@ export default function ServiciosList() {
             )}
             {(fromDate || toDate) && (
               <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs text-blue-800">
-                Fechas: {fromDate || '...'} - {toDate || '...'}
-                <button onClick={() => { setFromDate(""); setToDate(""); }} className="hover:text-blue-600">
+                Fechas: {fromDate || "..."} - {toDate || "..."}
+                <button
+                  onClick={() => {
+                    setFromDate("");
+                    setToDate("");
+                  }}
+                  className="hover:text-blue-600"
+                >
                   <X className="h-3 w-3" />
                 </button>
               </span>
             )}
-            <button
-              onClick={clearFilters}
-              className="text-xs text-slate-500 hover:text-slate-700 underline"
-            >
+            <button onClick={clearFilters} className="text-xs text-slate-500 hover:text-slate-700 underline">
               Limpiar todos
             </button>
           </div>
@@ -392,26 +407,38 @@ export default function ServiciosList() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td className="px-4 py-8 text-center" colSpan={6}>Cargando…</td></tr>
+                <tr>
+                  <td className="px-4 py-8 text-center" colSpan={6}>
+                    Cargando…
+                  </td>
+                </tr>
               ) : error ? (
-                <tr><td className="px-4 py-8 text-center text-rose-600" colSpan={6}>{error}</td></tr>
+                <tr>
+                  <td className="px-4 py-8 text-center text-rose-600" colSpan={6}>
+                    {error}
+                  </td>
+                </tr>
               ) : rows.length === 0 ? (
-                <tr><td className="px-4 py-8 text-center" colSpan={6}>No hay servicios registrados.</td></tr>
+                <tr>
+                  <td className="px-4 py-8 text-center" colSpan={6}>
+                    No hay servicios registrados.
+                  </td>
+                </tr>
               ) : (
                 rows.map((r) => (
                   <tr
                     key={r.servicio_id}
-                    className="border-t border-gray-100 transition hover:bg-gray-50/80 even:bg-gray-50/60 dark:border-gray-800 dark:hover:bg-white/5 dark:even:bg-white/5"
+                    className="border-t border-gray-100 transition hover:bg-gray-50/80 even:bg-gray-50/60 dark:border-gray-800 dark:hover:bg-white/5 dark:even:bg.white/5"
                   >
                     <td className="px-4 py-3">{new Date(r.fecha_servicio).toLocaleDateString()}</td>
-                    <td className="px-4 py-3">{r.equipo_label || '-'}</td>
-                    <td className="px-4 py-3">{r.tipo_servicio_nombre || '-'}</td>
+                    <td className="px-4 py-3">{r.equipo_label || "-"}</td>
+                    <td className="px-4 py-3">{r.tipo_servicio_nombre || "-"}</td>
                     <td className="px-4 py-3">
                       <span className={estadoToPillClasses(r.estado_servicio_id)}>
-                        {r.estado_servicio_nombre || 'Sin estado'}
+                        {r.estado_servicio_nombre || "Sin estado"}
                       </span>
                     </td>
-                    <td className="px-4 py-3">{r.tecnico_nombre || '-'}</td>
+                    <td className="px-4 py-3">{r.tecnico_nombre || "-"}</td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
                         <Link
@@ -433,7 +460,9 @@ export default function ServiciosList() {
 
       {/* Paginación */}
       <div className="flex items-center justify-between text-sm">
-        <div>Página {page} de {totalPages} · {count} servicios</div>
+        <div>
+          Página {page} de {totalPages} · {count} servicios
+        </div>
         <div className="space-x-2">
           <button
             className="rounded-lg border border-gray-300 px-3 py-1.5 disabled:opacity-50 dark:border-gray-700"
@@ -459,3 +488,4 @@ export default function ServiciosList() {
     </div>
   );
 }
+

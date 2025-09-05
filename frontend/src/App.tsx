@@ -17,7 +17,7 @@ import MisEquiposList from "./pages/solicitudes/MisEquiposList";
 import MisSolicitudesList from "./pages/solicitudes/MisSolicitudesList";
 import MisSolicitudesForm from "./pages/solicitudes/MisSolicitudesForm";
 import MisSolicitudDetalle from "./pages/solicitudes/MisSolicitudDetalle";
-import SolicitudesList from "./pages/solicitudes/SolicitudesList";
+import SolicitudesDeServicioList from "./pages/solicitudes/SolicitudesDeServicioList";
 import SolicitudDetalle from "./pages/solicitudes/SolicitudDetalle";
 
 // NUEVO: Dashboard
@@ -62,7 +62,7 @@ export default function App() {
             <Route path="/mis-solicitudes/:id" element={<MisSolicitudDetalle />} />
 
             {/* Admin */}
-            <Route path="/solicitudes" element={<SolicitudesList />} />
+            <Route path="/solicitudes" element={<SolicitudesDeServicioList />} />
             <Route path="/solicitudes/:id" element={<SolicitudDetalle />} />
 
             {/* Salud y 404 */}
