@@ -1,5 +1,5 @@
 // src/data/users.repository.ts
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '@/lib/supabase';
 import type { ListFiltros, UserRow, UserRole } from './users.types';
 import { nullify } from './users.types';
 

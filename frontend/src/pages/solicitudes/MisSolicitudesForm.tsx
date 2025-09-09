@@ -12,6 +12,7 @@ import {
 } from "@/data/solicitudes.types";
 import { listEquiposPropiosLite, createSolicitud } from "@/data/solicitudes.repository";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/auth/auth.store";
 
 function useToast() {
   const [msg, setMsg] = React.useState<string | null>(null);
@@ -42,6 +43,7 @@ export default function MisSolicitudesForm() {
   const navigate = useNavigate();
   const { show, Toast } = useToast();
   const [params] = useSearchParams();
+  const { state } = useAuth();
 
   // Catálogo de equipos del responsable
   const [equipos, setEquipos] = React.useState<EquipoLite[]>([]);
@@ -63,10 +65,10 @@ export default function MisSolicitudesForm() {
 
   // Prefetch equipos propios
   React.useEffect(() => {
+    if (state.status !== "authenticated") return;
     (async () => {
       try {
-        // TODO: reemplazar por el userId de sesión real
-        const solicitanteId = (window as any).__currentUserId || "me";
+        const solicitanteId = state.profile.user_id;
         const { data, error } = await listEquiposPropiosLite(solicitanteId);
         if (error) throw error;
         setEquipos(data);
@@ -85,16 +87,16 @@ export default function MisSolicitudesForm() {
         setLoading(false);
       }
     })();
-  }, [params, setValue, show]);
+  }, [params, setValue, show, state]);
 
   const onSubmit: SubmitHandler<SolicitudFormValues> = async (values) => {
+    if (state.status !== "authenticated") return;
     try {
-      // TODO: reemplazar por el userId real desde sesión
-      const solicitanteId = (window as any).__currentUserId || "me";
+      const solicitanteId = state.profile.user_id;
 
       const { ok, error } = await createSolicitud({
         equipo_id: values.equipo_id,
-        solicitante_id: solicitanteId as string,
+        solicitante_id: solicitanteId,
         descripcion: values.descripcion,
       });
 

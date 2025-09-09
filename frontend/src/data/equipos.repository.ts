@@ -1,5 +1,5 @@
 // A:\Proyectos\SISGEMEC\frontend\src\data\equipos.repository.ts
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '@/lib/supabase';
 
 type ListArgs = {
   page?: number;

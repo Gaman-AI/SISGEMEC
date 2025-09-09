@@ -1,4 +1,4 @@
-import { supabase } from "../lib/supabaseClient";
+import { supabase } from "@/lib/supabase";
 import type { TipoServicioRow } from "./tipos-servicio.types";
 import { nullify } from "./tipos-servicio.types";
 

@@ -1,7 +1,8 @@
 import * as React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/hooks/useSidebar";
+import { useAuth } from "@/auth/auth.store";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -12,6 +13,8 @@ import {
   Wrench,
   ChevronsLeft,
   ChevronsRight,
+  LogOut,
+  FileText,
 } from "lucide-react";
 import {
   Tooltip,
@@ -23,20 +26,40 @@ import { Brand } from "@/components/common/Brand";
 
 type NavItem = { label: string; to: string; icon: React.ComponentType<{ className?: string }> };
 
-const NAV_ITEMS: NavItem[] = [
+const ADMIN_NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { label: "Usuarios", to: "/usuarios", icon: Users },
   { label: "Equipos", to: "/equipos", icon: Laptop },
   { label: "Tipos de Servicio", to: "/tipos-servicio", icon: ListChecks },
   { label: "Servicios", to: "/servicios", icon: Wrench },
+  { label: "Solicitudes", to: "/solicitudes", icon: FileText },
+];
+
+const RESPONSABLE_NAV_ITEMS: NavItem[] = [
+  { label: "Mis Equipos", to: "/mis-equipos", icon: Laptop },
+  { label: "Mis Solicitudes", to: "/mis-solicitudes", icon: FileText },
 ];
 
 export default function Sidebar() {
   const { collapsed, set, toggle } = useSidebar();
+  const { state, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const handleNavClick = React.useCallback(() => {
     if (window.innerWidth < 1024) set(true);
   }, [set]);
+
+  const handleLogout = React.useCallback(async () => {
+    await signOut();
+    navigate("/login", { replace: true });
+  }, [signOut, navigate]);
+
+  // No mostrar sidebar si no está autenticado
+  if (state.status !== "authenticated") {
+    return null;
+  }
+
+  const navItems = state.profile.role === "ADMIN" ? ADMIN_NAV_ITEMS : RESPONSABLE_NAV_ITEMS;
 
   return (
     <aside
@@ -58,7 +81,7 @@ export default function Sidebar() {
 
       <TooltipProvider delayDuration={100}>
         <nav className="mt-2 px-2 space-y-1">
-          {NAV_ITEMS.map(({ label, to, icon: Icon }) => {
+          {navItems.map(({ label, to, icon: Icon }) => {
             const item = (
               <NavLink
                 key={to}
@@ -85,6 +108,24 @@ export default function Sidebar() {
               item
             );
           })}
+          
+          {/* Separador antes del logout */}
+          <div className="my-2">
+            <Separator />
+          </div>
+          
+          {/* Botón de logout */}
+          <Button
+            variant="ghost"
+            onClick={handleLogout}
+            className={cn(
+              "w-full justify-start gap-3 px-3 py-2 text-sm",
+              "hover:bg-accent hover:text-accent-foreground transition-colors"
+            )}
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            <span className={cn("truncate", collapsed && "sr-only")}>Cerrar sesión</span>
+          </Button>
         </nav>
       </TooltipProvider>
     </aside>

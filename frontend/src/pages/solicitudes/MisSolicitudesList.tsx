@@ -5,6 +5,7 @@ import { PAGE_SIZE_SOLICITUDES, ESTADOS_SOLICITUD_LABEL } from "@/data/solicitud
 import type { SolicitudRow } from "@/data/solicitudes.types";
 import { Button } from "@/components/ui/button";
 import { Search, Filter, X } from "lucide-react";
+import { useAuth } from "@/auth/auth.store";
 
 function useToast() {
   const [msg, setMsg] = React.useState<string | null>(null);
@@ -36,6 +37,7 @@ function useToast() {
 export default function MisSolicitudesList() {
   const navigate = useNavigate();
   const { show, Toast } = useToast();
+  const { state } = useAuth();
 
   const [rows, setRows] = React.useState<SolicitudRow[]>([]);
   const [count, setCount] = React.useState(0);
@@ -48,16 +50,16 @@ export default function MisSolicitudesList() {
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE_SOLICITUDES));
 
   const load = React.useCallback(async () => {
+    if (state.status !== "authenticated") return;
     setLoading(true);
     setError(null);
     try {
-      // TODO: sustituir por userId real desde sesión
-      const solicitanteId = (window as any).__currentUserId || "me";
+      const solicitanteId = state.profile.user_id;
       const { data, count: c, error: e } = await listMisSolicitudes({
         page,
         pageSize: PAGE_SIZE_SOLICITUDES,
         search,
-        solicitanteId: solicitanteId as string,
+        solicitanteId,
       });
       if (e) throw e;
       setRows(data);
@@ -67,7 +69,7 @@ export default function MisSolicitudesList() {
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, search, state]);
 
   React.useEffect(() => {
     void load();

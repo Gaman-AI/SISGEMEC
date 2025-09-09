@@ -1,14 +1,12 @@
 import * as React from "react";
+import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
-import { cn } from "../../lib/utils";
-import { useSidebar } from "../../hooks/useSidebar";
+import { cn } from "@/lib/utils";
+import { useSidebar } from "@/hooks/useSidebar";
 
-type Props = { children?: React.ReactNode };
-
-export default function AppLayout({ children }: Props) {
+export default function AppLayout() {
   const { collapsed } = useSidebar();
-
   return (
     <div className="flex">
       <Sidebar />
@@ -16,7 +14,7 @@ export default function AppLayout({ children }: Props) {
         <Topbar />
         <main className="flex-1 p-4">
           <div className="mx-auto w-full max-w-[1400px]">
-            {children}
+            <Outlet />
           </div>
         </main>
       </div>

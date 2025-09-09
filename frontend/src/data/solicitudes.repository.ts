@@ -1,6 +1,5 @@
 // frontend/src/data/solicitudes.repository.ts
-
-import supabase from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabase";
 import {
   ESTADOS_SOLICITUD_LABEL,
   type ListSolicitudesParams,
@@ -9,8 +8,24 @@ import {
   type ResponsableLite,
   type EstadoSolicitudId,
   buildEquipoLabel,
-  nullify,
+  // ⬇️ quitamos import de nullify desde types para evitar dependencias rotas
+  // nullify,
 } from "./solicitudes.types";
+
+/** Utilidad local: convierte "" -> null y preserva otros tipos */
+function nullifyLocal<T extends Record<string, any>>(obj: T): Record<string, any> {
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v === undefined) continue;
+    if (typeof v === "string") {
+      const t = v.trim();
+      out[k] = t === "" ? null : t;
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
 
 /* =========================================================
    Catálogos lite (para denormalizar labels en listados)
@@ -58,8 +73,13 @@ export async function listTiposServicioLite(): Promise<{ data: Array<{ tipo_serv
    ✅ Equipos del responsable autenticado (para MisEquiposList)
    ========================================================= */
 export async function listEquiposPropiosLite(
-  userId: string
+  userId: string | null | undefined
 ): Promise<{ data: EquipoLite[]; error: Error | null }> {
+  // ⚠️ Hardening: si no hay userId o viene "me", no llamamos, retornamos vacío (evita 400)
+  if (!userId || userId === "me") {
+    return { data: [], error: null };
+  }
+
   const { data, error } = await supabase
     .from("equipos")
     .select("equipo_id, tipo_equipo, marca, modelo, num_serie")
@@ -77,10 +97,15 @@ export async function createSolicitud(payload: {
   solicitante_id: string;
   descripcion?: string;
 }): Promise<{ ok: boolean; error: Error | null }> {
+  // ⚠️ si falta solicitante_id, evitamos llamada inválida
+  if (!payload.solicitante_id || payload.solicitante_id === "me") {
+    return { ok: false, error: new Error("Falta solicitante_id válido") };
+  }
+
   const insert = {
     equipo_id: payload.equipo_id,
     solicitante_id: payload.solicitante_id,
-    descripcion: nullify({ descripcion: payload.descripcion ?? "" }).descripcion, // "" -> null
+    descripcion: nullifyLocal({ descripcion: payload.descripcion ?? "" }).descripcion, // "" -> null
     estado_solicitud_id: 1 as const, // Enviada
   };
 
@@ -144,9 +169,15 @@ export async function listSolicitudesAdmin(
    ✅ Listado del Responsable (sus propias solicitudes)
    ========================================================= */
 export async function listMisSolicitudes(
-  params: ListSolicitudesParams & { solicitanteId: string }
+  params: ListSolicitudesParams & { solicitanteId: string | null | undefined }
 ): Promise<{ data: SolicitudRow[]; count: number; error: Error | null }> {
   const { page, pageSize, search, estadoId, fromDate, toDate, solicitanteId } = params;
+
+  // ⚠️ Hardening: si no hay solicitanteId o viene "me", devolvemos vacío (evita 400)
+  if (!solicitanteId || solicitanteId === "me") {
+    return { data: [], count: 0, error: null };
+  }
+
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
@@ -241,7 +272,7 @@ export async function updateSolicitudEstado(
 ): Promise<{ ok: boolean; error: Error | null }> {
   const { error } = await supabase
     .from("solicitudes_servicio")
-    .update({ 
+    .update({
       estado_solicitud_id: estadoId,
       updated_at: new Date().toISOString()
     })
@@ -263,7 +294,7 @@ export async function linkSolicitudToServicio(
 ): Promise<{ ok: boolean; error: Error | null }> {
   const { error } = await supabase
     .from("solicitudes_servicio")
-    .update({ 
+    .update({
       servicio_id: servicioId,
       estado_solicitud_id: 5, // Convertida
       updated_at: new Date().toISOString()
@@ -296,7 +327,7 @@ export async function convertirSolicitudEnServicio(args: {
 
   if (error) return { ok: false, servicio_id: null, error: new Error(error.message) };
 
-  const newId = typeof data === "number" ? data : Number(data?.servicio_id ?? NaN);
+  const newId = typeof data === "number" ? data : Number((data as any)?.servicio_id ?? NaN);
   if (!newId || Number.isNaN(newId)) {
     return { ok: false, servicio_id: null, error: new Error("No se obtuvo servicio_id del RPC") };
   }

@@ -1,9 +1,11 @@
+// frontend/src/pages/solicitudes/MisEquiposList.tsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { listEquiposPropiosLite } from "@/data/solicitudes.repository";
 import type { EquipoLite } from "@/data/solicitudes.types";
 import { buildEquipoLabel } from "@/data/solicitudes.types";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/auth/auth.store";
 
 function useToast() {
   const [msg, setMsg] = React.useState<string | null>(null);
@@ -23,15 +25,17 @@ function useToast() {
 export default function MisEquiposList() {
   const navigate = useNavigate();
   const { show, Toast } = useToast();
+  const { state } = useAuth();
   const [rows, setRows] = React.useState<EquipoLite[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
+    if (state.status !== "authenticated") return;
     (async () => {
       try {
-        // TODO: obtener userId desde sesión; placeholder con "me" endpoint si existiera
-        const userId = (window as any).__currentUserId || "me";
-        const { data, error } = await listEquiposPropiosLite(userId as string);
+        setLoading(true);
+        const userId = state.profile.user_id;
+        const { data, error } = await listEquiposPropiosLite(userId);
         if (error) throw error;
         setRows(data);
       } catch (e: any) {
@@ -40,7 +44,7 @@ export default function MisEquiposList() {
         setLoading(false);
       }
     })();
-  }, [show]);
+  }, [show, state]);
 
   return (
     <div className="space-y-5">
@@ -81,5 +85,6 @@ export default function MisEquiposList() {
     </div>
   );
 }
+
 
 
