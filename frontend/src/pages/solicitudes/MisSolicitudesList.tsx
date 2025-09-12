@@ -49,7 +49,7 @@ export default function MisSolicitudesList() {
 
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE_SOLICITUDES));
 
-  const load = React.useCallback(async () => {
+  const load = React.useCallback(async (signal?: AbortSignal) => {
     if (state.status !== "authenticated") return;
     setLoading(true);
     setError(null);
@@ -61,18 +61,24 @@ export default function MisSolicitudesList() {
         search,
         solicitanteId,
       });
+      if (signal?.aborted) return;
       if (e) throw e;
       setRows(data);
       setCount(c);
     } catch (e: any) {
+      if (signal?.aborted) return;
       setError(e?.message || "Error al cargar");
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, [page, search, state]);
 
   React.useEffect(() => {
-    void load();
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
   }, [load]);
 
   const clearAll = () => {
@@ -127,7 +133,7 @@ export default function MisSolicitudesList() {
 
         {/* Acciones filtros */}
         <div className="mt-4 flex gap-2">
-          <Button onClick={load} variant="outline" className="rounded-xl">
+          <Button onClick={() => load()} variant="outline" className="rounded-xl">
             Aplicar filtros
           </Button>
           <Button onClick={clearAll} variant="ghost" className="rounded-xl">
@@ -170,9 +176,7 @@ export default function MisSolicitudesList() {
                 </tr>
               ) : (
                 rows.map((r) => {
-                  const fecha = r.created_at
-                    ? new Date(r.created_at).toLocaleDateString()
-                    : "-";
+                  const fecha = r.created_at ? new Date(r.created_at).toLocaleDateString() : "-";
                   const estadoLabel =
                     r.estado_solicitud_nombre ??
                     ESTADOS_SOLICITUD_LABEL[r.estado_solicitud_id] ??
@@ -181,7 +185,7 @@ export default function MisSolicitudesList() {
                   return (
                     <tr
                       key={r.solicitud_id}
-                      className="border-t border-gray-100 transition hover:bg-gray-50/80 even:bg-gray-50/60 dark:border-gray-800 dark:hover:bg-white/5 dark:even:bg-white/5"
+                      className="border-t border-gray-100 transition hover:bg-gray-50/80 even:bg-gray-50/60 dark:border-gray-800 dark:hover:bg-white/5 dark:even:bg白/5"
                     >
                       <td className="px-4 py-3">{fecha}</td>
                       <td className="px-4 py-3">{r.equipo_label || "-"}</td>
@@ -195,9 +199,7 @@ export default function MisSolicitudesList() {
                         <Button
                           variant="outline"
                           className="rounded-xl"
-                          onClick={() =>
-                            navigate(`/mis-solicitudes/${r.solicitud_id}`)
-                          }
+                          onClick={() => navigate(`/mis-solicitudes/${r.solicitud_id}`)}
                         >
                           Ver
                         </Button>
@@ -233,7 +235,7 @@ export default function MisSolicitudesList() {
           </button>
           <button
             className="rounded-lg border border-gray-300 px-3 py-1.5 dark:border-gray-700"
-            onClick={load}
+            onClick={() => load()}
           >
             Refrescar
           </button>
@@ -244,5 +246,6 @@ export default function MisSolicitudesList() {
     </div>
   );
 }
+
 
 

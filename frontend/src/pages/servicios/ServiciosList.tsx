@@ -127,7 +127,7 @@ export default function ServiciosList() {
   }, []);
 
   const load = React.useCallback(
-    async () => {
+    async (signal?: AbortSignal) => {
       setLoading(true);
       setError(null);
 
@@ -144,6 +144,8 @@ export default function ServiciosList() {
       };
 
       const res = await listServicios(params);
+      if (signal?.aborted) return;
+
       if (res.error) {
         setError(res.error);
         setRows([]);
@@ -152,7 +154,9 @@ export default function ServiciosList() {
         setRows(res.data);
         setCount(res.count);
       }
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     },
     [page, search, estadoId, tipoId, tecnicoId, equipoId, fromDate, toDate]
   );
@@ -162,7 +166,9 @@ export default function ServiciosList() {
   }, [loadCatálogos]);
 
   React.useEffect(() => {
-    load();
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
   }, [load]);
 
   const clearFilters = () => {
@@ -382,7 +388,7 @@ export default function ServiciosList() {
 
         {/* Botones de acción */}
         <div className="mt-4 flex gap-2">
-          <Button onClick={load} variant="outline" className="rounded-xl">
+          <Button onClick={() => load()} variant="outline" className="rounded-xl">
             Aplicar filtros
           </Button>
           <Button onClick={clearFilters} variant="ghost" className="rounded-xl">
@@ -478,7 +484,7 @@ export default function ServiciosList() {
           >
             Siguiente
           </button>
-          <button className="rounded-lg border border-gray-300 px-3 py-1.5 dark:border-gray-700" onClick={load}>
+          <button className="rounded-lg border border-gray-300 px-3 py-1.5 dark:border-gray-700" onClick={() => load()}>
             Refrescar
           </button>
         </div>

@@ -1,9 +1,11 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { listSolicitudesAdmin, setSolicitudEstado, convertirSolicitudEnServicio, listTiposServicioLite } from "@/data/solicitudes.repository";
+import { listSolicitudesAdmin, setSolicitudEstado } from "@/data/solicitudes.repository";
 import type { SolicitudRow } from "@/data/solicitudes.types";
 import { PAGE_SIZE_SOLICITUDES } from "@/data/solicitudes.types";
+import { useAuth } from "@/auth/auth.store";
+import ConvertirSolicitudModal from "./components/ConvertirSolicitudModal";
 
 function useToast() {
   const [msg, setMsg] = React.useState<string | null>(null);
@@ -22,6 +24,7 @@ function useToast() {
 export default function SolicitudesDeServicioList() {
   const navigate = useNavigate();
   const { show, Toast } = useToast();
+  const { state } = useAuth();
 
   const [rows, setRows] = React.useState<SolicitudRow[]>([]);
   const [count, setCount] = React.useState(0);
@@ -32,19 +35,22 @@ export default function SolicitudesDeServicioList() {
   const [search, setSearch] = React.useState("");
   const [estadoId, setEstadoId] = React.useState<number | undefined>(undefined);
 
-  const [tipos, setTipos] = React.useState<Array<{ tipo_servicio_id: number; nombre: string }>>([]);
+  const [actingId, setActingId] = React.useState<number | null>(null);
+
+  // Modal state
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [modalSolicitudId, setModalSolicitudId] = React.useState<number | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE_SOLICITUDES));
 
-  const loadTipos = React.useCallback(async () => {
-    const { data } = await listTiposServicioLite();
-    setTipos(data ?? []);
-  }, []);
-
-  const load = React.useCallback(async () => {
+  const load = React.useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('[SolicitudesDeServicioList] Cargando solicitudes...');
+      }
+      
       const { data, count: c, error: e } = await listSolicitudesAdmin({
         page,
         pageSize: PAGE_SIZE_SOLICITUDES,
@@ -53,57 +59,63 @@ export default function SolicitudesDeServicioList() {
         fromDate: undefined,
         toDate: undefined,
       });
+      if (signal?.aborted) {
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('[SolicitudesDeServicioList] Carga abortada');
+        }
+        return;
+      }
       if (e) throw e;
       setRows(data);
       setCount(c);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('[SolicitudesDeServicioList] Solicitudes cargadas:', data?.length || 0);
+      }
     } catch (e: any) {
+      if (signal?.aborted) return;
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('[SolicitudesDeServicioList] Error cargando:', e?.message);
+      }
       setError(e?.message || "Error al cargar");
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, [page, search, estadoId]);
 
-  React.useEffect(() => { loadTipos(); }, [loadTipos]);
-  React.useEffect(() => { load(); }, [load]);
+  React.useEffect(() => {
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
 
   const handleSetEstado = async (id: number, next: number, label: string) => {
     if (!window.confirm(`¿Confirmas cambiar estado a "${label}"?`)) return;
+    setActingId(id);
     const { ok, error } = await setSolicitudEstado(id, next as any);
     if (!ok) { show(error?.message || "No se pudo actualizar estado", "error"); return; }
     show("Estado actualizado");
-    load();
+    await load();
+    setActingId(null);
   };
 
-  const handleConvertir = async (row: SolicitudRow) => {
-    // pedir tipo de servicio (simple prompt) — en prod puedes usar un modal/selector
-    if (!tipos || tipos.length === 0) {
-      show("No hay tipos de servicio activos", "error");
-      return;
+  const onOpenConvert = (id: number) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[SolicitudesDeServicioList] Abriendo modal para solicitud:', id);
     }
-    const opciones = tipos.map(t => `${t.tipo_servicio_id} - ${t.nombre}`).join("\n");
-    const entrada = window.prompt(`Elige tipo_servicio_id:\n${opciones}\n\nEscribe el ID del tipo:`);
-    const tipoId = Number(entrada);
-    if (!tipoId || Number.isNaN(tipoId)) return;
+    setModalSolicitudId(id);
+    setModalOpen(true);
+  };
 
-    // admin actual — en integración real, obtener de sesión
-    const adminId = (window as any).__currentUserId;
-    if (!adminId) { show("No hay admin logueado (adminId)", "error"); return; }
-
-    const { ok, servicio_id, error } = await convertirSolicitudEnServicio({
-      solicitudId: row.solicitud_id,
-      tipoServicioId: tipoId,
-      adminId,
-      fechaServicio: undefined,
-      observaciones: null,
-    });
-
-    if (!ok || !servicio_id) {
-      show(error?.message || "No se pudo convertir", "error");
-      return;
+  const handleConverted = (servicioId: number) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[SolicitudesDeServicioList] Conversión exitosa, navegando a servicio:', servicioId);
     }
-    show(`Convertido a servicio #${servicio_id}`);
-    // navegar a editar servicio
-    navigate(`/servicios/${servicio_id}/editar`);
+    show("Solicitud convertida. Servicio #" + servicioId);
+    load(); // Recargar la lista para actualizar estados
+    navigate(`/servicios/${servicioId}/editar`);
   };
 
   const pill = (label: string) => (
@@ -152,7 +164,7 @@ export default function SolicitudesDeServicioList() {
             <option value="5">Convertida</option>
           </select>
           <div className="flex gap-2">
-            <Button variant="outline" className="rounded-xl" onClick={load}>Aplicar</Button>
+            <Button variant="outline" className="rounded-xl" onClick={() => load()}>Aplicar</Button>
             <Button variant="ghost" className="rounded-xl" onClick={() => { setSearch(""); setEstadoId(undefined); setPage(1); }}>Limpiar</Button>
           </div>
         </div>
@@ -188,10 +200,10 @@ export default function SolicitudesDeServicioList() {
                   <td className="px-4 py-3">{pill(r.estado_solicitud_nombre || String(r.estado_solicitud_id))}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" className="rounded-xl" onClick={() => handleSetEstado(r.solicitud_id, 2, "En revisión")}>En revisión</Button>
-                      <Button variant="outline" className="rounded-xl" onClick={() => handleSetEstado(r.solicitud_id, 3, "Aprobada")}>Aprobar</Button>
-                      <Button variant="outline" className="rounded-xl" onClick={() => handleSetEstado(r.solicitud_id, 4, "Rechazada")}>Rechazar</Button>
-                      <Button className="rounded-xl" onClick={() => handleConvertir(r)}>Convertir a servicio</Button>
+                      <Button variant="outline" className="rounded-xl" onClick={() => handleSetEstado(r.solicitud_id, 2, "En revisión")} disabled={actingId === r.solicitud_id}>En revisión</Button>
+                      <Button variant="outline" className="rounded-xl" onClick={() => handleSetEstado(r.solicitud_id, 3, "Aprobada")} disabled={actingId === r.solicitud_id}>Aprobar</Button>
+                      <Button variant="outline" className="rounded-xl" onClick={() => handleSetEstado(r.solicitud_id, 4, "Rechazada")} disabled={actingId === r.solicitud_id}>Rechazar</Button>
+                      <Button className="rounded-xl" onClick={() => onOpenConvert(r.solicitud_id)} disabled={loading}>Convertir a servicio</Button>
                     </div>
                   </td>
                 </tr>
@@ -207,11 +219,22 @@ export default function SolicitudesDeServicioList() {
         <div className="space-x-2">
           <button className="rounded-lg border border-gray-300 px-3 py-1.5 disabled:opacity-50" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>Anterior</button>
           <button className="rounded-lg border border-gray-300 px-3 py-1.5 disabled:opacity-50" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>Siguiente</button>
-          <button className="rounded-lg border border-gray-300 px-3 py-1.5" onClick={load}>Refrescar</button>
+          <button className="rounded-lg border border-gray-300 px-3 py-1.5" onClick={() => load()}>Refrescar</button>
         </div>
       </div>
 
       <Toast />
+
+      {/* Modal de conversión */}
+      {state.status === "authenticated" && (
+        <ConvertirSolicitudModal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          solicitudId={modalSolicitudId}
+          adminId={state.profile.user_id}
+          onConverted={handleConverted}
+        />
+      )}
     </div>
   );
 }

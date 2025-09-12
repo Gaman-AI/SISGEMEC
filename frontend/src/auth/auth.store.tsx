@@ -53,6 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Suscripción a cambios de sesión
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!mounted) return; // Evitar setState después de unmount
+      
       if (!session) {
         setState({ status: "unauthenticated" });
       } else {
@@ -62,6 +64,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .select("user_id, full_name, email, role, active")
           .eq("user_id", userId)
           .maybeSingle();
+        
+        if (!mounted) return; // Verificar nuevamente después de async
         if (!data) {
           setState({ status: "unauthenticated" });
         } else {

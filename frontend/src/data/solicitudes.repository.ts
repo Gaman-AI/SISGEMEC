@@ -8,8 +8,6 @@ import {
   type ResponsableLite,
   type EstadoSolicitudId,
   buildEquipoLabel,
-  // ⬇️ quitamos import de nullify desde types para evitar dependencias rotas
-  // nullify,
 } from "./solicitudes.types";
 
 /** Utilidad local: convierte "" -> null y preserva otros tipos */
@@ -30,22 +28,33 @@ function nullifyLocal<T extends Record<string, any>>(obj: T): Record<string, any
 /* =========================================================
    Catálogos lite (para denormalizar labels en listados)
    ========================================================= */
-export async function listEquiposLite(): Promise<{ data: EquipoLite[]; error: Error | null }> {
-  const { data, error } = await supabase
+export async function listEquiposLite(
+  signal?: AbortSignal
+): Promise<{ data: EquipoLite[]; error: Error | null }> {
+  let q = supabase
     .from("equipos")
     .select("equipo_id, tipo_equipo, marca, modelo, num_serie")
     .order("equipo_id", { ascending: true });
 
+  if (signal) q = q.abortSignal(signal);
+
+  const { data, error } = await q;
   return { data: (data as EquipoLite[]) ?? [], error: error ? new Error(error.message) : null };
 }
 
-export async function listResponsablesLite(): Promise<{ data: ResponsableLite[]; error: Error | null }> {
-  const { data, error } = await supabase
+export async function listResponsablesLite(
+  signal?: AbortSignal
+): Promise<{ data: ResponsableLite[]; error: Error | null }> {
+  let q = supabase
     .from("profiles")
     .select("user_id, full_name, role, active")
     .eq("role", "RESPONSABLE")
     .eq("active", true)
     .order("full_name", { ascending: true });
+
+  if (signal) q = q.abortSignal(signal);
+
+  const { data, error } = await q;
 
   const rows =
     ((data as any[]) ?? []).map((r) => ({
@@ -59,7 +68,10 @@ export async function listResponsablesLite(): Promise<{ data: ResponsableLite[];
 /* =========================================================
    ✅ Catálogo de tipos de servicio (para convertir)
    ========================================================= */
-export async function listTiposServicioLite(): Promise<{ data: Array<{ tipo_servicio_id: number; nombre: string }>; error: Error | null }> {
+export async function listTiposServicioLite(): Promise<{
+  data: Array<{ tipo_servicio_id: number; nombre: string }>;
+  error: Error | null;
+}> {
   const { data, error } = await supabase
     .from("tipos_servicio")
     .select("tipo_servicio_id, nombre")
@@ -118,7 +130,8 @@ export async function createSolicitud(payload: {
    Listado Admin con filtros + denormalización
    ========================================================= */
 export async function listSolicitudesAdmin(
-  params: ListSolicitudesParams
+  params: ListSolicitudesParams,
+  signal?: AbortSignal
 ): Promise<{ data: SolicitudRow[]; count: number; error: Error | null }> {
   const { page, pageSize, search, estadoId, fromDate, toDate } = params;
   const from = (page - 1) * pageSize;
@@ -138,13 +151,15 @@ export async function listSolicitudesAdmin(
   if (fromDate) query = query.gte("created_at", `${fromDate}T00:00:00`);
   if (toDate) query = query.lte("created_at", `${toDate}T23:59:59.999`);
 
+  if (signal) query = query.abortSignal(signal);
+
   const { data, error, count } = await query;
   if (error) return { data: [], count: 0, error: new Error(error.message) };
 
   const rows = (data as SolicitudRow[]) ?? [];
 
   // Denormalización (equipo y responsable)
-  const [eqLite, respLite] = await Promise.all([listEquiposLite(), listResponsablesLite()]);
+  const [eqLite, respLite] = await Promise.all([listEquiposLite(signal), listResponsablesLite(signal)]);
   const eqMap = new Map<number, EquipoLite>();
   const respMap = new Map<string, ResponsableLite>();
   (eqLite.data || []).forEach((e) => eqMap.set(e.equipo_id, e));
@@ -169,7 +184,8 @@ export async function listSolicitudesAdmin(
    ✅ Listado del Responsable (sus propias solicitudes)
    ========================================================= */
 export async function listMisSolicitudes(
-  params: ListSolicitudesParams & { solicitanteId: string | null | undefined }
+  params: ListSolicitudesParams & { solicitanteId: string | null | undefined },
+  signal?: AbortSignal
 ): Promise<{ data: SolicitudRow[]; count: number; error: Error | null }> {
   const { page, pageSize, search, estadoId, fromDate, toDate, solicitanteId } = params;
 
@@ -196,13 +212,15 @@ export async function listMisSolicitudes(
   if (fromDate) query = query.gte("created_at", `${fromDate}T00:00:00`);
   if (toDate) query = query.lte("created_at", `${toDate}T23:59:59.999`);
 
+  if (signal) query = query.abortSignal(signal);
+
   const { data, error, count } = await query;
   if (error) return { data: [], count: 0, error: new Error(error.message) };
 
   const rows = (data as SolicitudRow[]) ?? [];
 
   // Denormalización (equipo y responsable)
-  const [eqLite, respLite] = await Promise.all([listEquiposLite(), listResponsablesLite()]);
+  const [eqLite, respLite] = await Promise.all([listEquiposLite(signal), listResponsablesLite(signal)]);
   const eqMap = new Map<number, EquipoLite>();
   const respMap = new Map<string, ResponsableLite>();
   (eqLite.data || []).forEach((e) => eqMap.set(e.equipo_id, e));
@@ -227,22 +245,26 @@ export async function listMisSolicitudes(
    ✅ Obtener una solicitud por ID
    ========================================================= */
 export async function getSolicitudById(
-  id: number
+  id: number,
+  signal?: AbortSignal
 ): Promise<{ data: SolicitudRow | null; error: Error | null }> {
-  const { data, error } = await supabase
+  let q = supabase
     .from("solicitudes_servicio")
     .select(
       "solicitud_id, equipo_id, solicitante_id, descripcion, estado_solicitud_id, servicio_id, created_at, updated_at"
     )
-    .eq("solicitud_id", id)
-    .maybeSingle();
+    .eq("solicitud_id", id);
+
+  if (signal) q = q.abortSignal(signal);
+
+  const { data, error } = await q.maybeSingle();
 
   if (error) return { data: null, error: new Error(error.message) };
   if (!data) return { data: null, error: null };
 
   const base = data as SolicitudRow;
 
-  const [eqLite, respLite] = await Promise.all([listEquiposLite(), listResponsablesLite()]);
+  const [eqLite, respLite] = await Promise.all([listEquiposLite(signal), listResponsablesLite(signal)]);
   const eqMap = new Map<number, EquipoLite>();
   const respMap = new Map<string, ResponsableLite>();
   (eqLite.data || []).forEach((e) => eqMap.set(e.equipo_id, e));
@@ -274,7 +296,7 @@ export async function updateSolicitudEstado(
     .from("solicitudes_servicio")
     .update({
       estado_solicitud_id: estadoId,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     })
     .eq("solicitud_id", id);
 
@@ -297,7 +319,7 @@ export async function linkSolicitudToServicio(
     .update({
       servicio_id: servicioId,
       estado_solicitud_id: 5, // Convertida
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     })
     .eq("solicitud_id", solicitudId);
 
@@ -311,8 +333,8 @@ export async function linkSolicitudToServicio(
 export async function convertirSolicitudEnServicio(args: {
   solicitudId: number;
   tipoServicioId: number;
-  adminId: string;           // profiles.user_id del admin actual
-  fechaServicio?: string;    // YYYY-MM-DD
+  adminId: string; // profiles.user_id del admin actual
+  fechaServicio?: string; // YYYY-MM-DD
   observaciones?: string | null;
 }): Promise<{ ok: boolean; servicio_id: number | null; error: Error | null }> {
   const { solicitudId, tipoServicioId, adminId, fechaServicio, observaciones } = args;
@@ -333,3 +355,4 @@ export async function convertirSolicitudEnServicio(args: {
   }
   return { ok: true, servicio_id: newId, error: null };
 }
+

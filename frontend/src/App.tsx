@@ -47,6 +47,7 @@ export default function App() {
             {/* Rutas públicas sin AppLayout */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/logout" element={<LogoutPage />} />
+            <Route path="/health" element={<div>OK</div>} />
 
             {/* Home decide según rol/sesión */}
             <Route path="/" element={<RoleRedirect />} />
@@ -76,8 +77,7 @@ export default function App() {
               <Route path="/mis-solicitudes/nueva" element={<RequireAuth><RequireResponsable><MisSolicitudesForm /></RequireResponsable></RequireAuth>} />
               <Route path="/mis-solicitudes/:id" element={<RequireAuth><RequireResponsable><MisSolicitudDetalle /></RequireResponsable></RequireAuth>} />
 
-              {/* Salud y 404 */}
-              <Route path="/health" element={<div>OK</div>} />
+              {/* 404 dentro del layout para rutas protegidas no encontradas */}
               <Route path="*" element={<div className="p-6">404</div>} />
             </Route>
           </Routes>

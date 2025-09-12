@@ -126,7 +126,7 @@ export default function EquiposList() {
     })();
   }, []);
 
-  const load = React.useCallback(async () => {
+  const load = React.useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     const res = await listEquipos({
@@ -136,6 +136,8 @@ export default function EquiposList() {
       estado_equipo_id: estadoId === '' ? null : Number(estadoId),
       responsable_id: respId === '' ? null : respId,
     });
+    if (signal?.aborted) return;
+
     if (res.error) {
       setError(res.error.message || 'Error al listar equipos');
       setRows([]);
@@ -144,11 +146,22 @@ export default function EquiposList() {
       setRows((res.data as Row[]) || []);
       setCount(res.count || 0);
     }
-    setLoading(false);
+    if (!signal?.aborted) {
+      setLoading(false);
+    }
   }, [page, pageSize, q, estadoId, respId]);
 
+  // ✅ wrapper sin argumentos para usar en onClick
+  const loadNow = React.useCallback(() => {
+    const controller = new AbortController();
+    void load(controller.signal);
+    // No guardamos controller porque es una recarga puntual
+  }, [load]);
+
   React.useEffect(() => {
-    load();
+    const controller = new AbortController();
+    void load(controller.signal);
+    return () => controller.abort();
   }, [load]);
 
   const onDelete = async (id: number) => {
@@ -158,7 +171,7 @@ export default function EquiposList() {
       alert(res.error.message || 'No se pudo eliminar');
       return;
     }
-    load();
+    loadNow();
   };
 
   const totalPages = Math.max(1, Math.ceil(count / pageSize));
@@ -433,7 +446,7 @@ export default function EquiposList() {
             variant="outline"
             size="sm"
             className="rounded-lg"
-            onClick={load}
+            onClick={loadNow}
           >
             Refrescar
           </Button>

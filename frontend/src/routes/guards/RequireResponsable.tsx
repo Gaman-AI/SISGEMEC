@@ -7,7 +7,11 @@ export default function RequireResponsable({ children }: { children: React.React
   if (state.status === "loading") {
     return <div className="p-4 text-sm text-slate-600">Cargando...</div>;
   }
-  if (state.status !== "authenticated") return null;
-  if (state.profile.role !== "RESPONSABLE") return <Navigate to="/dashboard" replace />;
+  if (state.status !== "authenticated") {
+    return <Navigate to="/login" replace />;
+  }
+  if (state.profile.role !== "RESPONSABLE") {
+    return <Navigate to="/dashboard" replace />;
+  }
   return <>{children}</>;
 }
