@@ -96,14 +96,14 @@ def check_supabase_connection():
     
     try:
         from app.config import settings
-        from supabase import create_client
+        from app.deps.supabase_client import supa
         
         if not settings.SUPABASE_URL or not settings.SUPABASE_ANON_KEY:
             print("❌ Configuración de Supabase incompleta")
             return False
         
         # Crear cliente
-        supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+        supabase = supa()
         print("✅ Cliente de Supabase creado")
         
         # Intentar una consulta simple

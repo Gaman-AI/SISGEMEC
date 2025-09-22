@@ -26,6 +26,9 @@ import MisSolicitudDetalle from "./pages/solicitudes/MisSolicitudDetalle";
 import SolicitudesDeServicioList from "./pages/solicitudes/SolicitudesDeServicioList";
 import SolicitudDetalle from "./pages/solicitudes/SolicitudDetalle";
 import DashboardPage from "./pages/dashboard/DashboardPage";
+import ImportInventarioPage from "./pages/import-inventario/ImportInventarioPage";
+import ImportUsuariosPage from "./pages/import-usuarios/ImportUsuariosPage";
+import ImportEquiposPage from "./pages/import-equipos/ImportEquiposPage";
 
 function RoleRedirect() {
   const { state } = useAuth();
@@ -70,6 +73,9 @@ export default function App() {
               <Route path="/servicios/:id/editar" element={<RequireAuth><RequireAdmin><ServiciosForm /></RequireAdmin></RequireAuth>} />
               <Route path="/solicitudes" element={<RequireAuth><RequireAdmin><SolicitudesDeServicioList /></RequireAdmin></RequireAuth>} />
               <Route path="/solicitudes/:id" element={<RequireAuth><RequireAdmin><SolicitudDetalle /></RequireAdmin></RequireAuth>} />
+              <Route path="/import-inventario" element={<RequireAuth><RequireAdmin><ImportInventarioPage /></RequireAdmin></RequireAuth>} />
+              <Route path="/import-usuarios" element={<RequireAuth><RequireAdmin><ImportUsuariosPage /></RequireAdmin></RequireAuth>} />
+              <Route path="/import-equipos" element={<RequireAuth><RequireAdmin><ImportEquiposPage /></RequireAdmin></RequireAuth>} />
 
               {/* RESPONSABLE */}
               <Route path="/mis-equipos" element={<RequireAuth><RequireResponsable><MisEquiposList /></RequireResponsable></RequireAuth>} />

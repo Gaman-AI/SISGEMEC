@@ -2,20 +2,16 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional
-from supabase import create_client, Client
+from app.deps.supabase_client import supa
 from app.config import settings
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 security = HTTPBearer()
 
 # Supabase client
-def get_supabase_client() -> Client:
-    if not settings.SUPABASE_URL or not settings.SUPABASE_ANON_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Supabase configuration not found"
-        )
-    return create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+def get_supabase_client():
+    """Obtiene cliente Supabase usando el helper centralizado"""
+    return supa()
 
 # Models
 class LoginRequest(BaseModel):

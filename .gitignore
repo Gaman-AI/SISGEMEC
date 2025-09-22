@@ -22,11 +22,18 @@ $RECYCLE.BIN/
 *.rej
 
 # ========== Entornos / Variables ==========
+# Archivos de entorno sensibles
 .env
 .env.*
+*.env
+# Mantener solo el archivo de ejemplo
 !.env.example
+
+# Ignorar entornos locales en backend y frontend
 backend/.env
+backend/.env.local
 frontend/.env
+frontend/.env.local
 supabase/.env
 
 # ========== Python (Backend FastAPI) ==========
@@ -130,4 +137,3 @@ temp/
 # package-lock.json
 # pnpm-lock.yaml
 # yarn.lock
-

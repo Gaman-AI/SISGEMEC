@@ -1,0 +1,17 @@
+# This is a placeholder for the Excel template
+# In a real implementation, you would create an actual .xlsx file
+# For now, this serves as documentation of the required structure
+
+# Sheet: "Usuarios"
+# Headers (Row 1):
+# - First Name (required)
+# - Last Name (required) 
+# - Email Address (required, UNIQUE global)
+# - Department (optional)
+# - Phone (optional)
+# - Location (optional)
+
+# Sample data rows:
+# John,Doe,john.doe@company.com,IT,555-0123,Office A
+# Jane,Smith,jane.smith@company.com,HR,555-0124,Office B
+# Bob,Johnson,bob.johnson@company.com,Finance,555-0125,Office C
