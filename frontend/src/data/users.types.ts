@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 /* ---------------------------------- TIPOS ---------------------------------- */
 
-export type UserRole = 'ADMIN' | 'TECNICO' | 'RESPONSABLE';
+export type UserRole = 'ADMIN' | 'RESPONSABLE';
 
 export type UserRow = {
   user_id: string;

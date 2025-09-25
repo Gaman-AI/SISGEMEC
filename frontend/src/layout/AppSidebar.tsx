@@ -8,7 +8,7 @@ const items = [
   { to: '/equipos', label: 'Equipos', icon: DeviceIcon },
   { to: '/responsables', label: 'Responsables', icon: UsersIcon },
   { to: '/tipos-servicio', label: 'Tipos de Servicio', icon: ListIcon },
-  { to: '/importar', label: 'Importar', icon: ImportIcon },
+  { to: '/import', label: 'Importar', icon: ImportIcon },
   { to: '/exportar', label: 'Exportar', icon: ExportIcon },
   { to: '/reportes', label: 'Reportes', icon: ReportIcon },
   { to: '/servicios', label: 'Servicios', icon: WrenchIcon },

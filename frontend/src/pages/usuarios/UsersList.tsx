@@ -1,8 +1,9 @@
-// src/pages/usuarios/UsersList.tsx
+// src/pages/usuarios/UsersList.tsx 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   listUsers,
+  getUsers,
   toggleUserActive,
 } from '../../data/users.repository';
 import type { UserRow, UserRole } from '../../data/users.types';
@@ -67,6 +68,8 @@ function FancySelect({ id, value, onChange, placeholder, icon, children }: Fancy
 }
 
 export default function UsersList() {
+  const location = useLocation();
+  
   // filtros
   const [search, setSearch] = React.useState('');
   const [role, setRole] = React.useState<UserRole | ''>('');
@@ -83,7 +86,24 @@ export default function UsersList() {
 
   const totalPages = Math.max(1, Math.ceil(count / pageSize));
 
-  const load = React.useCallback(async () => {
+  // Función para cargar todos los usuarios usando el endpoint del backend
+  const loadAllUsers = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getUsers();
+      setRows(data);
+      setCount(data.length);
+    } catch (e: any) {
+      setError(e?.message || 'Error al cargar usuarios');
+      setRows([]);
+      setCount(0);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const load = React.useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     const res = await listUsers({
@@ -94,6 +114,8 @@ export default function UsersList() {
       active,
       department,
     });
+    if (signal?.aborted) return;
+
     if (res.error) {
       setError(res.error.message || 'Error al listar usuarios');
       setRows([]);
@@ -102,12 +124,30 @@ export default function UsersList() {
       setRows(res.data);
       setCount(res.count);
     }
-    setLoading(false);
+    if (!signal?.aborted) {
+      setLoading(false);
+    }
   }, [page, pageSize, search, role, active, department]);
 
-  React.useEffect(() => {
-    load();
+  // wrapper sin argumentos para usar en onClick
+  const loadNow = React.useCallback(() => {
+    const controller = new AbortController();
+    void load(controller.signal);
+    // No guardamos controller porque es una recarga puntual
   }, [load]);
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+    void load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
+
+  // Refetch cuando se regresa desde la creación de usuarios
+  React.useEffect(() => {
+    if (location.state?.refreshUsers) {
+      loadAllUsers();
+    }
+  }, [location.state, loadAllUsers]);
 
   const onToggleActive = async (u: UserRow) => {
     const ok = await ConfirmDialog({
@@ -119,7 +159,7 @@ export default function UsersList() {
     if (!ok) return;
     try {
       await toggleUserActive(u.user_id, !u.active);
-      load();
+      loadNow();
     } catch (e: any) {
       alert(e?.message ?? 'No se pudo actualizar el estado');
     }
@@ -400,7 +440,7 @@ export default function UsersList() {
             variant="outline"
             size="sm"
             className="rounded-lg"
-            onClick={load}
+            onClick={loadNow}
           >
             Refrescar
           </Button>
@@ -409,3 +449,4 @@ export default function UsersList() {
     </div>
   );
 }
+

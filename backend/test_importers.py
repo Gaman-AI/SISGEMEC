@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script de prueba para los nuevos importadores
+Script de prueba para los importadores separados (Usuarios y Equipos)
 """
 import os
 import sys
@@ -67,7 +67,7 @@ def test_equipment_import_service():
 
 def main():
     """Función principal de pruebas"""
-    logger.info("🚀 Iniciando pruebas de importadores...")
+    logger.info("🚀 Iniciando pruebas de importadores separados...")
     
     tests = [
         ("Database Seed", test_database_seed),

@@ -12,24 +12,22 @@ from app.services.equipment_import import EquipmentImportService
 
 router = APIRouter(prefix="/import-equipos", tags=["import-equipos"])
 
+def _check_admin_token(authorization: str | None):
+    """Verifica el token de administración y lanza excepciones apropiadas"""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = authorization.split(" ", 1)[1].strip()
+    if not settings.API_ADMIN_TOKEN:
+        raise HTTPException(status_code=500, detail="API_ADMIN_TOKEN not configured")
+    if token != settings.API_ADMIN_TOKEN.strip():
+        raise HTTPException(status_code=403, detail="Forbidden")
+
 def verify_admin_token(authorization: Optional[str] = Header(None)) -> bool:
-    """Verifica el token de administración"""
-    if not authorization:
-        return False
-    
+    """Verifica el token de administración (compatibilidad)"""
     try:
-        # Extraer token del header "Bearer <token>"
-        scheme, token = authorization.split(' ', 1)
-        if scheme.lower() != 'bearer':
-            return False
-        
-        # Verificar token
-        if not settings.API_ADMIN_TOKEN:
-            # En desarrollo, permitir cualquier token si no está configurado
-            return True
-            
-        return token == settings.API_ADMIN_TOKEN
-    except (ValueError, AttributeError):
+        _check_admin_token(authorization)
+        return True
+    except HTTPException:
         return False
 
 @router.post("")
@@ -65,16 +63,18 @@ async def import_equipos(
     """
     
     # Verificar autorización
-    if not verify_admin_token(authorization):
+    try:
+        _check_admin_token(authorization)
+    except HTTPException as e:
         return JSONResponse(
-            status_code=401,
+            status_code=e.status_code,
             content={
                 "ok": False,
                 "total_filas_excel": 0,
                 "equipos_procesados": 0,
                 "equipos_creados": 0,
                 "equipos_actualizados": 0,
-                "errores": [{"fila": "-", "mensaje": "Token de administración requerido"}]
+                "errores": [{"fila": "-", "mensaje": e.detail}]
             }
         )
     

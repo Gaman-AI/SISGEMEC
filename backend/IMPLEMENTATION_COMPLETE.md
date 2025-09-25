@@ -1,140 +1,166 @@
-# ✅ IMPLEMENTACIÓN COMPLETADA - Importador de Excel SISGEMEC
+# ✅ IMPLEMENTACIÓN COMPLETADA - SOLUCIÓN DEFINITIVA
 
-## 🎯 Objetivos Cumplidos
+## 🎯 Problema Resuelto
 
-### ✅ **1. Contrato de respuesta estable**
-- **Éxito (200)**: `{ ok: true, stats: {...}, errores: [] }`
-- **Error de datos (422)**: `{ ok: false, stats: {...}, errores: [...] }`
-- **Error inesperado (500)**: `{ ok: false, error: {...}, stats: {...}, errores: [] }`
+El error "Invalid API key" al crear usuarios ha sido **definitivamente corregido**. El sistema ahora:
 
-### ✅ **2. Backend robusto**
-- **Router actualizado**: Manejo de errores con helpers `_ok()` y `_fail()`
-- **Servicio reescrito**: Validación estricta de columnas requeridas
-- **Estados tolerantes**: Mapeo flexible de estados a BD
-- **Sin creación de usuarios**: Solo vincula a profiles existentes
+- ✅ **Lee correctamente** la Service Role Key desde `backend/env.local`
+- ✅ **Valida automáticamente** que la clave tenga capacidades admin
+- ✅ **Proporciona diagnósticos seguros** sin exponer secretos
+- ✅ **Maneja errores claramente** con mensajes de corrección específicos
 
-### ✅ **3. Frontend actualizado**
-- **Estructura de respuesta**: Manejo de nueva estructura `stats` y `errores`
-- **Renderizado seguro**: Protección contra objetos en mensajes
-- **Estados visuales**: Indicadores de éxito/error apropiados
+## 🔧 Cambios Implementados
 
-### ✅ **4. Sin dependencias nuevas**
-- **Solo librerías existentes**: pandas, openpyxl, unidecode
-- **Sin cambios en requirements**: Mantiene compatibilidad
-- **Sin cambios en rutas**: Endpoints y autenticación intactos
+### 1. **Loader de Entorno Robusto** (`backend/app/core/env.py`)
+- ✅ **Carga automática** desde múltiples ubicaciones:
+  - `backend/.env.local` (prioridad alta)
+  - `backend/env.local` (sin punto)
+  - `backend/.env`
+  - `.env` (raíz del proyecto)
+- ✅ **Flag de carga única** para evitar recargas innecesarias
+- ✅ **Manejo silencioso de errores** en archivos malformados
 
-## 🔧 Archivos Modificados
+### 2. **Cliente Supabase con Diagnóstico** (`backend/app/core/supabase_client.py`)
+- ✅ **Validación automática** de Service Role Key
+- ✅ **Prueba de capacidades admin** al inicializar
+- ✅ **Logging seguro** con hints sin exponer claves
+- ✅ **Manejo específico** de errores AuthApiError
+- ✅ **Soporte para múltiples nombres** de variables de entorno
 
-### **Backend**
-- `backend/app/routers/import_inventario.py` - Router con manejo robusto de errores
-- `backend/app/services/excel_import.py` - Servicio completamente reescrito
-- `backend/IMPORT_INVENTARIO_README.md` - Documentación actualizada
+### 3. **Endpoints de Diagnóstico Seguros** (`backend/app/main.py`)
+- ✅ **`/__diagnostics/env`** - Verifica configuración sin exponer valores
+- ✅ **`/__diagnostics/supabase`** - Prueba capacidades admin
+- ✅ **Solo en desarrollo** - No disponible en producción
+- ✅ **Respuestas seguras** - Solo hints y longitudes
 
-### **Frontend**
-- `frontend/src/pages/import-inventario/ImportInventarioPage.tsx` - UI actualizada
+### 4. **Compatibilidad de API Corregida**
+- ✅ **Router admin_users.py** - Usa cliente centralizado
+- ✅ **Script de prueba** - Corregido para nueva API de Supabase
+- ✅ **Endpoints de diagnóstico** - Compatibles con respuesta de lista
 
-## 📋 Estructura de Excel Requerida
+## 🧪 Verificación Completada
 
-### **Hoja "Inventario" (REQUERIDA)**
-| Columna | Requerido | Descripción |
-|---------|-----------|-------------|
-| Activo | No | Tipo de equipo (default: "Computadora") |
-| Modelo | No | Modelo del equipo |
-| Número de serie | **Sí** | Número de serie único |
-| Procesador | No | Procesador |
-| RAM | No | Memoria RAM |
-| Disco | No | Almacenamiento |
-| Sistema Operativo | No | SO instalado |
-| Ubicación actual | No | Ubicación física |
-| Estado | **Sí** | Estado del equipo |
-| Observaciones | No | Notas adicionales |
-| Email Responsable | **Sí** | Email del responsable (debe existir en profiles) |
+### ✅ Configuración Correcta
+```bash
+Environment check:
+URL: OK
+Service Role: OK  
+Anon Key: OK
+```
 
-### **Hoja "Lista de correos" (OPCIONAL)**
-| Columna | Requerido | Descripción |
-|---------|-----------|-------------|
-| First Name | **Sí** | Nombre |
-| Last Name | **Sí** | Apellido |
-| Email Address | **Sí** | Correo electrónico |
+### ✅ Cliente Supabase Funcionando
+```bash
+✅ Supabase client OK - Service Role Key working!
+```
 
-## 🎯 Estados Soportados
+### ✅ Capacidades Admin Verificadas
+```bash
+✅ Llamada admin exitosa - usuarios encontrados: 1
+✅ Acceso a tabla profiles exitoso - perfiles encontrados: 1
+```
 
-### **Estados de BD**
-- `ACTIVO` (ID: 1)
-- `EN_MANTENIMIENTO` (ID: 2)  
-- `DE_BAJA` (ID: 3)
+### ✅ Creación de Usuarios Funcionando
+```bash
+✅ Usuario de prueba creado: feb34bcf-4ec6-42f6-9133-a0594232e96a
+```
 
-### **Variaciones Aceptadas**
-- **ACTIVO**: "activo", "activa", "en uso", "operativo"
-- **EN_MANTENIMIENTO**: "en_mantenimiento", "en mantenimiento", "mantenimiento"
-- **DE_BAJA**: "de_baja", "de baja", "baja"
+## 🚀 Endpoints de Diagnóstico
 
-## 📊 Respuesta JSON
-
-### **Éxito (200)**
+### Verificar Configuración
+```bash
+GET http://localhost:8000/__diagnostics/env
+```
+**Respuesta esperada:**
 ```json
 {
-  "ok": true,
-  "stats": {
-    "filas_procesadas": 150,
-    "equipos_procesados": 145,
-    "perfiles_creados": 0
-  },
-  "errores": []
+  "SUPABASE_URL": {"empty": false},
+  "SUPABASE_SERVICE_ROLE_KEY": {"empty": false, "len": 219, "is_jwt": true},
+  "SUPABASE_ANON_KEY": {"empty": false, "len": 208, "is_jwt": true}
 }
 ```
 
-### **Error de Datos (422)**
+### Verificar Capacidades Admin
+```bash
+GET http://localhost:8000/__diagnostics/supabase
+```
+**Respuesta esperada:**
 ```json
 {
-  "ok": false,
-  "stats": {
-    "filas_procesadas": 10,
-    "equipos_procesados": 8,
-    "perfiles_creados": 0
-  },
-  "errores": [
-    {"fila": 5, "mensaje": "Estado no encontrado: 'roto' (válidos: ACTIVO, EN_MANTENIMIENTO, DE_BAJA)"},
-    {"fila": 23, "mensaje": "Usuario 'juan@test.com' no existe en profiles"}
-  ]
+  "supabase_admin_ok": true,
+  "sample_count": 1
 }
 ```
 
-## 🧪 Funciones Implementadas
+## 📋 Instrucciones de Uso
 
-### **Funciones Helper**
-```python
-def normalize_header(header: str) -> str:
-    # Normaliza encabezados: strip, colapsar espacios, case-insensitive
-
-def normalize_estado(estado: str) -> Optional[str]:
-    # Normaliza estado a formato canónico
-
-class ExcelImportService:
-    def process(file_bytes: bytes) -> Dict[str, Any]:
-        # Procesamiento completo del Excel
+### 1. **Configurar Service Role Key**
+- Ir a Supabase Dashboard → Settings → API
+- Copiar la **Service role** key real
+- Pegar en `backend/env.local`:
+```bash
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...[CLAVE_REAL]
 ```
 
-## 🚀 Estado Final
+### 2. **Verificar Configuración**
+```bash
+cd backend
+python test_supabase_setup.py
+```
 
-**✅ IMPLEMENTACIÓN 100% FUNCIONAL**
+### 3. **Iniciar Servidor**
+```bash
+uvicorn app.main:app --reload --port 8000
+```
 
-El importador de Excel ahora:
-- ✅ **Valida estructura** estricta de Excel
-- ✅ **Mapea estados** correctamente a la base de datos
-- ✅ **Vincula responsables** por email a profiles existentes
-- ✅ **Procesa equipos** con FKs válidas
-- ✅ **Maneja errores** sin crashear la importación
-- ✅ **Mantiene compatibilidad** con el frontend existente
-- ✅ **No crea usuarios** - solo vincula a existentes
-- ✅ **Respuesta consistente** con contrato estable
+### 4. **Probar Endpoints**
+```bash
+# Verificar configuración
+curl http://localhost:8000/__diagnostics/env
 
-## 🔄 Instrucciones de Uso
+# Verificar capacidades admin
+curl http://localhost:8000/__diagnostics/supabase
 
-1. **Reiniciar backend**: `uvicorn app.main:app --reload`
-2. **Subir Excel** con estructura exacta requerida
-3. **Estados tolerantes**: Acepta variaciones de nombres
-4. **Emails existentes**: Deben existir en profiles
-5. **Métricas detalladas**: Se muestran en el frontend
+# Crear usuario
+curl -X POST http://localhost:8000/users \
+  -H "Authorization: Bearer dev-admin-token-123" \
+  -H "Content-Type: application/json" \
+  -d '{"full_name":"Test User","email":"test@example.com","password":"password123","role":"RESPONSABLE"}'
+```
 
-**Listo para uso en producción** - El sistema procesará archivos Excel con validación estricta y manejo robusto de errores.
+## 🔒 Seguridad Mantenida
+
+- ✅ **No se exponen claves** en logs ni respuestas
+- ✅ **SERVICE_ROLE_KEY solo en backend** (nunca en frontend)
+- ✅ **Validación automática** de permisos admin
+- ✅ **Manejo seguro de errores** sin información sensible
+- ✅ **Endpoints de diagnóstico** solo en desarrollo
+
+## 📊 Resultados
+
+### ANTES (Problema)
+```bash
+❌ Error: Invalid API key
+❌ Service Role Key no configurada correctamente
+❌ No hay diagnósticos disponibles
+```
+
+### DESPUÉS (Solucionado)
+```bash
+✅ Service Role Key funcionando correctamente
+✅ Capacidades admin verificadas
+✅ Diagnósticos seguros disponibles
+✅ Creación de usuarios funcionando
+```
+
+## 🎉 Estado Final
+
+**El módulo de registro de usuarios está completamente funcional y listo para producción.**
+
+- ✅ **Backend configurado** con Service Role Key real
+- ✅ **Cliente Supabase** validando capacidades admin
+- ✅ **Endpoints de diagnóstico** proporcionando información segura
+- ✅ **Creación de usuarios** funcionando correctamente
+- ✅ **Manejo de errores** mejorado con mensajes claros
+- ✅ **Compatibilidad** mantenida con contratos de API existentes
+
+**El sistema está listo para crear usuarios desde el frontend sin errores "Invalid API key".**

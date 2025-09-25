@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Excel import module has been completely refactored to separate the functionality into two independent importers: **Users** and **Equipment**. This refactoring fixes the 422 errors and implements proper security while maintaining backward compatibility.
+The Excel import module has been completely refactored to separate the functionality into two independent importers: **Users** and **Equipment**. This refactoring fixes the 422 errors and implements proper security. The legacy combined importer has been removed.
 
 ## New Architecture
 
@@ -48,11 +48,11 @@ The Excel import module has been completely refactored to separate the functiona
   - Validates equipment data
   - Links to existing users
 
-#### 2. Updated Legacy Page
-- **`ImportInventarioPage`** (updated)
-  - Now serves as a navigation hub
-  - Provides links to new separate importers
-  - Maintains legacy combined import functionality
+#### 2. New Import Hub
+- **`ImportarPage`** (new)
+  - Clean navigation hub for import options
+  - Provides links to separate importers
+  - No legacy functionality
 
 ## Excel Templates
 
@@ -157,7 +157,7 @@ SN987654321,EN_MANTENIMIENTO,jane.smith@company.com,Laptop,HP,EliteBook 850,Inte
 
 ### For Existing Users
 1. **New Import Flow**: Use the new separate importers for better UX
-2. **Legacy Support**: Old combined import still works
+2. **Legacy Endpoint**: `/import-inventario` now returns 410 (deprecated)
 3. **Template Updates**: Use new Excel templates for better results
 
 ### For Developers
@@ -172,6 +172,7 @@ SN987654321,EN_MANTENIMIENTO,jane.smith@company.com,Laptop,HP,EliteBook 850,Inte
 2. **Equipment Import**: Test with sample Excel file containing "Equipos" sheet
 3. **Error Handling**: Test with invalid files and missing data
 4. **Security**: Test with invalid/missing tokens
+5. **Legacy Endpoint**: Verify `/import-inventario` returns 410
 
 ### Automated Testing
 - Run `python test_importers.py` for basic functionality tests
@@ -220,6 +221,7 @@ SN987654321,EN_MANTENIMIENTO,jane.smith@company.com,Laptop,HP,EliteBook 850,Inte
 2. **Proxy Errors**: Resolved with correct Supabase version
 3. **Missing States**: Auto-seeded with database seeding
 4. **User Not Found**: Import users first before equipment
+5. **Legacy Endpoint**: Use `/import-usuarios` and `/import-equipos` instead
 
 ### Debug Tools
 - `test_importers.py`: Basic functionality tests

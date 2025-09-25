@@ -1,4 +1,5 @@
-// src/pages/usuarios/UsersForm.tsx
+// FILE: frontend/src/pages/usuarios/UsersForm.tsx
+// fix: refactorizar siguiendo el patrón del formulario de equipos que funciona correctamente
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, type SubmitHandler } from 'react-hook-form';
@@ -9,7 +10,7 @@ import { createUser, getUserById, updateUserProfile } from '../../data/users.rep
 
 import { Button } from '@/components/ui/button';
 import {
-  Save, X, ChevronDown,
+  Save, X, ChevronDown, Loader2,
   User as UserIcon, Mail, Building2, MapPin, Phone, ShieldCheck, Lock
 } from 'lucide-react';
 
@@ -52,7 +53,7 @@ const UserFormSchema = z.object({
   department: z.string().trim().optional(),
   phone: z.string().trim().optional(),
   location: z.string().trim().optional(),
-  role: z.enum(['ADMIN', 'TECNICO', 'RESPONSABLE']).default('RESPONSABLE'),
+  role: z.enum(['ADMIN', 'RESPONSABLE']).default('RESPONSABLE'),
   active: z.boolean().default(true),
 });
 type FormInput = z.input<typeof UserFormSchema>;
@@ -112,6 +113,9 @@ export default function UsersForm() {
   const isEdit = Boolean(userId);
   const { show, Toast } = useToast();
 
+  const [loading, setLoading] = React.useState<boolean>(true);
+  const [submitting, setSubmitting] = React.useState<boolean>(false);
+
   const {
     register,
     handleSubmit,
@@ -139,35 +143,56 @@ export default function UsersForm() {
   // Cargar datos en edición (hidratar el form de una sola vez)
   React.useEffect(() => {
     (async () => {
-      if (!isEdit || !userId) return;
-
-      if (hydratedRef.current === userId) return; // ya hidratado
-
-      const { data, error } = await getUserById(userId);
-      if (error) {
-        show(error.message || 'No se pudo cargar el usuario', 'error');
+      if (!isEdit || !userId) {
+        setLoading(false);
         return;
       }
-      if (data) {
-        // Mapeo estricto para tipos correctos del form
-        const mapped: FormInput = {
-          full_name: data.full_name ?? '',
-          email: data.email ?? '',
-          password: undefined, // nunca hidratar password
-          department: data.department ?? '',
-          phone: data.phone ?? '',
-          location: data.location ?? '',
-          role: (data.role as UserRole) ?? 'RESPONSABLE',
-          active: !!data.active,
-        };
-        reset(mapped); // <-- hidrata todo el formulario de una sola vez
-        hydratedRef.current = userId;
+
+      if (hydratedRef.current === userId) {
+        setLoading(false);
+        return; // ya hidratado
+      }
+
+      try {
+        const { data, error } = await getUserById(userId);
+        if (error) {
+          show(error.message || 'No se pudo cargar el usuario', 'error');
+          setLoading(false);
+          return;
+        }
+        if (data) {
+          // Mapeo estricto para tipos correctos del form
+          const mapped: FormInput = {
+            full_name: data.full_name ?? '',
+            email: data.email ?? '',
+            password: undefined, // nunca hidratar password
+            department: data.department ?? '',
+            phone: data.phone ?? '',
+            location: data.location ?? '',
+            role: (data.role as UserRole) ?? 'RESPONSABLE',
+            active: !!data.active,
+          };
+          reset(mapped); // <-- hidrata todo el formulario de una sola vez
+          hydratedRef.current = userId;
+        }
+      } catch (e: any) {
+        show(e?.message || 'Error al cargar el usuario', 'error');
+      } finally {
+        setLoading(false);
       }
     })();
     // OJO: no metemos `show` en deps para evitar re-ejecuciones inestables
   }, [isEdit, userId, reset, show]);
 
   const onSubmit: SubmitHandler<FormInput> = async (values) => {
+    // Prevenir doble submit
+    if (submitting) {
+      console.log("[USER FORM] Submit bloqueado - ya enviando");
+      return;
+    }
+    
+    setSubmitting(true);
+    
     try {
       if (isEdit && userId) {
         await updateUserProfile(userId, {
@@ -180,14 +205,18 @@ export default function UsersForm() {
           active: values.active ?? true,
         });
         show('Usuario actualizado');
+        // Navegar a la lista después de actualizar con refresh flag
+        setTimeout(() => navigate('/usuarios', { state: { refreshUsers: true } }), 500);
       } else {
+        // Crear nuevo usuario
         if (!values.password) {
           show('La contraseña es obligatoria', 'error');
           return;
         }
-        await createUser({
+        
+        const result = await createUser({
           full_name: values.full_name,
-          email: values.email ?? '',
+          email: values.email?.toLowerCase().trim() ?? '',  // fix: Normalize email
           password: values.password,
           department: toNull(values.department),
           phone: toNull(values.phone),
@@ -195,14 +224,51 @@ export default function UsersForm() {
           role: (values.role ?? 'RESPONSABLE') as UserRole,
           active: values.active ?? true,
         });
-        show('Usuario creado');
+        
+        // Mostrar mensaje de éxito
+        if (result.generated_password) {
+          show(`Usuario creado. Contraseña generada: ${result.generated_password}`);
+        } else {
+          show('Usuario creado exitosamente');
+        }
+        
+        // Log en desarrollo para verificar respuesta
+        if (import.meta.env.MODE !== "production") {
+          console.log("[CREATE USER OK]", result);
+        }
+        
+        // fix: Navigate to users list after successful creation with refresh flag
+        setTimeout(() => navigate('/usuarios', { state: { refreshUsers: true } }), 500);
       }
-      setTimeout(() => navigate('/usuarios'), 500);
     } catch (e: any) {
-      const msg = e?.message || e?.error_description || 'Ocurrió un error al guardar el usuario';
-      show(msg, 'error');
+      // fix: Enhanced error handling like equipment form
+      console.error("[USER FORM ERROR]", e);
+      
+      let errorMsg = 'Ocurrió un error al guardar el usuario';
+      
+      if (e?.response?.data?.detail) {
+        errorMsg = typeof e.response.data.detail === 'string' ? e.response.data.detail : JSON.stringify(e.response.data.detail);
+      } else if (e?.response?.data?.message) {
+        errorMsg = typeof e.response.data.message === 'string' ? e.response.data.message : JSON.stringify(e.response.data.message);
+      } else if (e?.message) {
+        errorMsg = e.message;
+      } else if (e?.error_description) {
+        errorMsg = e.error_description;
+      }
+      
+      show(errorMsg, 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-slate-500" aria-label="Cargando" role="status" />
+      </div>
+    );
+  }
 
   /* ------------------------------- UI -------------------------------------- */
   return (
@@ -365,9 +431,8 @@ export default function UsersForm() {
                 icon={<ShieldCheck className="h-4 w-4" />}
                 required
               >
-                <option value="ADMIN">ADMIN</option>
-                <option value="TECNICO">TECNICO</option>
-                <option value="RESPONSABLE">RESPONSABLE</option>
+                <option value="ADMIN">Administrador</option>
+                <option value="RESPONSABLE">Responsable</option>
               </FancySelect>
               {errors.role && (
                 <p className="mt-1 text-xs text-rose-600">{errors.role.message as string}</p>
@@ -400,11 +465,18 @@ export default function UsersForm() {
           </Button>
           <Button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || submitting}
             className="rounded-xl bg-gradient-to-b from-slate-900 to-slate-700 text-white hover:from-slate-800 hover:to-slate-600"
           >
-            <Save className="mr-2 h-4 w-4" />
-            {isEdit ? 'Guardar cambios' : 'Crear usuario'}
+            {submitting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            {submitting 
+              ? (isEdit ? 'Guardando...' : 'Creando...') 
+              : (isEdit ? 'Guardar cambios' : 'Crear usuario')
+            }
           </Button>
         </div>
       </form>

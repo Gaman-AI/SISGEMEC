@@ -1,30 +1,44 @@
+// frontend/src/lib/axios.ts
 import axios from "axios";
 
-// Configurar axios base
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000",
-  timeout: 30000, // 30 segundos
+const BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL ?? "http://localhost:8000";
+const ADMIN_TOKEN = ((import.meta as any).env?.VITE_API_ADMIN_TOKEN ?? "dev-admin-token-123").trim();
+
+export const api = axios.create({
+  baseURL: BASE_URL.replace(/\/+$/, ""),
 });
 
-// Interceptor de respuesta para manejar errores
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error("API Error:", error);
-    
-    // Limpiar loading states si existen
-    if (error.response?.status === 401) {
-      // No redirigir automáticamente, dejar que cada componente maneje
-      console.warn("Unauthorized request - token may be invalid");
+// Rutas protegidas: detectar /users con o sin prefijos (p.ej. /api/v1/users)
+const PROTECTED_PATHS: RegExp[] = [
+  /(^|\/)users\/?$/i,     // .../users  o .../users/
+];
+
+api.interceptors.request.use((config) => {
+  const rawUrl = config.url ?? "";
+  const asURL = new URL(rawUrl, api.defaults.baseURL);
+  const pathname = asURL.pathname;
+
+  const isProtected = PROTECTED_PATHS.some((re) => re.test(pathname));
+  if (isProtected) {
+    if (!config.headers) config.headers = {} as any;
+    // Fuerza Authorization si no está presente.
+    // Evita duplicados en minúsculas/mayúsculas.
+    const hasAuth =
+      Object.keys(config.headers).some((k) => k.toLowerCase() === "authorization") ||
+      Object.keys(config.headers).some((k) => k.toLowerCase() === "x-admin-token");
+
+    if (!hasAuth) {
+      if (ADMIN_TOKEN) {
+        (config.headers as any)["Authorization"] = `Bearer ${ADMIN_TOKEN}`;
+      } else {
+        console.warn(
+          "[api] VITE_API_ADMIN_TOKEN está vacío. Las rutas admin fallarán con 401."
+        );
+      }
     }
-    
-    if (error.response?.status === 500) {
-      console.error("Server error:", error.response.data);
-    }
-    
-    // Re-lanzar el error para que lo maneje el componente
-    return Promise.reject(error);
   }
-);
+
+  return config;
+});
 
 export default api;

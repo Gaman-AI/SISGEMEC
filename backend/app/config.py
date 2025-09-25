@@ -1,8 +1,20 @@
+# FILE: backend/app/config.py
+# fix: asegurar carga de .env y/o env.local con python-dotenv; no cambies nombres de variables
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-# Cargar variables de entorno
-load_dotenv()
+# Cargar primero .env si existe; si no, intentar env.local
+_root = Path(__file__).resolve().parents[2]
+_dotenv = _root / ".env"
+_envlocal = _root / "env.local"
+if _dotenv.exists():
+    load_dotenv(_dotenv)
+elif _envlocal.exists():
+    load_dotenv(_envlocal)
+else:
+    # Fallback a load_dotenv() sin path específico
+    load_dotenv()
 
 class Settings:
     # Supabase Configuration
