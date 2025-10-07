@@ -16,7 +16,7 @@ import string
 
 from app.config import settings
 from app.core.supabase_client import get_supabase
-from app.deps.auth import require_admin_token
+from app.deps.jwt_auth import require_admin_user
 from gotrue.errors import AuthApiError
 from postgrest.exceptions import APIError
 
@@ -353,7 +353,7 @@ def _ensure_user_and_profile(supabase, email: str, password: Optional[str], full
     # no debería llegar
     raise HTTPException(status_code=500, detail="User creation orchestrator unexpected failure")
 
-@router.post("", dependencies=[Depends(require_admin_token)])
+@router.post("", dependencies=[Depends(require_admin_user)])
 def create_user(payload: UserCreateRequest):
     """
     Crea un nuevo usuario usando Service Role (IDEMPOTENTE con ORQUESTADOR)
@@ -404,7 +404,7 @@ def create_user(payload: UserCreateRequest):
         status_code=status.HTTP_201_CREATED if created else status.HTTP_200_OK
     )
 
-@router.get("", dependencies=[Depends(require_admin_token)])
+@router.get("", dependencies=[Depends(require_admin_user)])
 def list_users():
     """
     Lista todos los usuarios desde la tabla profiles.

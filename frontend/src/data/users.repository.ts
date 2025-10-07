@@ -1,25 +1,18 @@
 // FILE: frontend/src/data/users.repository.ts
 // fix: refactorizar siguiendo el patrón del módulo de equipos que funciona correctamente
 import { supabase } from '@/lib/supabase';
-import { api } from '@/lib/axios';
+import { apiPost } from '@/services/api';
 import type { ListFiltros, UserRow, UserRole } from './users.types';
 import { nullify } from './users.types';
-import type { AxiosError } from 'axios';
 
 const TABLE = 'profiles';
 
 /* -------------------------------- LISTAR ----------------------------------- */
 export async function getUsers(): Promise<UserRow[]> {
-  const res = await api.get(`/users`, {
-    // Evitar cache del navegador/proxy
-    headers: {
-      "Cache-Control": "no-store",
-      "Pragma": "no-cache",
-    },
-    // Cache-buster en querystring para proxies agresivos
-    params: { _ts: Date.now() },
-  });
-  return res.data;
+  // fix: Use direct Supabase for listing users (no backend endpoint needed)
+  const { data, error } = await supabase.from('profiles').select('*').order('full_name');
+  if (error) throw error;
+  return data || [];
 }
 
 export async function listUsers(args: ListFiltros = {}) {
@@ -84,27 +77,22 @@ export async function createUser(payload: {
 }) {
   try {
     const body = { ...payload, email: String(payload.email || "").trim().toLowerCase() };
-    // El interceptor inyecta automáticamente el Authorization header
-    const res = await api.post("/users", body);
-    return res.data;
-  } catch (err) {
-    const ax = err as AxiosError<any>;
-    const detail = ax.response?.data?.detail;
-    const message = ax.response?.data?.message;
-    
-    // Mejorar el manejo de errores
-    let errorMessage = ax.message;
-    if (detail) {
-      errorMessage = typeof detail === "string" ? detail : JSON.stringify(detail);
-    } else if (message) {
-      errorMessage = typeof message === "string" ? message : JSON.stringify(message);
+    // fix: Use new API service that sends Supabase JWT token
+    return await apiPost("/users", body);
+  } catch (err: any) {
+    // fix: Enhanced error handling
+    let errorMessage = err.message;
+    if (err.response?.data?.detail) {
+      errorMessage = typeof err.response.data.detail === "string" ? err.response.data.detail : JSON.stringify(err.response.data.detail);
+    } else if (err.response?.data?.message) {
+      errorMessage = typeof err.response.data.message === "string" ? err.response.data.message : JSON.stringify(err.response.data.message);
     }
     
     // Log para debugging
     console.error("[CREATE USER ERROR]", {
-      status: ax.response?.status,
-      statusText: ax.response?.statusText,
-      data: ax.response?.data,
+      status: err.response?.status,
+      statusText: err.response?.statusText,
+      data: err.response?.data,
       message: errorMessage
     });
     

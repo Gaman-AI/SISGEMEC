@@ -1,21 +1,49 @@
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from fastapi.responses import RedirectResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
+# ==== .env robusto (no intrusivo) ====
 import os
 import logging
+try:
+    from dotenv import load_dotenv, find_dotenv
+    # Cargar solo .env (no env.local que tiene EMAIL_DEBUG=1)
+    env_path = find_dotenv(filename=".env", usecwd=True)
+    if env_path:
+        load_dotenv(env_path, override=True)
+        logging.getLogger("uvicorn").info(f"[CONFIG] Cargando configuración desde: {env_path}")
+    else:
+        logging.getLogger("uvicorn").warning("[CONFIG] No se encontró archivo .env")
+except Exception as e:
+    logging.getLogger("uvicorn").error(f"[CONFIG] Error cargando .env: {e}")
+    pass
+
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Request
+from fastapi.responses import RedirectResponse, FileResponse, JSONResponse, Response, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+import logging
+import sys
+import uuid
+import traceback
+
+logger = logging.getLogger("uvicorn")
 
 from app.routers.me import router as me_router
 from app.routers.equipos import router as equipos_router
 from app.routers.servicios import router as servicios_router
+from app.routers.solicitudes import router as solicitudes_router
 from app.routers.auth import router as auth_router
 from app.routers.import_usuarios import router as import_usuarios_router
 from app.routers.import_equipos import router as import_equipos_router
 from app.routers.deprecations import router as deprecations_router
 from app.routers.admin_users import router as admin_users_router
+from app.routers.debug_auth import router as debug_auth_router
+from app.routers.debug_cors import router as debug_cors_router
+from app.routers.debug_last_error import router as debug_last_error_router
+from app.routers.reportes import router as reportes_router
+from app.routers.health import router as health_router
+from app.middleware.logging import LoggingMiddleware
 from app.config import settings
 from app.core.supabase_client import get_supabase, _read_envs
+from app.core.email_config import EmailSettings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,40 +60,144 @@ async def lifespan(app: FastAPI):
         logging.getLogger("supabase").warning("⚠️ Supabase warm-up failed on startup: %s", e.__class__.__name__)
         logging.getLogger("supabase").warning("   Los endpoints reintentarán automáticamente")
     
+    # Log de EmailSettings al startup (sin exponer password)
+    try:
+        s = EmailSettings()
+        masked_user = (s.user[:2] + "***") if s.user else ""
+        logging.getLogger("uvicorn").info(
+            f"[EMAIL] loaded host={s.host} port={s.port} tls={s.use_tls} user={masked_user} from={s.from_email} debug={s.email_debug}"
+        )
+    except Exception as e:
+        logging.getLogger("uvicorn").warning(f"[EMAIL] Error cargando EmailSettings: {e}")
+    
     yield
 
-app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
+app = FastAPI(
+    title="SISGEMEC API", 
+    lifespan=lifespan,
+    openapi_url="/openapi.json",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+# Logging consistente y visible
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 
 # Log API_ADMIN_TOKEN status on boot (dev only)
 if getattr(settings, "ENVIRONMENT", "development") != "production":
     masked = "****" if getattr(settings, "API_ADMIN_TOKEN", None) else "(vacío)"
     print(f"[BOOT] API_ADMIN_TOKEN: {masked}")
 
-# Configurar CORS
+# --- Config CORS ---
+FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173").rstrip("/")
+allow_origins = [FRONTEND_ORIGIN, "http://127.0.0.1:5173"]
+
+# 1) CORSMiddleware oficial (único y al inicio)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Vite dev server
-        "http://localhost:3000",  # Alternativo
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*", "Authorization", "authorization"],
+    allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
+logger.info("[CORS] allow_origins=%s", allow_origins)
+
+# Import global error tracking
+from app.core.error_tracking import capture_exception
+
+# 2) CORS Shield + Error Capture Middleware
+@app.middleware("http")
+async def cors_and_error_shield(request: Request, call_next):
+    # OPTIONS (preflight) sale rápido con CORS - SIN AUTENTICACIÓN
+    if request.method.upper() == "OPTIONS":
+        resp = Response(status_code=204)
+        origin = request.headers.get("origin")
+        if origin in allow_origins:
+            resp.headers["Access-Control-Allow-Origin"] = origin
+            resp.headers["Vary"] = "Origin"
+        else:
+            # Permitir localhost y 127.0.0.1 por defecto
+            resp.headers["Access-Control-Allow-Origin"] = "http://localhost:5173"
+        resp.headers["Access-Control-Allow-Credentials"] = "true"
+        resp.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, X-Requested-With, Accept, Origin"
+        resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        resp.headers["Access-Control-Max-Age"] = "86400"  # Cache preflight por 24h
+        return resp
+    
+    try:
+        resp = await call_next(request)
+    except Exception as e:
+        error_id = str(uuid.uuid4())[:8]
+        trace = traceback.format_exc()
+        where = f"{request.method} {request.url.path}"
+        extra = {"headers": dict(request.headers)}
+        
+        capture_exception(e)
+        logger.error("[ERR][%s] %s\n%s", error_id, repr(e), trace)
+        
+        resp = JSONResponse(status_code=500, content={"detail": "Internal Server Error", "error_id": error_id})
+
+    # Forzar CORS en toda respuesta
+    origin = request.headers.get("origin")
+    if origin in allow_origins:
+        resp.headers["Access-Control-Allow-Origin"] = origin
+        resp.headers["Vary"] = "Origin"
+    else:
+        # Fallback para desarrollo
+        resp.headers["Access-Control-Allow-Origin"] = "http://localhost:5173"
+    resp.headers["Access-Control-Allow-Credentials"] = "true"
+    resp.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
+    return resp
+
+# Middleware de logging
+app.add_middleware(LoggingMiddleware)
+
 # Rutas de API
+app.include_router(health_router)  # Health check (sin auth)
 app.include_router(auth_router)
 app.include_router(me_router)
 app.include_router(equipos_router)
 app.include_router(servicios_router)
+app.include_router(solicitudes_router)
 app.include_router(import_usuarios_router)
 app.include_router(import_equipos_router)
 app.include_router(admin_users_router)
+app.include_router(reportes_router)
 
 # Compatibilidad temporal para endpoints legacy
 app.include_router(deprecations_router)
+
+# Debug endpoints (solo si EMAIL_DEBUG=1)
+EMAIL_DEBUG = os.getenv("EMAIL_DEBUG", "0")
+logging.getLogger("uvicorn").info(f"[EMAIL] env=development | EMAIL_DEBUG(env)={EMAIL_DEBUG} | SMTP_USER={os.getenv('SMTP_USER', 'NOT_SET')}")
+
+if EMAIL_DEBUG in ("1", "true", "True"):
+    app.include_router(debug_auth_router, tags=["debug"])
+    app.include_router(debug_cors_router, tags=["debug"])
+    app.include_router(debug_last_error_router, tags=["debug"])
+
+# --- Ruta de diagnóstico para ver TODAS las rutas registradas ---
+@app.get("/__routes")
+def __routes():
+    # Nota: las rutas con prefijo '/debug' deben aparecer aquí si el router se montó
+    return sorted([f"{list(r.methods)} {r.path}" for r in app.router.routes])
+
+# --- Montaje condicional del router de debug CON prefijo '/debug' ---
+try:
+    from app.routers.debug_email import router as debug_router
+    if EmailSettings().email_debug:
+        app.include_router(debug_router, prefix="/debug", tags=["debug-email"])
+        logging.getLogger("uvicorn").info("[DEBUG] Router /debug montado (EMAIL_DEBUG=1)")
+    else:
+        logging.getLogger("uvicorn").info("[DEBUG] Router /debug NO montado (EMAIL_DEBUG != 1)")
+except Exception as e:
+    logging.getLogger("uvicorn").warning(f"[DEBUG] No se pudo montar /debug: {e}")
 
 # Endpoint de diagnóstico para desarrollo
 if getattr(settings, "ENVIRONMENT", "development") != "production":

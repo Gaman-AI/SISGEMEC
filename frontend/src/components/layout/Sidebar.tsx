@@ -16,6 +16,7 @@ import {
   LogOut,
   FileText,
   Upload,
+  BarChart3,
 } from "lucide-react";
 import {
   Tooltip,
@@ -34,6 +35,7 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
   { label: "Tipos de Servicio", to: "/tipos-servicio", icon: ListChecks },
   { label: "Servicios", to: "/servicios", icon: Wrench },
   { label: "Solicitudes", to: "/solicitudes", icon: FileText },
+  { label: "Reportes", to: "/reportes", icon: BarChart3 },
   { label: "Importar", to: "/import", icon: Upload },
 ];
 

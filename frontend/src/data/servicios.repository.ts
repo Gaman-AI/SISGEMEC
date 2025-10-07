@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { apiPut } from "@/services/api";
 import type { 
   ServicioRow, 
   EquipoLite, 
@@ -172,23 +173,28 @@ export async function createServicio(payload: ServicioFormValues): Promise<{ dat
   }
 }
 
-export async function updateServicio(id: number, payload: ServicioFormValues): Promise<{ ok: boolean; error?: string }> {
-  try {
-    const values = nullify(payload);
-    
-    const { error } = await supabase
-      .from("servicios")
-      .update(values)
-      .eq("servicio_id", id);
-
-    if (error) {
-      return { ok: false, error: error.message };
-    }
-
-    return { ok: true, error: undefined };
-  } catch (error: any) {
-    return { ok: false, error: error.message || 'Error al actualizar servicio' };
+export async function updateServicio(id: number, data: any) {
+  if ((import.meta as any).env.VITE_USE_BACKEND_API === "true") {
+    // Usar apiPut que ya maneja Authorization automáticamente
+    return apiPut(`/servicios/${id}`, data);
   }
+  // Fallback a Supabase directo
+  const { data: result, error } = await supabase.from('servicios').update(data).eq('id', id).select().single();
+  if (error) throw error;
+  return { ok: true, error: undefined };
+}
+
+export async function completarServicio(id: number) {
+  if ((import.meta as any).env.VITE_USE_BACKEND_API === "true") {
+    // Usar apiPut que ya maneja Authorization automáticamente
+    return apiPut(`/servicios/${id}/complete`, {});
+  }
+  // Fallback a Supabase directo
+  const { data, error } = await supabase.from('servicios')
+    .update({ estado: 'COMPLETADO' })
+    .eq('id', id).select().single();
+  if (error) throw error;
+  return { ok: true, error: undefined };
 }
 
 export async function listEquiposLite(): Promise<{ data: EquipoLite[]; error: Error | null }> {

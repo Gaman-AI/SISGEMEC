@@ -29,6 +29,7 @@ import DashboardPage from "./pages/dashboard/DashboardPage";
 import ImportarPage from "./pages/ImportarPage";
 import ImportUsuariosPage from "./pages/import-usuarios/ImportUsuariosPage";
 import ImportEquiposPage from "./pages/import-equipos/ImportEquiposPage";
+import ReportesPage from "./pages/admin/ReportesPage";
 
 function RoleRedirect() {
   const { state } = useAuth();
@@ -76,6 +77,7 @@ export default function App() {
               <Route path="/import" element={<RequireAuth><RequireAdmin><ImportarPage /></RequireAdmin></RequireAuth>} />
               <Route path="/import-usuarios" element={<RequireAuth><RequireAdmin><ImportUsuariosPage /></RequireAdmin></RequireAuth>} />
               <Route path="/import-equipos" element={<RequireAuth><RequireAdmin><ImportEquiposPage /></RequireAdmin></RequireAuth>} />
+              <Route path="/reportes" element={<RequireAuth><RequireAdmin><ReportesPage /></RequireAdmin></RequireAuth>} />
 
               {/* RESPONSABLE */}
               <Route path="/mis-equipos" element={<RequireAuth><RequireResponsable><MisEquiposList /></RequireResponsable></RequireAuth>} />

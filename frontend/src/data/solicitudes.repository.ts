@@ -1,5 +1,6 @@
 // frontend/src/data/solicitudes.repository.ts
 import { supabase } from "@/lib/supabase";
+import { apiPost, apiPut } from "@/services/api";
 import {
   ESTADOS_SOLICITUD_LABEL,
   type ListSolicitudesParams,
@@ -104,26 +105,30 @@ export async function listEquiposPropiosLite(
 /* =========================================================
    ✅ Crear solicitud (para MisSolicitudesForm)
    ========================================================= */
-export async function createSolicitud(payload: {
-  equipo_id: number;
-  solicitante_id: string;
-  descripcion?: string;
-}): Promise<{ ok: boolean; error: Error | null }> {
-  // ⚠️ si falta solicitante_id, evitamos llamada inválida
-  if (!payload.solicitante_id || payload.solicitante_id === "me") {
-    return { ok: false, error: new Error("Falta solicitante_id válido") };
+export async function createSolicitud(input: any) {
+  let result;
+  
+  if ((import.meta as any).env.VITE_USE_BACKEND_API === "true") {
+    // Usar apiPost que ya maneja Authorization automáticamente
+    result = await apiPost("/solicitudes", input);
+  } else {
+    // Fallback a Supabase directo
+    const { data, error } = await supabase.from('solicitudes_servicio').insert(input).select().single();
+    if (error) throw error;
+    result = { ok: true, error: null };
   }
-
-  const insert = {
-    equipo_id: payload.equipo_id,
-    solicitante_id: payload.solicitante_id,
-    descripcion: nullifyLocal({ descripcion: payload.descripcion ?? "" }).descripcion, // "" -> null
-    estado_solicitud_id: 1 as const, // Enviada
-  };
-
-  const { error } = await supabase.from("solicitudes_servicio").insert(insert);
-  if (error) return { ok: false, error: new Error(error.message) };
-  return { ok: true, error: null };
+  
+  // REFRESH inmediato de "mis solicitudes" - trigger para que la UI se actualice
+  try {
+    // Disparar evento personalizado para que los componentes sepan que deben refetch
+    window.dispatchEvent(new CustomEvent('solicitud-created', { 
+      detail: { solicitud_id: result.solicitud_id } 
+    }));
+  } catch (e) {
+    console.warn('No se pudo disparar evento de actualización:', e);
+  }
+  
+  return result;
 }
 
 /* =========================================================
@@ -287,20 +292,14 @@ export async function getSolicitudById(
 /* =========================================================
    ✅ Actualizar estado de solicitud
    ========================================================= */
-export async function updateSolicitudEstado(
-  id: number,
-  estadoId: EstadoSolicitudId,
-  motivo?: string
-): Promise<{ ok: boolean; error: Error | null }> {
-  const { error } = await supabase
-    .from("solicitudes_servicio")
-    .update({
-      estado_solicitud_id: estadoId,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("solicitud_id", id);
-
-  if (error) return { ok: false, error: new Error(error.message) };
+export async function updateSolicitudEstado(id: number, estado: string) {
+  if ((import.meta as any).env.VITE_USE_BACKEND_API === "true") {
+    // Usar apiPut que ya maneja Authorization automáticamente
+    return apiPut(`/solicitudes/${id}/estado`, { estado });
+  }
+  // Fallback a Supabase directo
+  const { data, error } = await supabase.from('solicitudes_servicio').update({ estado }).eq('id', id).select().single();
+  if (error) throw error;
   return { ok: true, error: null };
 }
 
@@ -337,22 +336,12 @@ export async function convertirSolicitudEnServicio(args: {
   fechaServicio?: string; // YYYY-MM-DD
   observaciones?: string | null;
 }): Promise<{ ok: boolean; servicio_id: number | null; error: Error | null }> {
-  const { solicitudId, tipoServicioId, adminId, fechaServicio, observaciones } = args;
-
-  const { data, error } = await supabase.rpc("convertir_solicitud_a_servicio", {
-    p_solicitud_id: solicitudId,
-    p_tipo_servicio_id: tipoServicioId,
-    p_admin_id: adminId,
-    p_fecha_servicio: fechaServicio ?? null,
-    p_observaciones: observaciones ?? null,
-  });
-
-  if (error) return { ok: false, servicio_id: null, error: new Error(error.message) };
-
-  const newId = typeof data === "number" ? data : Number((data as any)?.servicio_id ?? NaN);
-  if (!newId || Number.isNaN(newId)) {
-    return { ok: false, servicio_id: null, error: new Error("No se obtuvo servicio_id del RPC") };
+  // Usar backend cuando VITE_USE_BACKEND_API=true
+  if ((import.meta as any).env.VITE_USE_BACKEND_API === "true") {
+    // Usar apiPost que ya maneja Authorization automáticamente
+    return apiPost('/solicitudes/convertir-servicio', args);
   }
-  return { ok: true, servicio_id: newId, error: null };
+  // Fallback a Supabase directo (implementar lógica existente)
+  return { ok: false, servicio_id: null, error: new Error("Función no implementada en modo Supabase directo") };
 }
 

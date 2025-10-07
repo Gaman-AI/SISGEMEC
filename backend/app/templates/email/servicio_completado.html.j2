@@ -1,0 +1,12 @@
+{% extends "email/base.html.j2" %}
+{% block content %}
+<h1>Servicio Completado — Solicitud #{{ solicitud.id }}</h1>
+<div class="kv">
+  <p><strong>Servicio:</strong> {{ servicio.tipo }}</p>
+  <p><strong>Técnico:</strong> {{ servicio.tecnico_nombre }}</p>
+  <p><strong>Fecha de Cierre:</strong> {{ servicio.fecha_cierre }}</p>
+</div>
+<p style="margin:16px 0">
+  <a class="btn" href="{{ app_base_url }}/responsable/solicitudes/{{ solicitud.id }}" target="_blank">Ver detalle</a>
+</p>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "email/base.html.j2" %}
+{% block content %}
+<h1>Nueva Solicitud #{{ solicitud.id }}</h1>
+<div class="kv">
+  <p><strong>Título:</strong> {{ solicitud.titulo }}</p>
+  <p><strong>Descripción:</strong> {{ solicitud.descripcion }}</p>
+  <p><strong>Creada por:</strong> {{ solicitud.responsable_nombre }} ({{ solicitud.responsable_email }})</p>
+  <p><strong>Fecha:</strong> {{ solicitud.fecha_creacion }}</p>
+</div>
+<p style="margin:16px 0">
+  <a class="btn" href="{{ app_base_url }}/admin/solicitudes/{{ solicitud.id }}" target="_blank">Ver en SISGEMEC</a>
+</p>
+{% endblock %}
