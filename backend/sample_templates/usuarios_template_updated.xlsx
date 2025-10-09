@@ -1,0 +1,16 @@
+# Plantilla Excel Actualizada - Usuarios
+# Hoja: "Usuarios"
+
+# Columnas (Fila 1):
+# First Name | Last Name | Email Address | Password | Department | Phone | Location
+
+# Datos de ejemplo:
+# Juan | Pérez | juan@aosenuma.com | sisgemec_test | Soporte | 5532112233 | CDMX
+# María | García | maria@aosenuma.com | password123 | IT | 5544332211 | Guadalajara
+# Carlos | López | carlos@aosenuma.com | | Finanzas | 5566778899 | Monterrey
+
+# Notas:
+# - Password: Opcional, mínimo 8 caracteres
+# - Si Password está vacío y el usuario no existe en auth.users → error
+# - Si ya existe en auth.users → actualiza profiles (aunque Password venga vacío)
+# - Email Address: Debe ser único globalmente

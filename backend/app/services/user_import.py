@@ -11,8 +11,12 @@ from uuid import uuid4
 
 from app.config import settings
 from app.deps.supabase_client import supa_service
+from app.core.supabase_admin import create_or_get_auth_user
 
 logger = logging.getLogger(__name__)
+
+# Nombres de columna para password (case-insensitive)
+PASSWORD_COL_NAMES = {"password", "Password", "PASSWORD"}
 
 def normalize_text(text: str) -> str:
     """Normaliza texto: lower, strip, elimina tildes, espacios extra"""
@@ -81,6 +85,15 @@ class UserImportService:
             logger.error(f"Error buscando profile por email {email}: {e}")
             return None
     
+    def _profile_exists(self, email: str) -> bool:
+        """Verifica si existe un profile por email"""
+        return self._find_profile_by_email(email) is not None
+    
+    def _try_get_user_id_by_email(self, email: str) -> Optional[str]:
+        """Intenta obtener user_id por email desde profiles"""
+        profile = self._find_profile_by_email(email)
+        return profile.get("user_id") if profile else None
+    
     def _upsert_profile(self, user_id: str, email: str, full_name: str, 
                        department: str = None, phone: str = None, location: str = None) -> bool:
         """Upsert profile por email"""
@@ -131,6 +144,68 @@ class UserImportService:
                 return str(value).strip() if pd.notna(value) else None
         return None
     
+    def _get_password_from_row(self, row: pd.Series, df_headers: List[str]) -> Optional[str]:
+        """Obtiene password de la fila (case-insensitive)"""
+        for i, header in enumerate(df_headers):
+            if header in PASSWORD_COL_NAMES:
+                value = row.iloc[i]
+                password = str(value).strip() if pd.notna(value) else None
+                return password if password else None
+        return None
+    
+    def _process_user_row(self, row: pd.Series, df_headers: List[str], fila_num: int) -> tuple[Optional[Dict], List[Dict]]:
+        """Procesa una fila de usuario y devuelve (datos, errores)"""
+        errors = []
+        
+        # Obtener datos básicos
+        first_name = self._get_column_value(row, "First Name", df_headers)
+        last_name = self._get_column_value(row, "Last Name", df_headers)
+        email = self._get_column_value(row, "Email Address", df_headers)
+        
+        # Validar campos requeridos
+        if not first_name:
+            errors.append({"fila": fila_num, "mensaje": "First Name es requerido"})
+        if not last_name:
+            errors.append({"fila": fila_num, "mensaje": "Last Name es requerido"})
+        if not email:
+            errors.append({"fila": fila_num, "mensaje": "Email Address es requerido"})
+        
+        if errors:
+            return None, errors
+        
+        # Normalizar datos
+        email = self._normalize_email(email)
+        full_name = f"{first_name} {last_name}"
+        
+        # Obtener password
+        password = self._get_password_from_row(row, df_headers)
+        
+        # Obtener campos opcionales
+        department = self._get_column_value(row, "Department", df_headers)
+        phone = self._get_column_value(row, "Phone", df_headers)
+        location = self._get_column_value(row, "Location", df_headers)
+        
+        # Crear o recuperar usuario en auth.users
+        auth_user = create_or_get_auth_user(email=email, password=password)
+        if not auth_user:
+            # Si no pudimos confirmar/crear auth user y no existe profile previo, marcamos error
+            if not self._profile_exists(email):
+                errors.append({"fila": fila_num, "mensaje": "No se pudo crear usuario de autenticación: falta password o service role key"})
+                return None, errors
+        
+        # Obtener user_id
+        user_id = auth_user["id"] if auth_user else self._try_get_user_id_by_email(email)
+        if not user_id:
+            errors.append({"fila": fila_num, "mensaje": f"No se pudo obtener user_id para {email}"})
+            return None, errors
+        
+        # Upsert profile
+        if not self._upsert_profile(user_id, email, full_name, department, phone, location):
+            errors.append({"fila": fila_num, "mensaje": f"Error procesando profile para {email}"})
+            return None, errors
+        
+        return {"email": email, "user_id": user_id}, errors
+    
     def process(self, file_bytes: bytes) -> Dict[str, Any]:
         """Procesa archivo Excel y devuelve resultado"""
         try:
@@ -176,46 +251,15 @@ class UserImportService:
                 fila_num = idx + 2  # +2 por header y 1-indexing
                 self.total_filas_excel += 1
                 
-                # Obtener datos requeridos
-                first_name = self._get_column_value(row, "First Name", df_headers)
-                last_name = self._get_column_value(row, "Last Name", df_headers)
-                email = self._get_column_value(row, "Email Address", df_headers)
+                # Procesar fila usando el nuevo método
+                user_data, row_errors = self._process_user_row(row, df_headers, fila_num)
                 
-                # Validar campos requeridos
-                if not first_name:
-                    self.errores.append({"fila": fila_num, "mensaje": "First Name es requerido"})
+                # Agregar errores de la fila
+                self.errores.extend(row_errors)
+                
+                # Si hay errores, continuar con la siguiente fila
+                if row_errors:
                     continue
-                
-                if not last_name:
-                    self.errores.append({"fila": fila_num, "mensaje": "Last Name es requerido"})
-                    continue
-                
-                if not email:
-                    self.errores.append({"fila": fila_num, "mensaje": "Email Address es requerido"})
-                    continue
-                
-                # Normalizar datos
-                email = self._normalize_email(email)
-                full_name = f"{first_name} {last_name}"
-                
-                # Obtener campos opcionales
-                department = self._get_column_value(row, "Department", df_headers)
-                phone = self._get_column_value(row, "Phone", df_headers)
-                location = self._get_column_value(row, "Location", df_headers)
-                
-                # Buscar o crear usuario en auth.users
-                user = self._find_user_by_email(email)
-                if user:
-                    user_id = user.id
-                else:
-                    user_id = self._create_auth_user(email, full_name)
-                    if not user_id:
-                        self.errores.append({"fila": fila_num, "mensaje": f"Error creando usuario en auth.users para {email}"})
-                        continue
-                
-                # Upsert profile
-                if not self._upsert_profile(user_id, email, full_name, department, phone, location):
-                    self.errores.append({"fila": fila_num, "mensaje": f"Error procesando profile para {email}"})
             
             return self._build_result()
                 

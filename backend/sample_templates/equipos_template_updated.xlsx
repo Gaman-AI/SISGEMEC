@@ -1,0 +1,15 @@
+# Plantilla Excel Actualizada - Equipos
+# Hoja: "Equipos"
+
+# Columnas (Fila 1):
+# Tipo | Marca | Modelo | Número de serie | Procesador | RAM | Disco | Sistema Operativo | Ubicación actual | Estado | Fecha de ingreso | Fecha de salida | Responsable email | Observaciones
+
+# Datos de ejemplo:
+# Computadora | Dell | OptiPlex 7090 | SN123456789 | Intel i7 | 16GB | 512GB SSD | Windows 11 | Office A | ACTIVO | 2024-01-15 | | juan@aosenuma.com | Equipo principal
+# Laptop | HP | EliteBook 850 | SN987654321 | Intel i5 | 8GB | 256GB SSD | Windows 10 | Office B | EN_MANTENIMIENTO | 2024-02-01 | | maria@aosenuma.com | Requiere actualización
+
+# Notas:
+# - Responsable email: Debe existir en profiles (importar usuarios primero)
+# - Estado: Acepta variaciones (activo, en mantenimiento, de baja)
+# - Número de serie: Debe ser único
+# - Fechas: Formato YYYY-MM-DD

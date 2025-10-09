@@ -14,7 +14,7 @@ router = APIRouter(prefix="/import-usuarios", tags=["import-usuarios"])
 
 def _check_admin_token(authorization: str | None):
     """Verifica el token de administración y lanza excepciones apropiadas"""
-    if not authorization or not authorization.startswith("Bearer "):
+    if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
     token = authorization.split(" ", 1)[1].strip()
     if not settings.API_ADMIN_TOKEN:
@@ -47,6 +47,7 @@ async def import_usuarios(
     - First Name (obligatorio)
     - Last Name (obligatorio)
     - Email Address (obligatorio, UNIQUE global)
+    - Password (opcional, para crear login en auth.users)
     - Department (opcional)
     - Phone (opcional)
     - Location (opcional)
@@ -210,7 +211,7 @@ async def get_template_info():
                 "First Name", "Last Name", "Email Address"
             ],
             "optional_columns": [
-                "Department", "Phone", "Location"
+                "Password", "Department", "Phone", "Location"
             ],
             "required_fields": ["First Name", "Last Name", "Email Address"]
         },

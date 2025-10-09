@@ -14,7 +14,7 @@ router = APIRouter(prefix="/import-equipos", tags=["import-equipos"])
 
 def _check_admin_token(authorization: str | None):
     """Verifica el token de administración y lanza excepciones apropiadas"""
-    if not authorization or not authorization.startswith("Bearer "):
+    if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
     token = authorization.split(" ", 1)[1].strip()
     if not settings.API_ADMIN_TOKEN:

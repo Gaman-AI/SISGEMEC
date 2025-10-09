@@ -76,14 +76,8 @@ export default function ImportUsuariosPage() {
       const formData = new FormData();
       formData.append("file", values.file[0]);
 
-      // Usar token de administración
-      const adminToken = import.meta.env.VITE_API_ADMIN_TOKEN || "dev-token";
-      
-      const response = await api.post("/import-usuarios", formData, {
-        headers: {
-          "Authorization": `Bearer ${adminToken}`,
-        },
-      });
+      // El interceptor maneja automáticamente el token admin
+      const response = await api.post("/import-usuarios", formData);
 
       const data = response.data ?? {};
       const errores = Array.isArray(data.errores) ? data.errores : [];

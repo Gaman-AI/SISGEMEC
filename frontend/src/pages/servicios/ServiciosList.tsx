@@ -98,24 +98,46 @@ export default function ServiciosList() {
   const [equipos, setEquipos] = React.useState<
     Array<{ equipo_id: number; tipo_equipo: string | null; marca: string | null; modelo: string | null; num_serie: string | null }>
   >([]);
+  const [loadingEq, setLoadingEq] = React.useState(false);
 
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE_SERVICIOS));
 
   const loadCatálogos = React.useCallback(async () => {
     try {
-      // Cargar catálogos en paralelo
-      const [estadosRes, tiposRes, tecnicosRes, equiposRes] = await Promise.all([
-        fetch("/api/estados-servicio")
-          .then((r) => r.json())
-          .catch(() => [
+      setLoadingEq(true);
+
+      // Helper seguro para JSON (evita throws de r.json())
+      const safeJson = async (res: Response) => {
+        if (!res || !res.ok) return null;
+        try { return await res.json(); } catch { return null; }
+      };
+
+      // Helper para normalizar equipos en array pase lo que pase
+      const normalizeEquipos = (raw: any): any[] => {
+        if (Array.isArray(raw)) return raw;
+        if (raw && Array.isArray(raw.data)) return raw.data; // por si el backend envía { data: [...] }
+        return [];
+      };
+
+      // Cargar catálogos en paralelo, con tolerancia a 401/500
+      const [estadosResRaw, tiposResRaw, tecnicosResRaw, equiposResRaw] = await Promise.all([
+        fetch("/api/estados-servicio").then(safeJson).catch(() => null),
+        fetch("/api/tipos-servicio").then(safeJson).catch(() => null),
+        fetch("/api/tecnicos").then(safeJson).catch(() => null),
+        fetch("/api/equipos").then(safeJson).catch(() => null),
+      ]);
+
+      const estadosRes = Array.isArray(estadosResRaw) && estadosResRaw.length
+        ? estadosResRaw
+        : [
             { estado_servicio_id: 1, nombre: "Pendiente" },
             { estado_servicio_id: 2, nombre: "En atención" },
             { estado_servicio_id: 3, nombre: "Atendido" },
-          ]),
-        fetch("/api/tipos-servicio").then((r) => r.json()).catch(() => []),
-        fetch("/api/tecnicos").then((r) => r.json()).catch(() => []),
-        fetch("/api/equipos").then((r) => r.json()).catch(() => []),
-      ]);
+          ];
+
+      const tiposRes = Array.isArray(tiposResRaw) ? tiposResRaw : [];
+      const tecnicosRes = Array.isArray(tecnicosResRaw) ? tecnicosResRaw : [];
+      const equiposRes = normalizeEquipos(equiposResRaw);
 
       setEstados(estadosRes);
       setTipos(tiposRes);
@@ -123,6 +145,10 @@ export default function ServiciosList() {
       setEquipos(equiposRes);
     } catch (e) {
       console.error("Error cargando catálogos:", e);
+      // En error, asegura array vacío:
+      setEquipos([]);
+    } finally {
+      setLoadingEq(false);
     }
   }, []);
 
@@ -282,11 +308,22 @@ export default function ServiciosList() {
             placeholder="Todos los equipos"
             icon={<Filter className="h-4 w-4" />}
           >
-            {equipos.map((e) => (
-              <option key={e.equipo_id} value={e.equipo_id}>
-                {[e.tipo_equipo, e.marca, e.modelo, e.num_serie].filter(Boolean).join(" - ")}
-              </option>
-            ))}
+            {/* Normaliza antes del render */}
+            {(() => {
+              const safeEquipos = Array.isArray(equipos) ? equipos : [];
+              
+              if (loadingEq) {
+                return <option disabled>Cargando equipos…</option>;
+              } else if (safeEquipos.length === 0) {
+                return <option disabled>No hay equipos disponibles</option>;
+              } else {
+                return safeEquipos.map((e) => (
+                  <option key={e.equipo_id} value={e.equipo_id}>
+                    {[e.tipo_equipo, e.marca, e.modelo, e.num_serie].filter(Boolean).join(" - ")}
+                  </option>
+                ));
+              }
+            })()}
           </FancySelect>
 
           {/* Fecha desde */}
@@ -360,7 +397,7 @@ export default function ServiciosList() {
             )}
             {equipoId && (
               <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs text-blue-800">
-                Equipo: {equipos.find((e) => e.equipo_id === equipoId)?.num_serie}
+                Equipo: {Array.isArray(equipos) ? equipos.find((e) => e.equipo_id === equipoId)?.num_serie : 'N/A'}
                 <button onClick={() => setEquipoId(undefined)} className="hover:text-blue-600">
                   <X className="h-3 w-3" />
                 </button>

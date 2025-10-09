@@ -8,9 +8,11 @@ export const api = axios.create({
   baseURL: BASE_URL.replace(/\/+$/, ""),
 });
 
-// Rutas protegidas: detectar /users con o sin prefijos (p.ej. /api/v1/users)
+// Rutas protegidas: detectar /users y rutas de importación
 const PROTECTED_PATHS: RegExp[] = [
   /(^|\/)users\/?$/i,     // .../users  o .../users/
+  /(^|\/)import-usuarios\/?$/i,  // .../import-usuarios
+  /(^|\/)import-equipos\/?$/i,   // .../import-equipos
 ];
 
 api.interceptors.request.use((config) => {
