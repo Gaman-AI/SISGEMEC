@@ -187,11 +187,18 @@ class UserImportService:
         
         # Crear o recuperar usuario en auth.users
         auth_user = create_or_get_auth_user(email=email, password=password)
-        if not auth_user:
-            # Si no pudimos confirmar/crear auth user y no existe profile previo, marcamos error
-            if not self._profile_exists(email):
-                errors.append({"fila": fila_num, "mensaje": "No se pudo crear usuario de autenticación: falta password o service role key"})
-                return None, errors
+        
+        # (debug removed)
+        
+        # Defensa adicional: confirmar email devuelto por Auth
+        if auth_user and auth_user.get("email", "").lower() != email.lower():
+            # Reintentar un lookup limpio (sin crear)
+            auth_user = create_or_get_auth_user(email=email, password=None)
+        
+        # Si no hubo auth_user y no existe profile previo, rechazamos fila (sin romper lote)
+        if not auth_user and not self._profile_exists(email):
+            errors.append({"fila": fila_num, "mensaje": "No se pudo crear usuario de autenticación: falta password o service role key, o Auth no devolvió un id válido"})
+            return None, errors
         
         # Obtener user_id
         user_id = auth_user["id"] if auth_user else self._try_get_user_id_by_email(email)

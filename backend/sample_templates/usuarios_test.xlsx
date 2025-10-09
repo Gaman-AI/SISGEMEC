@@ -1,0 +1,13 @@
+# Plantilla de Prueba - Usuarios
+# Hoja: "Usuarios"
+
+# Datos de prueba para verificar el fix:
+First Name,Last Name,Email Address,Password,Department,Phone,Location
+Juan,Pérez,juan@aosenuma.com,sisgemec_test,Soporte,5532112233,CDMX
+María,García,maria@aosenuma.com,password123,IT,5544332211,Guadalajara
+Carlos,López,carlos@aosenuma.com,,Finanzas,5566778899,Monterrey
+
+# Notas:
+# - Juan: Usuario nuevo con password → debe crear en auth.users y profiles
+# - María: Usuario nuevo con password → debe crear en auth.users y profiles  
+# - Carlos: Usuario nuevo sin password → debe dar error claro
