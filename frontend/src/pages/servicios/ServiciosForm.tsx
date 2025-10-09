@@ -7,10 +7,12 @@ import {
   createServicio, 
   getServicioById, 
   updateServicio,
+  completarServicio,
   listEquiposLite,
   listTiposServicioLite,
   listEstadosServicioLite,
   listAdminsLite,
+  type ServicioUpdatePayload,
 } from "../../data/servicios.repository";
 import { Button } from "@/components/ui/button";
 import { Save, X, ChevronDown, Laptop, Wrench, User, Calendar } from "lucide-react";
@@ -166,12 +168,28 @@ export default function ServiciosForm() {
   const onSubmit: SubmitHandler<ServicioFormValues> = async (values) => {
     try {
       if (isEdit && id) {
-        const { ok, error } = await updateServicio(id, values);
-        if (error) {
-          show(error, 'error');
-          return;
+        const servicioId = Number(id);
+        const estadoSel = values.estado_servicio_id;
+        const estadoNombre = estados.find(e => e.estado_servicio_id === estadoSel)?.nombre?.toLowerCase();
+
+        if (estadoNombre === "completado") {
+          // Usar endpoint específico para completar (dispara correo)
+          const result = await completarServicio(servicioId);
+          show(`Servicio #${result.servicio_id} completado`);
+        } else {
+          // Usar endpoint general de actualización
+          const payload: ServicioUpdatePayload = {
+            equipo_id: values.equipo_id,
+            tipo_servicio_id: values.tipo_servicio_id,
+            estado_servicio_id: values.estado_servicio_id,
+            tecnico_id: values.tecnico_id || undefined,
+            fecha_servicio: values.fecha_servicio, // 'YYYY-MM-DD'
+            descripcion: values.descripcion || undefined,
+            observaciones: values.observaciones || undefined,
+          };
+          const result = await updateServicio(servicioId, payload);
+          show(`Servicio #${result.servicio_id} actualizado`);
         }
-        show("Servicio actualizado");
       } else {
         const { data, error } = await createServicio(values);
         if (error) {

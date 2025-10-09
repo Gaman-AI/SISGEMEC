@@ -10,6 +10,18 @@ import type {
 } from "./servicios.types";
 import { buildEquipoLabel, nullify } from "./servicios.types";
 
+export type ServicioUpdatePayload = {
+  equipo_id?: number;
+  tipo_servicio_id?: number;
+  estado_servicio_id?: number;
+  tecnico_id?: string;
+  fecha_servicio?: string; // 'YYYY-MM-DD'
+  descripcion?: string;
+  observaciones?: string;
+};
+
+export type ServicioResultId = { servicio_id: number };
+
 export type ListParams = {
   page: number;            // 1-based
   pageSize: number;        // usar PAGE_SIZE_SERVICIOS = 10
@@ -173,28 +185,41 @@ export async function createServicio(payload: ServicioFormValues): Promise<{ dat
   }
 }
 
-export async function updateServicio(id: number, data: any) {
+export async function updateServicio(
+  servicioId: number,
+  payload: ServicioUpdatePayload
+): Promise<ServicioResultId> {
   if ((import.meta as any).env.VITE_USE_BACKEND_API === "true") {
     // Usar apiPut que ya maneja Authorization automáticamente
-    return apiPut(`/servicios/${id}`, data);
+    const { data } = await apiPut(`/servicios/${servicioId}`, payload);
+    // back puede responder { ok, servicio_id, servicio } o similar
+    const id =
+      data?.servicio_id ??
+      data?.servicio?.servicio_id ??
+      servicioId; // fallback seguro
+    return { servicio_id: Number(id) };
   }
   // Fallback a Supabase directo
-  const { data: result, error } = await supabase.from('servicios').update(data).eq('id', id).select().single();
+  const { data: result, error } = await supabase.from('servicios').update(payload).eq('servicio_id', servicioId).select().single();
   if (error) throw error;
-  return { ok: true, error: undefined };
+  return { servicio_id: servicioId };
 }
 
-export async function completarServicio(id: number) {
+export async function completarServicio(
+  servicioId: number
+): Promise<ServicioResultId> {
   if ((import.meta as any).env.VITE_USE_BACKEND_API === "true") {
     // Usar apiPut que ya maneja Authorization automáticamente
-    return apiPut(`/servicios/${id}/complete`, {});
+    const { data } = await apiPut(`/servicios/${servicioId}/complete`, {});
+    const id = data?.servicio_id ?? servicioId;
+    return { servicio_id: Number(id) };
   }
   // Fallback a Supabase directo
   const { data, error } = await supabase.from('servicios')
-    .update({ estado: 'COMPLETADO' })
-    .eq('id', id).select().single();
+    .update({ estado_servicio_id: 3 }) // Asumiendo que 3 es "Completado"
+    .eq('servicio_id', servicioId).select().single();
   if (error) throw error;
-  return { ok: true, error: undefined };
+  return { servicio_id: servicioId };
 }
 
 export async function listEquiposLite(): Promise<{ data: EquipoLite[]; error: Error | null }> {

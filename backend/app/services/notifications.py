@@ -1,9 +1,13 @@
-import smtplib, ssl, logging
-from email.message import EmailMessage
+# -*- coding: utf-8 -*-
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from typing import Iterable, Optional, Literal
+import logging
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from ..core.email_config import EmailSettings
-from ..repositories.notifications_repo import NotificationLogsRepo
+from app.core.email_config import EmailSettings
+from app.repositories.notifications_repo import NotificationLogsRepo
 
 logger = logging.getLogger("notifications")
 
@@ -13,9 +17,11 @@ env = Environment(
     autoescape=select_autoescape(["html", "xml"])
 )
 
+EventType = Literal["SOLICITUD_NUEVA", "SERVICIO_COMPLETADO", "SERVICIO_ATENDIDO"]
+
 class NotificationService:
-    def __init__(self):
-        self.s = EmailSettings()
+    def __init__(self, settings: Optional[EmailSettings] = None):
+        self.s = settings or EmailSettings.load_from_env()
         self.logs = NotificationLogsRepo()
 
     def _render(self, html_name: str, txt_name: str, ctx: dict):
@@ -23,41 +29,79 @@ class NotificationService:
         txt  = env.get_template(f"email/{txt_name}").render(**ctx)
         return html, txt
 
-    def _build(self, subject: str, to_email: str, html: str, txt: str) -> EmailMessage:
-        msg = EmailMessage()
+
+    def _build_message(self, subject: str, html_body: str, text_body: str, to_email: str):
+        msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
-        msg["From"] = self.s.from_email
+        msg["From"] = self.s.sender
         msg["To"] = to_email
-        msg.set_content(txt)
-        msg.add_alternative(html, subtype="html")
+
+        part1 = MIMEText(text_body, "plain", "utf-8")
+        part2 = MIMEText(html_body, "html", "utf-8")
+        msg.attach(part1)
+        msg.attach(part2)
         return msg
 
-    def _smtp_send(self, msg: EmailMessage):
+    def _send_smtp(self, msg: MIMEMultipart, to_email: str):
+        if self.s.debug_noop:
+            logger.warning("[EMAIL][NOOP] DEBUG activo — no se envía correo a: %s", to_email)
+            return "SENT(NOOP)"
+
         try:
-            # Forzar FROM=SMTP_USER en Gmail si es necesario
-            if self.s.user and msg["From"] != self.s.user:
-                logger.info("[EMAIL] Ajustando FROM de '%s' a '%s' para Gmail", msg["From"], self.s.user)
-                # Remover header From existente y agregar nuevo
-                if "From" in msg:
-                    del msg["From"]
-                msg["From"] = self.s.user
-            
             if self.s.use_tls:
-                with smtplib.SMTP(self.s.host, self.s.port, timeout=self.s.timeout) as server:
-                    context = ssl.create_default_context()
-                    server.starttls(context=context)
-                    if self.s.user:
-                        server.login(self.s.user, self.s.password)
-                    server.send_message(msg)
+                server = smtplib.SMTP(self.s.host, self.s.port, timeout=self.s.timeout)
+                server.ehlo()
+                server.starttls()
+                server.login(self.s.user, self.s.password)
             else:
-                context = ssl.create_default_context()
-                with smtplib.SMTP_SSL(self.s.host, self.s.port, context=context, timeout=self.s.timeout) as server:
-                    if self.s.user:
-                        server.login(self.s.user, self.s.password)
-                    server.send_message(msg)
+                server = smtplib.SMTP_SSL(self.s.host, self.s.port, timeout=self.s.timeout)
+                server.login(self.s.user, self.s.password)
+
+            server.sendmail(self.s.sender, [to_email], msg.as_string())
+            server.quit()
+            return "SENT"
         except Exception as e:
-            logger.error("[EMAIL] SMTP Error: %s", e)
+            logger.error("[EMAIL] SMTP Error -> host=%s port=%s user=%s err=%s",
+                         self.s.host, self.s.port, self.s.user, repr(e))
             raise
+
+    def send(self, *, event: EventType, to_emails: Iterable[str],
+             subject: str, template_name: str, context: dict,
+             solicitud_id: Optional[int] = None, servicio_id: Optional[int] = None):
+        successes = 0
+        failures = 0
+        for to in filter(None, map(str.strip, to_emails)):
+            try:
+                html_body = self._render(template_name + ".html.j2", template_name + ".txt.j2", context)[0]
+                text_body = self._render(template_name + ".html.j2", template_name + ".txt.j2", context)[1]
+                msg = self._build_message(subject, html_body, text_body, to)
+                status = self._send_smtp(msg, to)
+                
+                # Registrar en logs
+                log_id = self.logs.insert_event(
+                    event_type=event,
+                    solicitud_id=solicitud_id,
+                    servicio_id=servicio_id,
+                    to_email=to,
+                    subject=subject,
+                    status="SENT" if status.startswith("SENT") else status,
+                    error_message=None
+                )
+                successes += 1
+            except Exception as e:
+                # Registrar fallo en logs
+                self.logs.insert_event(
+                    event_type=event,
+                    solicitud_id=solicitud_id,
+                    servicio_id=servicio_id,
+                    to_email=to,
+                    subject=subject,
+                    status="FAILED",
+                    error_message=str(e)[:1000]
+                )
+                failures += 1
+        logger.info("[EMAIL] %s -> ok=%s fail=%s", event, successes, failures)
+        return {"ok": successes, "fail": failures}
 
     # ========= Eventos =========
     # (1) Creación de solicitud/servicio por RESPONSABLE → correos a ADMINS activos

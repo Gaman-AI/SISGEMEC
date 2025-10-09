@@ -329,6 +329,32 @@ export async function linkSolicitudToServicio(
 /* =========================================================
    ✅ Convertir solicitud → servicio (RPC)
    ========================================================= */
+export type ConvertirSolicitudPayload = {
+  tipo_servicio_id: number;
+  descripcion?: string;
+  observaciones?: string;
+};
+
+export async function convertirSolicitudAServicio(
+  solicitudId: number,
+  payload: ConvertirSolicitudPayload
+): Promise<{ ok: boolean; solicitud_id: number; servicio_id: number }> {
+  if (!Number.isFinite(solicitudId)) {
+    throw new Error("solicitudId inválido");
+  }
+  
+  // Usar backend cuando VITE_USE_BACKEND_API=true
+  if ((import.meta as any).env.VITE_USE_BACKEND_API === "true") {
+    // Usar apiPost que ya maneja Authorization automáticamente
+    const result = await apiPost(`/solicitudes/${solicitudId}/convertir-servicio`, payload);
+    return result as { ok: boolean; solicitud_id: number; servicio_id: number };
+  }
+  
+  // Fallback a Supabase directo (implementar lógica existente)
+  throw new Error("Función no implementada en modo Supabase directo");
+}
+
+// Mantener función anterior para compatibilidad (deprecated)
 export async function convertirSolicitudEnServicio(args: {
   solicitudId: number;
   tipoServicioId: number;
@@ -336,12 +362,15 @@ export async function convertirSolicitudEnServicio(args: {
   fechaServicio?: string; // YYYY-MM-DD
   observaciones?: string | null;
 }): Promise<{ ok: boolean; servicio_id: number | null; error: Error | null }> {
-  // Usar backend cuando VITE_USE_BACKEND_API=true
-  if ((import.meta as any).env.VITE_USE_BACKEND_API === "true") {
-    // Usar apiPost que ya maneja Authorization automáticamente
-    return apiPost('/solicitudes/convertir-servicio', args);
+  // Usar la nueva función con el ID en la URL
+  try {
+    const result = await convertirSolicitudAServicio(args.solicitudId, {
+      tipo_servicio_id: args.tipoServicioId,
+      observaciones: args.observaciones || undefined
+    });
+    return { ok: result.ok, servicio_id: result.servicio_id, error: null };
+  } catch (error) {
+    return { ok: false, servicio_id: null, error: error as Error };
   }
-  // Fallback a Supabase directo (implementar lógica existente)
-  return { ok: false, servicio_id: null, error: new Error("Función no implementada en modo Supabase directo") };
 }
 

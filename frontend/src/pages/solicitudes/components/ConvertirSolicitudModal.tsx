@@ -3,10 +3,10 @@ import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/auth/auth.store";
-import { listTiposServicioLite, convertirSolicitudEnServicio } from "@/data/solicitudes.repository";
+import { listTiposServicioLite, convertirSolicitudAServicio } from "@/data/solicitudes.repository";
 
 // Schema de validación
 const ConvertirFormSchema = z.object({
@@ -48,16 +48,14 @@ function useToast() {
 interface ConvertirSolicitudModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  solicitudId: number | null;
-  adminId: string;
-  onConverted: (servicioId: number) => void;
+  solicitud: { solicitud_id: number };
+  onConverted?: (r: { servicio_id: number }) => void;
 }
 
 export default function ConvertirSolicitudModal({
   open,
   onOpenChange,
-  solicitudId,
-  adminId,
+  solicitud,
   onConverted,
 }: ConvertirSolicitudModalProps) {
   const { show, Toast } = useToast();
@@ -164,33 +162,31 @@ export default function ConvertirSolicitudModal({
   }, [open, reset]);
 
   const onSubmit: SubmitHandler<ConvertirFormValues> = async (values) => {
-    if (submitting || !solicitudId) return;
+    if (submitting) return;
     
     setSubmitting(true);
     
     try {
       if (process.env.NODE_ENV === 'development') {
-        console.debug('[ConvertirModal] Enviando conversión:', { solicitudId, tipoServicioId: values.tipoServicioId });
+        console.debug('[ConvertirModal] Enviando conversión:', { solicitudId: solicitud.solicitud_id, tipoServicioId: values.tipoServicioId });
       }
       
-      const { ok, servicio_id, error } = await convertirSolicitudEnServicio({
-        solicitudId,
-        tipoServicioId: Number(values.tipoServicioId),
-        adminId,
-        fechaServicio: values.fecha,
-        observaciones: values.observaciones || null,
-      });
-
-      if (!ok || !servicio_id) {
-        throw error ?? new Error("No se pudo convertir la solicitud");
-      }
+      const payload = {
+        tipo_servicio_id: Number(values.tipoServicioId),
+        observaciones: values.observaciones || undefined,
+      };
+      
+      const resp = await convertirSolicitudAServicio(
+        solicitud.solicitud_id,
+        payload
+      );
 
       if (process.env.NODE_ENV === 'development') {
-        console.debug('[ConvertirModal] Conversión exitosa:', servicio_id);
+        console.debug('[ConvertirModal] Conversión exitosa:', resp.servicio_id);
       }
 
-      show(`Solicitud convertida a servicio #${servicio_id}`);
-      onConverted(servicio_id);
+      show(`Solicitud convertida a servicio #${resp.servicio_id}`);
+      onConverted?.({ servicio_id: resp.servicio_id });
       onOpenChange(false);
     } catch (e: any) {
       if (process.env.NODE_ENV === 'development') {
@@ -206,9 +202,12 @@ export default function ConvertirSolicitudModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" aria-describedby="convertir-desc">
         <DialogHeader>
           <DialogTitle>Convertir a Servicio</DialogTitle>
+          <DialogDescription id="convertir-desc">
+            Crea un servicio a partir de esta solicitud.
+          </DialogDescription>
         </DialogHeader>
 
         {/* Form */}

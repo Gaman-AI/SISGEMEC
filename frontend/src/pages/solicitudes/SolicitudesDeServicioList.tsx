@@ -39,7 +39,7 @@ export default function SolicitudesDeServicioList() {
 
   // Modal state
   const [modalOpen, setModalOpen] = React.useState(false);
-  const [modalSolicitudId, setModalSolicitudId] = React.useState<number | null>(null);
+  const [solicitudSel, setSolicitudSel] = React.useState<SolicitudRow | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE_SOLICITUDES));
 
@@ -101,21 +101,21 @@ export default function SolicitudesDeServicioList() {
     setActingId(null);
   };
 
-  const onOpenConvert = (id: number) => {
+  const onOpenConvert = (row: SolicitudRow) => {
     if (process.env.NODE_ENV === 'development') {
-      console.debug('[SolicitudesDeServicioList] Abriendo modal para solicitud:', id);
+      console.debug('[SolicitudesDeServicioList] Abriendo modal para solicitud:', row.solicitud_id);
     }
-    setModalSolicitudId(id);
+    setSolicitudSel(row);
     setModalOpen(true);
   };
 
-  const handleConverted = (servicioId: number) => {
+  const handleConverted = (result: { servicio_id: number }) => {
     if (process.env.NODE_ENV === 'development') {
-      console.debug('[SolicitudesDeServicioList] Conversión exitosa, navegando a servicio:', servicioId);
+      console.debug('[SolicitudesDeServicioList] Conversión exitosa, navegando a servicio:', result.servicio_id);
     }
-    show("Solicitud convertida. Servicio #" + servicioId);
+    show("Solicitud convertida. Servicio #" + result.servicio_id);
     load(); // Recargar la lista para actualizar estados
-    navigate(`/servicios/${servicioId}/editar`);
+    navigate(`/servicios/${result.servicio_id}/editar`);
   };
 
   const pill = (label: string) => (
@@ -203,7 +203,7 @@ export default function SolicitudesDeServicioList() {
                       <Button variant="outline" className="rounded-xl" onClick={() => handleSetEstado(r.solicitud_id, 2, "En revisión")} disabled={actingId === r.solicitud_id}>En revisión</Button>
                       <Button variant="outline" className="rounded-xl" onClick={() => handleSetEstado(r.solicitud_id, 3, "Aprobada")} disabled={actingId === r.solicitud_id}>Aprobar</Button>
                       <Button variant="outline" className="rounded-xl" onClick={() => handleSetEstado(r.solicitud_id, 4, "Rechazada")} disabled={actingId === r.solicitud_id}>Rechazar</Button>
-                      <Button className="rounded-xl" onClick={() => onOpenConvert(r.solicitud_id)} disabled={loading}>Convertir a servicio</Button>
+                      <Button className="rounded-xl" onClick={() => onOpenConvert(r)} disabled={loading}>Convertir a servicio</Button>
                     </div>
                   </td>
                 </tr>
@@ -226,13 +226,12 @@ export default function SolicitudesDeServicioList() {
       <Toast />
 
       {/* Modal de conversión */}
-      {state.status === "authenticated" && (
+      {solicitudSel && (
         <ConvertirSolicitudModal
           open={modalOpen}
           onOpenChange={setModalOpen}
-          solicitudId={modalSolicitudId}
-          adminId={state.profile.user_id}
-          onConverted={handleConverted}
+          solicitud={{ solicitud_id: solicitudSel.solicitud_id }}
+          onConverted={(result: { servicio_id: number }) => handleConverted(result)}
         />
       )}
     </div>

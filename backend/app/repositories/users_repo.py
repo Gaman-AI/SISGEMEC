@@ -1,8 +1,33 @@
+# -*- coding: utf-8 -*-
 from typing import List, Optional
 import logging
 from app.core.supabase_client import get_supabase
 
 logger = logging.getLogger("notifications")
+
+def get_active_admin_emails() -> List[str]:
+    sb = get_supabase()
+    # role='ADMIN' AND active=true AND email NOT NULL
+    res = sb.table("profiles") \
+        .select("email") \
+        .eq("role", "ADMIN") \
+        .eq("active", True) \
+        .not_.is_("email", "null") \
+        .execute()
+    rows = res.data or []
+    return [r["email"] for r in rows if r.get("email")]
+
+def get_responsable_email_by_servicio_id(servicio_id: int) -> Optional[str]:
+    sb = get_supabase()
+    # buscar solicitante por join solicitud -> servicio
+    sol = sb.table("solicitudes_servicio").select("solicitante_id").eq("servicio_id", servicio_id).single().execute().data
+    if not sol or not sol.get("solicitante_id"):
+        return None
+    uid = sol["solicitante_id"]
+    prof = sb.table("profiles").select("email,active").eq("user_id", uid).single().execute().data
+    if prof and prof.get("email") and prof.get("active", True):
+        return prof["email"]
+    return None
 
 class UsersRepo:
     def __init__(self):

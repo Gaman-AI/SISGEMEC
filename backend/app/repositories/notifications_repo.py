@@ -1,8 +1,26 @@
+# -*- coding: utf-8 -*-
 from typing import Optional, Any, Dict
 import logging
 from app.core.supabase_client import get_supabase
 
 logger = logging.getLogger("notifications")
+
+def notification_logs_insert(
+    *, event_type: str, to_email: str, subject: str,
+    solicitud_id: Optional[int] = None, servicio_id: Optional[int] = None,
+    status: str = "SENT", error_message: Optional[str] = None
+):
+    sb = get_supabase()
+    data = {
+        "event_type": event_type,
+        "solicitud_id": solicitud_id,
+        "servicio_id": servicio_id,
+        "to_email": to_email,
+        "subject": subject,
+        "status": status,
+        "error_message": error_message
+    }
+    sb.table("notification_logs").insert(data).execute()
 
 class NotificationLogsRepo:
     """
