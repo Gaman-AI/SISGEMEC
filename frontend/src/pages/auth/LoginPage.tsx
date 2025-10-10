@@ -34,21 +34,29 @@ export default function LoginPage() {
   if (state.status === "authenticated") return null;
 
   return (
-    <div className="flex min-h-dvh items-center justify-center p-6">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm rounded-2xl border bg-white p-6 shadow-sm">
-        <h1 className="mb-2 text-xl font-semibold">Iniciar sesión</h1>
-        <p className="mb-4 text-sm text-slate-600">Usa tu correo y contraseña de Supabase.</p>
-        <div className="mb-3">
-          <label className="mb-1 block text-sm">Correo</label>
-          <input className="h-11 w-full rounded-xl border px-3 text-sm" value={email} onChange={(e)=>setEmail(e.target.value)} />
+    <div className="relative min-h-dvh">
+      <div className="absolute inset-0 bg-[url('/branding/login-bg.jpg')] bg-cover bg-center" />
+      <div className="absolute inset-0 bg-white/65" />
+      <div className="relative grid min-h-dvh place-items-center p-4">
+        <div className="w-full max-w-lg rounded-3xl border border-black/5 bg-white/90 shadow-xl backdrop-blur-[2px]">
+          <div className="p-8 space-y-6">
+            <form onSubmit={handleSubmit}>
+              <h1 className="mb-2 text-xl font-semibold text-[#264a55] text-center">Iniciar sesión en numafix</h1> <br />
+              <p className="mb-4 text-sm text-[#264a55] text-center">Accede al sistema y gestiona tus equipos de forma segura.</p>
+              <div className="mb-3">
+                <label className="mb-1 block text-sm text-[#264a55]">Correo</label>
+                <input className="h-11 w-full rounded-xl border px-3 text-sm" value={email} onChange={(e)=>setEmail(e.target.value)} />
+              </div>
+              <div className="mb-3">
+                <label className="mb-1 block text-sm text-[#264a55]">Contraseña</label>
+                <input type="password" className="h-11 w-full rounded-xl border px-3 text-sm" value={password} onChange={(e)=>setPassword(e.target.value)} />
+              </div>
+              {err && <div className="mb-3 text-sm text-rose-600">{err}</div>}
+              <button className="w-full rounded-xl bg-[#264a55] py-3 text-white font-medium shadow-sm hover:brightness-95 focus:outline-none focus:ring-4 focus:ring-[#264a55]/30 active:brightness-90 transition" type="submit" disabled={loading}>{loading ? "Entrando…" : "Entrar"}</button>
+            </form>
+          </div>
         </div>
-        <div className="mb-3">
-          <label className="mb-1 block text-sm">Contraseña</label>
-          <input type="password" className="h-11 w-full rounded-xl border px-3 text-sm" value={password} onChange={(e)=>setPassword(e.target.value)} />
-        </div>
-        {err && <div className="mb-3 text-sm text-rose-600">{err}</div>}
-        <Button className="w-full rounded-xl" type="submit" disabled={loading}>{loading ? "Entrando…" : "Entrar"}</Button>
-      </form>
+      </div>
     </div>
   );
 }

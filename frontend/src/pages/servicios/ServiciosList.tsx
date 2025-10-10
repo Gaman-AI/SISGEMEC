@@ -219,7 +219,7 @@ export default function ServiciosList() {
           <Button variant="outline" className="rounded-xl" onClick={() => navigate('/solicitudes')}>
             Solicitudes de servicio
           </Button>
-          <Button onClick={() => navigate('/servicios/nuevo')} className="rounded-xl">
+          <Button onClick={() => navigate('/servicios/nuevo')} className="rounded-xl bg-[#264a55] text-white hover:brightness-95 active:brightness-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#264a55]/30">
             + Nuevo servicio
           </Button>
         </div>

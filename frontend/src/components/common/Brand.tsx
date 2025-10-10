@@ -8,7 +8,7 @@ export function Brand({ compact, className }: Props) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <SquareGanttChart className="h-5 w-5" />
-      {!compact && <span className="font-semibold tracking-tight">SISGEMEC</span>}
+      {!compact && <span className="font-semibold tracking-tight">Numafix</span>}
     </div>
   );
 }

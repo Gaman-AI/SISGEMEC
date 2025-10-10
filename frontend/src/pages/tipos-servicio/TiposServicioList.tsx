@@ -88,7 +88,7 @@ export default function TiposServicioList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-4xl font-bold tracking-tight">Tipos de Servicio</h1>
-        <Button onClick={() => navigate('/tipos-servicio/nuevo')} className="rounded-xl">
+        <Button onClick={() => navigate('/tipos-servicio/nuevo')} className="rounded-xl bg-[#264a55] text-white hover:brightness-95 active:brightness-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#264a55]/30">
           + Nuevo tipo
         </Button>
       </div>

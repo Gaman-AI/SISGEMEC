@@ -60,7 +60,7 @@
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
 
-  --ring: 222.2 84% 4.9%;
+  --ring: 194 38% 24%;
 }
 
 /* Modo oscuro: SLATE — DARK */
@@ -152,7 +152,7 @@ body {
 :root {
   /* mantiene neutral slate para background/foreground que ya definiste;
      SOLO fijamos el acento (primary/accent) a azul */
-  --primary: 221 83% 53%;            /* blue-600 */
+  --primary: 194 38% 24%;            /* #264a55 */
   --primary-foreground: 0 0% 100%;
   --accent: 214 95% 93%;             /* blue-100 */
   --accent-foreground: 221 83% 30%;  /* blue-700 */

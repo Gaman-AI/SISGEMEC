@@ -193,11 +193,9 @@ export default function EquiposList() {
           <Button
             className="
               group inline-flex items-center gap-2 rounded-xl
-              bg-gradient-to-b from-slate-900 to-slate-700
-              text-white shadow-sm
-              hover:from-slate-800 hover:to-slate-600
-              active:from-slate-900 active:to-slate-700
-              focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2
+              bg-[#264a55] text-white shadow-sm
+              hover:brightness-95 active:brightness-90
+              focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#264a55]/30
               px-4 py-2.5 text-sm font-semibold
             "
           >

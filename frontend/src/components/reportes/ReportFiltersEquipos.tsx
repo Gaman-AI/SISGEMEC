@@ -124,7 +124,7 @@ export default function ReportFiltersEquipos({
 
         {/* Botones */}
         <div className="flex gap-2 pt-4">
-          <Button type="submit" disabled={loading}>
+          <Button type="submit" disabled={loading} className="bg-[#264a55] text-white hover:brightness-95 active:brightness-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#264a55]/30">
             {loading ? 'Buscando...' : 'Buscar'}
           </Button>
           <Button type="button" variant="outline" onClick={handleClear}>

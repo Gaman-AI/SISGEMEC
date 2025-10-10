@@ -68,8 +68,8 @@ export default function Sidebar() {
   return (
     <aside
       className={cn(
-        // fondo slate fijo
-        "h-dvh border-r bg-[hsl(var(--sidebar-bg))] text-foreground/90",
+        // fondo corporativo
+        "h-dvh border-r bg-[#317b86] text-white",
         collapsed ? "w-[80px]" : "w-64",
         "transition-[width] duration-200 ease-in-out sticky top-0"
       )}
@@ -93,9 +93,9 @@ export default function Sidebar() {
                 onClick={handleNavClick}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm",
-                    "hover:bg-accent hover:text-accent-foreground transition-colors",
-                    isActive && "bg-accent text-accent-foreground"
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white",
+                    "hover:bg-white/20 hover:text-white transition-colors",
+                    isActive && "bg-white/20 text-white"
                   )
                 }
               >
@@ -123,8 +123,8 @@ export default function Sidebar() {
             variant="ghost"
             onClick={handleLogout}
             className={cn(
-              "w-full justify-start gap-3 px-3 py-2 text-sm",
-              "hover:bg-accent hover:text-accent-foreground transition-colors"
+              "w-full justify-start gap-3 px-3 py-2 text-sm text-white",
+              "hover:bg-white/20 hover:text-white transition-colors"
             )}
           >
             <LogOut className="h-4 w-4 shrink-0" />
