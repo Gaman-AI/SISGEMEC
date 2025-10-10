@@ -1,6 +1,6 @@
 // frontend/src/data/solicitudes.repository.ts
 import { supabase } from "@/lib/supabase";
-import { apiPost, apiPut } from "@/services/api";
+import { apiPost, apiPut, api } from "@/services/api";
 import {
   ESTADOS_SOLICITUD_LABEL,
   type ListSolicitudesParams,
@@ -372,5 +372,26 @@ export async function convertirSolicitudEnServicio(args: {
   } catch (error) {
     return { ok: false, servicio_id: null, error: error as Error };
   }
+}
+
+/* =========================================================
+   ✅ Actualizar estado de solicitud (nueva función robusta)
+   ========================================================= */
+export type SolicitudEstadoPayload =
+  | { estado_solicitud_id: number; estado_nombre?: never }
+  | { estado_nombre: string; estado_solicitud_id?: never };
+
+export async function actualizarEstadoSolicitud(
+  solicitudId: number,
+  payload: SolicitudEstadoPayload
+) {
+  const { data } = await api.put(`/solicitudes/${solicitudId}/estado`, payload);
+  return data as {
+    ok: boolean;
+    solicitud_id: number;
+    estado_solicitud_id: number;
+    estado_nombre: string;
+    solicitud: any;
+  };
 }
 

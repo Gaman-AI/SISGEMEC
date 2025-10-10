@@ -1,7 +1,8 @@
+// frontend/src/pages/solicitudes/SolicitudesDeServicioList.tsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { listSolicitudesAdmin, setSolicitudEstado } from "@/data/solicitudes.repository";
+import { listSolicitudesAdmin, setSolicitudEstado, actualizarEstadoSolicitud } from "@/data/solicitudes.repository";
 import type { SolicitudRow } from "@/data/solicitudes.types";
 import { PAGE_SIZE_SOLICITUDES } from "@/data/solicitudes.types";
 import { useAuth } from "@/auth/auth.store";
@@ -47,7 +48,7 @@ export default function SolicitudesDeServicioList() {
     setLoading(true);
     setError(null);
     try {
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.debug('[SolicitudesDeServicioList] Cargando solicitudes...');
       }
       
@@ -60,7 +61,7 @@ export default function SolicitudesDeServicioList() {
         toDate: undefined,
       });
       if (signal?.aborted) {
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.debug('[SolicitudesDeServicioList] Carga abortada');
         }
         return;
@@ -69,12 +70,12 @@ export default function SolicitudesDeServicioList() {
       setRows(data);
       setCount(c);
       
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.debug('[SolicitudesDeServicioList] Solicitudes cargadas:', data?.length || 0);
       }
     } catch (e: any) {
       if (signal?.aborted) return;
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.debug('[SolicitudesDeServicioList] Error cargando:', e?.message);
       }
       setError(e?.message || "Error al cargar");
@@ -91,18 +92,45 @@ export default function SolicitudesDeServicioList() {
     return () => controller.abort();
   }, [load]);
 
-  const handleSetEstado = async (id: number, next: number, label: string) => {
-    if (!window.confirm(`¿Confirmas cambiar estado a "${label}"?`)) return;
-    setActingId(id);
-    const { ok, error } = await setSolicitudEstado(id, next as any);
-    if (!ok) { show(error?.message || "No se pudo actualizar estado", "error"); return; }
-    show("Estado actualizado");
-    await load();
-    setActingId(null);
+  const handleSetEstado = async (row: SolicitudRow, nuevoEstadoNombre: string) => {
+    if (!window.confirm(`¿Confirmas cambiar estado a "${nuevoEstadoNombre}"?`)) return;
+    setActingId(row.solicitud_id);
+    
+    try {
+      // 1) Si tienes catálogo de estados en memoria, resuelve ID:
+      const estados = [
+        { id: 1, nombre: 'Enviada' },
+        { id: 2, nombre: 'En revisión' },
+        { id: 3, nombre: 'Aprobada' },
+        { id: 4, nombre: 'Rechazada' },
+        { id: 5, nombre: 'Convertida' }
+      ]; // ajusta a tu fuente real si aplica
+      const match = estados.find(
+        (e) => String(e.nombre).trim().toLowerCase() === nuevoEstadoNombre.trim().toLowerCase()
+      );
+
+      const payload = match
+        ? { estado_solicitud_id: Number(match.id) }
+        : { estado_nombre: nuevoEstadoNombre };
+
+      // 2) Llama al repo con payload correcto
+      const resp = await actualizarEstadoSolicitud(Number(row.solicitud_id), payload);
+
+      // 3) Feedback + refresco
+      console.log("[Solicitudes] Estado actualizado:", resp);
+      show(`Solicitud #${resp.solicitud_id} → ${resp.estado_nombre}`);
+      await load();
+    } catch (err: any) {
+      console.error("[Solicitudes] Error al actualizar estado:", err);
+      const detail = err?.response?.data?.detail ?? err?.message ?? "No se pudo actualizar el estado";
+      show(detail, "error");
+    } finally {
+      setActingId(null);
+    }
   };
 
   const onOpenConvert = (row: SolicitudRow) => {
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.debug('[SolicitudesDeServicioList] Abriendo modal para solicitud:', row.solicitud_id);
     }
     setSolicitudSel(row);
@@ -110,7 +138,7 @@ export default function SolicitudesDeServicioList() {
   };
 
   const handleConverted = (result: { servicio_id: number }) => {
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.debug('[SolicitudesDeServicioList] Conversión exitosa, navegando a servicio:', result.servicio_id);
     }
     show("Solicitud convertida. Servicio #" + result.servicio_id);
@@ -200,9 +228,9 @@ export default function SolicitudesDeServicioList() {
                   <td className="px-4 py-3">{pill(r.estado_solicitud_nombre || String(r.estado_solicitud_id))}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" className="rounded-xl" onClick={() => handleSetEstado(r.solicitud_id, 2, "En revisión")} disabled={actingId === r.solicitud_id}>En revisión</Button>
-                      <Button variant="outline" className="rounded-xl" onClick={() => handleSetEstado(r.solicitud_id, 3, "Aprobada")} disabled={actingId === r.solicitud_id}>Aprobar</Button>
-                      <Button variant="outline" className="rounded-xl" onClick={() => handleSetEstado(r.solicitud_id, 4, "Rechazada")} disabled={actingId === r.solicitud_id}>Rechazar</Button>
+                      <Button variant="outline" className="rounded-xl" onClick={() => handleSetEstado(r, "En revisión")} disabled={actingId === r.solicitud_id}>En revisión</Button>
+                      <Button variant="outline" className="rounded-xl" onClick={() => handleSetEstado(r, "Aprobada")} disabled={actingId === r.solicitud_id}>Aprobar</Button>
+                      <Button variant="outline" className="rounded-xl" onClick={() => handleSetEstado(r, "Rechazada")} disabled={actingId === r.solicitud_id}>Rechazar</Button>
                       <Button className="rounded-xl" onClick={() => onOpenConvert(r)} disabled={loading}>Convertir a servicio</Button>
                     </div>
                   </td>

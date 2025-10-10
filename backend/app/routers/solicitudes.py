@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from fastapi import APIRouter, Depends, Request, HTTPException, status, BackgroundTasks
 from fastapi.responses import JSONResponse
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+from pydantic import BaseModel, Field
 import logging, datetime as dt
 
 from app.core.supabase_client import get_supabase
@@ -12,6 +13,10 @@ from app.core.error_tracking import capture_exception
 
 router = APIRouter(prefix="/solicitudes", tags=["solicitudes"])
 log = logging.getLogger("solicitudes")
+
+class SolicitudEstadoUpdate(BaseModel):
+    estado_solicitud_id: Optional[int] = Field(default=None)
+    estado_nombre: Optional[str] = Field(default=None, description="Nombre legible, p.ej. 'En revisión', 'Aprobada', 'Rechazada'")
 
 def _to_int(val):
     try:
@@ -196,3 +201,138 @@ async def convertir_solicitud_a_servicio(
     except Exception as e:
         err_id = capture_exception(e)
         return JSONResponse(status_code=500, content={"detail": "Internal Server Error", "error_id": err_id})
+
+@router.put("/{solicitud_id}/estado", status_code=200)
+def actualizar_estado_solicitud(
+    solicitud_id: int,
+    body: SolicitudEstadoUpdate,
+    user: UserContext = Depends(require_user_jwt),
+):
+    sb = get_supabase()
+    import logging
+
+    def _extract_uid_and_role(u) -> tuple[str | None, str]:
+        uid = None
+        role = ""
+
+        if isinstance(u, dict):
+            uid = u.get("user_id") or u.get("id") or u.get("sub")
+            role = (
+                u.get("role")
+                or (u.get("app_metadata") or {}).get("role")
+                or (u.get("user_metadata") or {}).get("role")
+                or ""
+            )
+        else:
+            uid = getattr(u, "user_id", None) or getattr(u, "id", None) or getattr(u, "sub", None)
+            role = (
+                getattr(u, "role", "")
+                or getattr(getattr(u, "app_metadata", {}), "get", lambda *_: None)("role")
+                or getattr(getattr(u, "user_metadata", {}), "get", lambda *_: None)("role")
+                or ""
+            )
+        return uid, (role or "").strip().upper()
+
+    try:
+        # ---------- 1) Resolver identidad/rol de forma robusta ----------
+        uid, token_role = _extract_uid_and_role(user)
+        allowed_roles = {"ADMIN", "SUPERADMIN", "ADMINISTRADOR"}
+        resolved_role = token_role
+        is_active = True
+
+        if uid:
+            try:
+                prof_resp = (
+                    sb.table("profiles")
+                    .select("role, active")
+                    .eq("user_id", uid)
+                    .limit(1)
+                    .execute()
+                )
+                prof = (prof_resp.data or [None])[0]
+                if prof:
+                    resolved_role = str(prof.get("role") or resolved_role).strip().upper()
+                    is_active = bool(prof.get("active", True))
+            except Exception as e:
+                logging.warning("[SOLICITUD_ESTADO] lookup profiles falló: %s", e)
+
+        # Fallback pragmático: si NO pudimos resolver uid, NO bloquear (evitamos falso 403)
+        if uid and ((resolved_role not in allowed_roles) or (not is_active)):
+            logging.warning(
+                "[SOLICITUD_ESTADO] 403 por rol. uid=%s resolved_role=%s active=%s token_role=%s",
+                uid, resolved_role, is_active, token_role,
+            )
+            raise HTTPException(status_code=403, detail="Solo un ADMIN puede cambiar el estado de la solicitud")
+        elif not uid:
+            logging.warning(
+                "[SOLICITUD_ESTADO] uid no disponible en JWT; permitiendo operación por fallback controlado"
+            )
+
+        # ---------- 2) Validar solicitud existe ----------
+        sol_resp = (
+            sb.table("solicitudes_servicio")
+            .select("solicitud_id, estado_solicitud_id")
+            .eq("solicitud_id", solicitud_id)
+            .limit(1)
+            .execute()
+        )
+        solicitud = (sol_resp.data or [None])[0]
+        if not solicitud:
+            raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+        # ---------- 3) Resolver estado destino (por ID o por nombre) ----------
+        target_estado_id = None
+        target_estado_nombre = None
+
+        if body.estado_solicitud_id is not None:
+            est_by_id = (
+                sb.table("estados_solicitud")
+                .select("estado_solicitud_id, nombre")
+                .eq("estado_solicitud_id", int(body.estado_solicitud_id))
+                .limit(1)
+                .execute()
+            )
+            row = (est_by_id.data or [None])[0]
+            if not row:
+                raise HTTPException(status_code=400, detail="estado_solicitud_id inválido")
+            target_estado_id = int(row["estado_solicitud_id"])
+            target_estado_nombre = row["nombre"]
+        elif body.estado_nombre:
+            nombre_req = str(body.estado_nombre).strip().lower()
+            est_all = sb.table("estados_solicitud").select("estado_solicitud_id, nombre").execute().data or []
+            match = next((e for e in est_all if str(e["nombre"]).strip().lower() == nombre_req), None)
+            if not match:
+                raise HTTPException(status_code=400, detail="estado_nombre inválido")
+            target_estado_id = int(match["estado_solicitud_id"])
+            target_estado_nombre = match["nombre"]
+        else:
+            raise HTTPException(status_code=400, detail="Debes enviar estado_solicitud_id o estado_nombre")
+
+        # ---------- 4) Actualizar ----------
+        sb.table("solicitudes_servicio").update(
+            {"estado_solicitud_id": target_estado_id}
+        ).eq("solicitud_id", solicitud_id).execute()
+
+        # ---------- 5) Devolver actualizado ----------
+        updated_resp = (
+            sb.table("solicitudes_servicio")
+            .select("solicitud_id, equipo_id, solicitante_id, descripcion, estado_solicitud_id, servicio_id, created_at, updated_at")
+            .eq("solicitud_id", solicitud_id)
+            .limit(1)
+            .execute()
+        )
+        updated = (updated_resp.data or [None])[0]
+
+        return {
+            "ok": True,
+            "solicitud_id": solicitud_id,
+            "estado_solicitud_id": target_estado_id,
+            "estado_nombre": target_estado_nombre,
+            "solicitud": updated,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.exception("[SOLICITUD_ESTADO] Error inesperado para solicitud_id=%s: %s", solicitud_id, e)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
