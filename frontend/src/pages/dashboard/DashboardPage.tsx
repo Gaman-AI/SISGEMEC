@@ -4,6 +4,9 @@ import { Badge } from "../../components/ui/badge";
 import { Separator } from "../../components/ui/separator";
 import { Monitor, Users as UsersIcon, Wrench, Ticket } from "lucide-react";
 import { listEquipos } from "../../data/equipos.repository";
+import { countResponsablesActivos } from "../../data/usuarios.repository";
+import { countServiciosNoAtendidos } from "../../data/servicios.repository";
+import { countSolicitudesNoConvertidas } from "../../data/solicitudes.repository";
 
 /* ⬇️ NUEVO: imports para navegar y botón */
 import { useNavigate } from "react-router-dom";
@@ -34,32 +37,48 @@ export default function DashboardPage() {
   const navigate = useNavigate();
 
   React.useEffect(() => {
+    let mounted = true;
     (async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // TOTAL DE EQUIPOS (REAL)
-        const eq = (await listEquipos({
-          page: 1,
-          pageSize: 1, // sólo queremos el count
-          search: "",
-          estado_equipo_id: null,
-          responsable_id: null,
-        })) as ListEquiposResp;
+        const [
+          totalEquiposRes,
+          responsablesActivosRes,
+          serviciosNoAtendidosRes,
+          solicitudesNoConvertidasRes
+        ] = await Promise.all([
+          // Si ya tienes una función que devuelve count de equipos, úsala; si no, usa el listado con count exact:
+          listEquipos({ page: 1, pageSize: 1 }), // ya presente en el panel
+          countResponsablesActivos(),
+          countServiciosNoAtendidos(),
+          countSolicitudesNoConvertidas()
+        ]);
 
-        setEquiposTotal(getCount(eq));
+        if (!mounted) return;
 
-        // Placeholders (los conectamos cuando tengas repos)
-        setUsuariosActivos(0);
-        setMantenimientosSemana(0);
-        setSolicitudesAbiertas(0);
+        // Total de equipos (ya funcionaba)
+        setEquiposTotal(getCount(totalEquiposRes as ListEquiposResp));
+
+        // Usuarios responsables activos
+        setUsuariosActivos(responsablesActivosRes?.count ?? 0);
+
+        // Mantenimientos: servicios no atendidos
+        setMantenimientosSemana(serviciosNoAtendidosRes?.count ?? 0);
+
+        // Solicitudes: no convertidas a servicio
+        setSolicitudesAbiertas(solicitudesNoConvertidasRes?.count ?? 0);
       } catch (e: any) {
+        console.warn('Dashboard load error', e);
         setError(e?.message ?? "Error al cargar dashboard");
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     })();
+    return () => { mounted = false; };
   }, []);
 
   const SkeletonCard = () => (
@@ -127,7 +146,7 @@ export default function DashboardPage() {
                 <div className="text-3xl font-bold">{usuariosActivos}</div>
                 <Badge className="mt-2" variant="default">+0%</Badge>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Usuarios conectados hoy
+                  Usuarios responsables activos
                 </div>
               </CardContent>
             </Card>
@@ -161,7 +180,7 @@ export default function DashboardPage() {
 
                 {/* ⬇️ NUEVO: botón de acceso directo a la bandeja */}
                 <div className="mt-4">
-                  <Button className="rounded-xl" onClick={() => navigate("/solicitudes")}>
+                  <Button className="rounded-xl bg-[#264a55] hover:opacity-90" onClick={() => navigate("/solicitudes")}>
                     Abrir bandeja
                   </Button>
                 </div>

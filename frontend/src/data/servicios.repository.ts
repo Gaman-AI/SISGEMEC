@@ -299,3 +299,43 @@ export async function listAdminsLite(): Promise<{ data: AdminLite[]; error: Erro
 export async function listTecnicosLite() {
   return listAdminsLite();
 }
+
+// NUEVO: contar servicios no atendidos
+export async function countServiciosNoAtendidos() {
+  // Estrategia flexible según esquema disponible:
+  // 1) Si hay estado_servicio_id: excluir completado (3) o usar IN pendientes
+  // 2) Si hay estado texto: excluir 'Completado'/'Cerrado'
+  // 3) Si hay booleano 'completado' o 'finalizado': eq false
+
+  // Intento 1: ids (1,2) = pendientes/en atención
+  let q = supabase
+    .from('servicios')
+    .select('*', { count: 'exact', head: true })
+    .in('estado_servicio_id', [1, 2]);
+
+  let { count, error } = await q;
+
+  // Intento 2: estado texto
+  if (error || count === null) {
+    q = supabase
+      .from('servicios')
+      .select('*', { count: 'exact', head: true })
+      .not('estado', 'in', '("Completado","Cerrado","Finalizado")');
+    ({ count, error } = await q);
+  }
+
+  // Intento 3: booleano finalizado/completado
+  if (error || count === null) {
+    q = supabase
+      .from('servicios')
+      .select('*', { count: 'exact', head: true })
+      .eq('finalizado', false);
+    ({ count, error } = await q);
+  }
+
+  if (error || count === null) {
+    console.warn('countServiciosNoAtendidos:error', error);
+    return { count: 0, error: error ?? new Error('No se pudo contar servicios') };
+  }
+  return { count: count ?? 0, error: null };
+}

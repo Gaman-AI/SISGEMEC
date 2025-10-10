@@ -395,3 +395,91 @@ export async function actualizarEstadoSolicitud(
   };
 }
 
+// NUEVO: contar solicitudes no convertidas a servicio
+export async function countSolicitudesNoConvertidas() {
+  // 1️⃣ Preferencia: esquema numérico (estado_solicitud_id)
+  // Mapeo detectado en auditoría:
+  // 1: Enviada, 2: En revisión, 3: Aprobada, 4: Rechazada, 5: Convertida
+  let q = supabase
+    .from('solicitudes')
+    .select('*', { count: 'exact', head: true })
+    .in('estado_solicitud_id', [1, 2, 4]);
+
+  let { count, error } = await q;
+
+  // 2️⃣ Esquema textual (columna "estado")
+  if (error || count === null) {
+    q = supabase
+      .from('solicitudes')
+      .select('*', { count: 'exact', head: true })
+      .or(
+        [
+          "estado.ilike.Enviada",
+          "estado.ilike.En revisión",
+          "estado.ilike.En revision",
+          "estado.ilike.Rechazada",
+        ].join(",")
+      );
+    ({ count, error } = await q);
+  }
+
+  // 3️⃣ Alternativo textual (columna "estado_solicitud")
+  if (error || count === null) {
+    q = supabase
+      .from('solicitudes')
+      .select('*', { count: 'exact', head: true })
+      .or(
+        [
+          "estado_solicitud.ilike.Enviada",
+          "estado_solicitud.ilike.En revisión",
+          "estado_solicitud.ilike.En revision",
+          "estado_solicitud.ilike.Rechazada",
+        ].join(",")
+      );
+    ({ count, error } = await q);
+  }
+
+  // 4️⃣ Si la tabla real es "solicitudes_servicio"
+  if (error || count === null) {
+    q = supabase
+      .from('solicitudes_servicio')
+      .select('*', { count: 'exact', head: true })
+      .in('estado_solicitud_id', [1, 2, 4]);
+    ({ count, error } = await q);
+  }
+  if (error || count === null) {
+    q = supabase
+      .from('solicitudes_servicio')
+      .select('*', { count: 'exact', head: true })
+      .or(
+        [
+          "estado.ilike.Enviada",
+          "estado.ilike.En revisión",
+          "estado.ilike.En revision",
+          "estado.ilike.Rechazada",
+        ].join(",")
+      );
+    ({ count, error } = await q);
+  }
+  if (error || count === null) {
+    q = supabase
+      .from('solicitudes_servicio')
+      .select('*', { count: 'exact', head: true })
+      .or(
+        [
+          "estado_solicitud.ilike.Enviada",
+          "estado_solicitud.ilike.En revisión",
+          "estado_solicitud.ilike.En revision",
+          "estado_solicitud.ilike.Rechazada",
+        ].join(",")
+      );
+    ({ count, error } = await q);
+  }
+
+  if (error || count === null) {
+    console.warn('countSolicitudesNoConvertidas:error', error);
+    return { count: 0, error: error ?? new Error('No se pudo contar solicitudes') };
+  }
+  return { count: count ?? 0, error: null };
+}
+

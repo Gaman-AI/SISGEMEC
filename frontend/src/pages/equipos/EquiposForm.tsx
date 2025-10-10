@@ -516,8 +516,8 @@ export default function EquiposForm() {
             type="submit"
             disabled={isSubmitting}
             className="
-              rounded-xl bg-gradient-to-b from-slate-900 to-slate-700 text-white
-              hover:from-slate-800 hover:to-slate-600
+              rounded-xl bg-[#264a55] text-white
+              hover:brightness-95 active:brightness-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#264a55]/30
             "
           >
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}

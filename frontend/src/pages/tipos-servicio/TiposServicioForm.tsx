@@ -211,7 +211,7 @@ export default function TiposServicioForm() {
           >
             Cancelar
           </Button>
-          <Button type="submit" disabled={isSubmitting} className="rounded-xl">
+          <Button type="submit" disabled={isSubmitting} className="rounded-xl bg-[#264a55] text-white hover:brightness-95 active:brightness-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#264a55]/30">
             {isEdit ? "Guardar cambios" : "Crear tipo"}
           </Button>
         </div>

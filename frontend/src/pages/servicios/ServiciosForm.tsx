@@ -350,7 +350,7 @@ export default function ServiciosForm() {
             <X className="mr-2 h-4 w-4" />
             Cancelar
           </Button>
-          <Button type="submit" disabled={isSubmitting} className="rounded-xl">
+          <Button type="submit" disabled={isSubmitting} className="rounded-xl bg-[#264a55] text-white hover:brightness-95 active:brightness-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#264a55]/30">
             <Save className="mr-2 h-4 w-4" />
             {isEdit ? 'Guardar cambios' : 'Crear servicio'}
           </Button>

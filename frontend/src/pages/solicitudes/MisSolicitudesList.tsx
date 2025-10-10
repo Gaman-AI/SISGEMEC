@@ -91,7 +91,7 @@ export default function MisSolicitudesList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-4xl font-bold tracking-tight">Mis solicitudes</h1>
-        <Button className="rounded-xl" onClick={() => navigate("/mis-solicitudes/nueva")}>
+        <Button className="rounded-xl bg-[#264a55] text-white hover:brightness-95 active:brightness-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#264a55]/30" onClick={() => navigate("/mis-solicitudes/nueva")}>
           Nueva solicitud
         </Button>
       </div>

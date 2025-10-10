@@ -185,7 +185,7 @@ export default function ImportUsuariosPage() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl"
+                className="w-full rounded-xl bg-[#264a55] text-white hover:brightness-95 active:brightness-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#264a55]/30"
               >
                 {loading ? (
                   <>
