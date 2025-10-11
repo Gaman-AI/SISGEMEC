@@ -15,10 +15,10 @@ export default function ImportarPage() {
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Tarjeta Importar Usuarios */}
-        <div className="rounded-2xl border border-green-200 p-5 shadow-sm bg-green-50/50">
+        <div className="rounded-2xl border-none p-5 shadow-sm bg-[#CFD0BF]">
           <div className="flex items-center gap-2 mb-2">
-            <Users className="h-5 w-5 text-green-700" />
-            <div className="text-lg font-medium text-green-700">Importar Usuarios</div>
+            <Users className="h-5 w-5 text-slate-800" />
+            <div className="text-lg font-medium text-slate-800">Importar Usuarios</div>
           </div>
           <p className="text-sm text-slate-600 mb-4">
             Importa responsables desde Excel con la hoja <b>"Usuarios"</b>.<br/>
@@ -26,7 +26,7 @@ export default function ImportarPage() {
           </p>
           <Link
             to="/import-usuarios"
-            className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-colors"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-[#CFD0BF] text-slate-800 border border-slate-300 hover:opacity-90 transition-colors"
           >
             <Users className="h-4 w-4 mr-2" />
             Importar Usuarios
@@ -35,10 +35,10 @@ export default function ImportarPage() {
         </div>
 
         {/* Tarjeta Importar Equipos */}
-        <div className="rounded-2xl border border-blue-200 p-5 shadow-sm bg-blue-50/50">
+        <div className="rounded-2xl border-none p-5 shadow-sm bg-[#C7D8D0]">
           <div className="flex items-center gap-2 mb-2">
-            <Monitor className="h-5 w-5 text-blue-700" />
-            <div className="text-lg font-medium text-blue-700">Importar Equipos</div>
+            <Monitor className="h-5 w-5 text-slate-800" />
+            <div className="text-lg font-medium text-slate-800">Importar Equipos</div>
           </div>
           <p className="text-sm text-slate-600 mb-4">
             Importa equipos desde Excel con la hoja <b>"Equipos"</b>.<br/>
@@ -46,7 +46,7 @@ export default function ImportarPage() {
           </p>
           <Link
             to="/import-equipos"
-            className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-[#C7D8D0] text-slate-800 border border-slate-300 hover:opacity-90 transition-colors"
           >
             <Monitor className="h-4 w-4 mr-2" />
             Importar Equipos

@@ -3,10 +3,11 @@ import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/ca
 import { Badge } from "../../components/ui/badge";
 import { Separator } from "../../components/ui/separator";
 import { Monitor, Users as UsersIcon, Wrench, Ticket } from "lucide-react";
-import { listEquipos } from "../../data/equipos.repository";
-import { countResponsablesActivos } from "../../data/usuarios.repository";
-import { countServiciosNoAtendidos } from "../../data/servicios.repository";
-import { countSolicitudesNoConvertidas } from "../../data/solicitudes.repository";
+import { listEquipos, countEquiposNuevosSemana } from "../../data/equipos.repository";
+import { countResponsablesActivos, countResponsablesNuevosSemana } from "../../data/usuarios.repository";
+import { countServiciosNoAtendidos, countServiciosNuevosSemana, listServiciosByTipoCounts } from "../../data/servicios.repository";
+import { countSolicitudesNoConvertidas, countSolicitudesNuevasSemana } from "../../data/solicitudes.repository";
+import { supabase } from "../../lib/supabase";
 
 /* ⬇️ NUEVO: imports para navegar y botón */
 import { useNavigate } from "react-router-dom";
@@ -33,8 +34,46 @@ export default function DashboardPage() {
   const [mantenimientosSemana, setMantenimientosSemana] = React.useState<number>(0);
   const [solicitudesAbiertas, setSolicitudesAbiertas] = React.useState<number>(0);
 
+  // métricas semanales
+  const [eqWeek, setEqWeek] = React.useState(0);
+  const [usrWeek, setUsrWeek] = React.useState(0);
+  const [srvWeek, setSrvWeek] = React.useState(0);
+  const [solWeek, setSolWeek] = React.useState(0);
+
+  // actividad y gráfica
+  const [recent, setRecent] = React.useState<{ts:string,label:string}[]>([]);
+  const [svcChart, setSvcChart] = React.useState<{tipo_servicio_id:number, count:number, nombre:string}[]>([]);
+
   /* ⬇️ NUEVO: hook para navegar */
   const navigate = useNavigate();
+
+  async function getRecentActivity() {
+    const pulls = [
+      supabase.from('equipos').select('equipo_id, num_serie, created_at, fecha_ingreso').order('created_at', { ascending: false }).limit(5),
+      supabase.from('profiles').select('user_id, full_name, role, created_at').order('created_at', { ascending: false }).limit(5),
+      supabase.from('servicios').select('servicio_id, tipo_servicio_id, created_at, fecha_inicio').order('created_at', { ascending: false }).limit(5),
+      supabase.from('solicitudes').select('solicitud_id, estado_solicitud_id, created_at').order('created_at', { ascending: false }).limit(5),
+    ];
+
+    const results = await Promise.allSettled(pulls);
+    const items:any[] = [];
+    const pickDate = (row:any, candidates:string[]) => candidates.find(c => row?.[c]) ? row[candidates.find(c => row?.[c]) as string] : null;
+
+    if (results[0].status === 'fulfilled' && results[0].value.data) {
+      for (const r of results[0].value.data as any[]) items.push({ ts: pickDate(r, ['created_at','fecha_ingreso']), label: `Equipo agregado: ${r.num_serie ?? r.equipo_id}` });
+    }
+    if (results[1].status === 'fulfilled' && results[1].value.data) {
+      for (const r of results[1].value.data as any[]) items.push({ ts: r.created_at, label: `Usuario ${r.role ?? ''} agregado: ${r.full_name ?? r.user_id}` });
+    }
+    if (results[2].status === 'fulfilled' && results[2].value.data) {
+      for (const r of results[2].value.data as any[]) items.push({ ts: pickDate(r, ['created_at','fecha_inicio']), label: `Servicio registrado: #${r.servicio_id}` });
+    }
+    if (results[3].status === 'fulfilled' && results[3].value.data) {
+      for (const r of results[3].value.data as any[]) items.push({ ts: r.created_at, label: `Solicitud creada: #${r.solicitud_id}` });
+    }
+
+    return items.filter(i => !!i.ts).sort((a,b) => new Date(b.ts).getTime() - new Date(a.ts).getTime()).slice(0, 6);
+  }
 
   React.useEffect(() => {
     let mounted = true;
@@ -47,13 +86,25 @@ export default function DashboardPage() {
           totalEquiposRes,
           responsablesActivosRes,
           serviciosNoAtendidosRes,
-          solicitudesNoConvertidasRes
+          solicitudesNoConvertidasRes,
+          eqNew,
+          usrNew,
+          srvNew,
+          solNew,
+          recentRes,
+          chartRes
         ] = await Promise.all([
           // Si ya tienes una función que devuelve count de equipos, úsala; si no, usa el listado con count exact:
           listEquipos({ page: 1, pageSize: 1 }), // ya presente en el panel
           countResponsablesActivos(),
           countServiciosNoAtendidos(),
-          countSolicitudesNoConvertidas()
+          countSolicitudesNoConvertidas(),
+          countEquiposNuevosSemana(),
+          countResponsablesNuevosSemana(),
+          countServiciosNuevosSemana(),
+          countSolicitudesNuevasSemana(),
+          getRecentActivity(),
+          listServiciosByTipoCounts(),
         ]);
 
         if (!mounted) return;
@@ -69,6 +120,14 @@ export default function DashboardPage() {
 
         // Solicitudes: no convertidas a servicio
         setSolicitudesAbiertas(solicitudesNoConvertidasRes?.count ?? 0);
+
+        // Métricas semanales
+        setEqWeek(eqNew?.count ?? 0);
+        setUsrWeek(usrNew?.count ?? 0);
+        setSrvWeek(srvNew?.count ?? 0);
+        setSolWeek(solNew?.count ?? 0);
+        setRecent(Array.isArray(recentRes) ? recentRes : []);
+        setSvcChart(Array.isArray(chartRes?.data) ? chartRes.data : []);
       } catch (e: any) {
         console.warn('Dashboard load error', e);
         setError(e?.message ?? "Error al cargar dashboard");
@@ -128,8 +187,10 @@ export default function DashboardPage() {
                 <Monitor className="h-5 w-5 opacity-70" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{equiposTotal.toLocaleString()}</div>
-                <Badge className="mt-2" variant="default">+0%</Badge>
+                <div className="text-4xl font-bold text-[#264a55]">{equiposTotal.toLocaleString()}</div>
+                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white bg-[#527779] mt-2">
+                  {eqWeek} esta semana
+                </span>
                 <div className="text-xs text-muted-foreground mt-1">
                   Equipos registrados en el sistema
                 </div>
@@ -143,8 +204,10 @@ export default function DashboardPage() {
                 <UsersIcon className="h-5 w-5 opacity-70" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{usuariosActivos}</div>
-                <Badge className="mt-2" variant="default">+0%</Badge>
+                <div className="text-4xl font-bold text-[#264a55]">{usuariosActivos}</div>
+                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white bg-[#527779] mt-2">
+                  {usrWeek} esta semana
+                </span>
                 <div className="text-xs text-muted-foreground mt-1">
                   Usuarios responsables activos
                 </div>
@@ -158,8 +221,10 @@ export default function DashboardPage() {
                 <Wrench className="h-5 w-5 opacity-70" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{mantenimientosSemana}</div>
-                <Badge className="mt-2" variant="default">0%</Badge>
+                <div className="text-4xl font-bold text-[#264a55]">{mantenimientosSemana}</div>
+                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white bg-[#527779] mt-2">
+                  {srvWeek} esta semana
+                </span>
                 <div className="text-xs text-muted-foreground mt-1">
                   Programados para esta semana
                 </div>
@@ -173,7 +238,10 @@ export default function DashboardPage() {
                 <Ticket className="h-5 w-5 opacity-70" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{solicitudesAbiertas}</div>
+                <div className="text-4xl font-bold text-[#264a55]">{solicitudesAbiertas}</div>
+                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white bg-[#527779] mt-2">
+                  {solWeek} esta semana
+                </span>
                 <div className="text-xs text-muted-foreground mt-1">
                   Abiertas y pendientes de atención
                 </div>
@@ -198,7 +266,21 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-medium">Actividad reciente</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Próximamente: últimos movimientos en Equipos/Usuarios…
+            <section className="mt-6">
+              <h3 className="text-sm font-semibold mb-2">Actividad reciente</h3>
+              {recent.length === 0 ? (
+                <div className="text-sm text-muted-foreground">Sin movimientos recientes.</div>
+              ) : (
+                <ul className="space-y-2">
+                  {recent.map((i, idx) => (
+                    <li key={idx} className="text-sm">
+                      <span className="text-slate-500 mr-2">{new Date(i.ts).toLocaleString()}</span>
+                      <span>{i.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           </CardContent>
         </Card>
 
@@ -207,7 +289,35 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-medium">Gráfica</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Próximamente: tendencias y comparativas…
+            <section className="mt-6">
+              <h3 className="text-sm font-semibold mb-2">Tipos de servicio más solicitados</h3>
+              {svcChart.length === 0 ? (
+                <div className="text-sm text-muted-foreground">Sin datos suficientes.</div>
+              ) : (
+                <div className="space-y-2">
+                  {(() => {
+                    const max = Math.max(...svcChart.map(d => Number(d.count) || 0)) || 1;
+                    return svcChart
+                      .sort((a,b) => (b.count as number) - (a.count as number))
+                      .slice(0,5)
+                      .map((d, idx) => {
+                        const pct = Math.round((Number(d.count) / max) * 100);
+                        return (
+                          <div key={idx}>
+                            <div className="flex items-center justify-between text-xs mb-1">
+                              <span>{d.nombre || `Tipo ${d.tipo_servicio_id}`}</span>
+                              <span>{d.count}</span>
+                            </div>
+                            <div className="h-2 rounded bg-slate-200">
+                              <div className="h-2 rounded bg-[#208692]" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      });
+                  })()}
+                </div>
+              )}
+            </section>
           </CardContent>
         </Card>
       </div>

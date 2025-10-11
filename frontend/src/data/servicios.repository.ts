@@ -339,3 +339,69 @@ export async function countServiciosNoAtendidos() {
   }
   return { count: count ?? 0, error: null };
 }
+
+export async function countServiciosNuevosSemana() {
+  function getWeekRangeISO() {
+    const now = new Date();
+    // 0=Dom,1=Lun,...  Queremos Lunes como inicio
+    const day = now.getDay(); // 0..6
+    const diffToMonday = (day === 0 ? -6 : 1 - day); // si es domingo, retrocede 6
+    const start = new Date(now);
+    start.setHours(0,0,0,0);
+    start.setDate(now.getDate() + diffToMonday);
+
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    end.setHours(23,59,59,999);
+
+    return {
+      startISO: start.toISOString(),
+      endISO: end.toISOString()
+    };
+  }
+
+  const { startISO, endISO } = getWeekRangeISO();
+  const tables = ['servicios'];
+  const cols = ['created_at', 'fecha_inicio', 'fecha_creacion', 'fecha'];
+  for (const t of tables) {
+    for (const c of cols) {
+      const { count, error } = await supabase
+        .from(t)
+        .select('*', { count: 'exact', head: true })
+        .gte(c, startISO)
+        .lte(c, endISO);
+      if (!error && count !== null) return { count, error: null };
+    }
+  }
+  console.warn('countServiciosNuevosSemana: no matching column found');
+  return { count: 0, error: null };
+}
+
+export async function listServiciosByTipoCounts() {
+  // Fallback: obtener todos los servicios y contar manualmente
+  const res = await supabase.from('servicios').select('tipo_servicio_id').limit(200);
+  const map = new Map<number, number>();
+  if (res.data) for (const r of res.data) map.set(r.tipo_servicio_id, (map.get(r.tipo_servicio_id) ?? 0) + 1);
+  
+  // Intentar obtener nombres de tipos de servicio
+  let tiposMap = new Map<number, string>();
+  try {
+    const tiposRes = await supabase.from('tipos_servicio').select('tipo_servicio_id, nombre');
+    if (tiposRes.data) {
+      for (const t of tiposRes.data) {
+        tiposMap.set(t.tipo_servicio_id, t.nombre);
+      }
+    }
+  } catch (e) {
+    console.warn('No se pudo cargar nombres de tipos de servicio:', e);
+  }
+  
+  return { 
+    data: Array.from(map.entries()).map(([tipo_servicio_id, count]) => ({ 
+      tipo_servicio_id, 
+      count,
+      nombre: tiposMap.get(tipo_servicio_id) || `Tipo ${tipo_servicio_id}`
+    })), 
+    error: res.error ?? null 
+  };
+}
