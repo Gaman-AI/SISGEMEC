@@ -1,23 +1,62 @@
+{% set primary   = '#208692' %}
+{% set primary2  = '#164F5B' %}
+{% set accent    = '#527779' %}
+{% set soft1     = '#C7D8D0' %}
+{% set soft2     = '#CFD0BF' %}
+{% set soft3     = '#FFFFFF' %}  {# <-- fondo general en BLANCO #}
+{% set ink       = '#26272A' %}
+
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>{{ title or "SISGEMEC" }}</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Numafix{% endblock %}</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#f6f7fb; color:#0f172a; }
-    .card { max-width:600px; margin:24px auto; background:#ffffff; border-radius:16px; padding:24px; border:1px solid #e5e7eb; }
-    .btn { display:inline-block; padding:12px 16px; border-radius:10px; text-decoration:none; background:#0ea5e9; color:#fff; }
-    .muted { color:#64748b; font-size:12px; }
-    h1 { font-size:20px; margin:0 0 12px; }
-    .kv { background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px; padding:12px; }
-    .kv p { margin:4px 0; }
+    body { margin:0; padding:0; background: {{ soft3 }}; color: {{ ink }}; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
+    img { border:0; outline:none; text-decoration:none; display:block; }
+    table { border-collapse:collapse; }
+    a { color: {{ primary }}; text-decoration:none; }
+
+    .container { width:100%; background: {{ soft3 }}; padding: 24px 0; }
+    .wrapper { width:100%; max-width: 640px; margin:0 auto; background:#fff; border:1px solid {{ soft1 }}; border-radius:12px; overflow:hidden; }
+    .header { background: {{ primary }}; padding:20px 24px; }
+    .brand { font:700 18px/1.2 system-ui, Segoe UI, Roboto, Helvetica, Arial; color:#fff; letter-spacing:.4px; }
+    .subbrand { color:#eaf7fa; font:500 12px/1.2 system-ui; opacity:.9; margin-top:4px; }
+
+    .content { padding:24px; background:#fff; }
+    .title { color: {{ primary2 }}; font:700 20px/1.3 system-ui; margin:0 0 12px; }
+    .lead  { color: {{ ink }}; font:400 14px/1.6 system-ui; margin:0 0 16px; }
+
+    .card  { background:#fff; border:1px solid {{ soft1 }}; border-radius:10px; padding:16px; }  /* <-- tarjeta BLANCA */
+    .badge { display:inline-block; padding:4px 10px; border-radius:999px; font:600 12px system-ui; background: {{ accent }}; color:#fff; }
+
+    .meta  { width:100%; margin-top:6px; }
+    .meta th { width:40%; text-align:left; font:600 12px/1.4 system-ui; color:#3a4650; padding:8px 10px; background:#fff; border-bottom:1px solid {{ soft1 }}; }
+    .meta td { font:400 13px/1.5 system-ui; color:{{ ink }}; padding:8px 10px; border-bottom:1px solid {{ soft1 }}; }
+
+    .footer { padding:18px 24px; background:#fff; color:#5a646d; font:12px system-ui; border-top:1px solid {{ soft1 }}; }
+    .note   { background:#fff; border-left:4px solid {{ primary }}; padding:12px 14px; border-radius:8px; margin-top:10px; }
+    @media (max-width: 480px) { .content{padding:18px} .header{padding:16px 18px} }
   </style>
 </head>
 <body>
-  <div class="card">
-    {% block content %}{% endblock %}
-    <p class="muted">Este es un mensaje automático de SISGEMEC.</p>
-  </div>
+  <table role="presentation" class="container" width="100%">
+    <tr><td align="center">
+      <table role="presentation" class="wrapper">
+        <tr><td class="header">
+          <div class="brand">Numafix</div>
+          <div class="subbrand">Notificador de solicitudes y servicios</div>
+        </td></tr>
+        <tr><td class="content">
+          {% block content %}{% endblock %}
+        </td></tr>
+        <tr><td class="footer">
+          Este correo fue generado automáticamente por Numafix. Por favor no respondas a este mensaje.
+          <div class="note">Si no esperabas este correo, ignóralo o contacta al administrador.</div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
 </body>
 </html>

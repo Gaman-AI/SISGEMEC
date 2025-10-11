@@ -1,2 +1,10 @@
-<h2>Servicio #{{ servicio_id }} completado</h2>
-<p>Tu solicitud ha sido atendida y el servicio fue marcado como completado.</p>
+{% extends "email/base.html.j2" %}
+{% block title %}Servicio completado · Numafix{% endblock %}
+
+{% block content %}
+  <div class="badge">Servicio atendido</div>
+  <h1 class="title">Servicio completado</h1>
+  <p class="lead">
+    Tu última solicitud de servicio ha sido completada.
+  </p>
+{% endblock %}

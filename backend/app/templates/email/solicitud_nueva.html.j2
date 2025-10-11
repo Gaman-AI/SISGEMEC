@@ -1,4 +1,27 @@
-<h2>Nueva solicitud #{{ solicitud_id }}</h2>
-<p><strong>Equipo:</strong> {{ equipo_id }}</p>
-<p><strong>Solicitante:</strong> {{ solicitante }}</p>
-<p><strong>Descripción:</strong> {{ descripcion }}</p>
+{% extends "email/base.html.j2" %}
+{% block title %}Nueva solicitud #{{ solicitud_id }} · Numafix{% endblock %}
+
+{# Fallbacks robustos para asegurar datos sin tocar backend #}
+{% set v_equipo       = equipo_id or equipo_num_serie or num_serie or equipo or equipo_ref or '—' %}
+{% set v_solicitante  = solicitante_nombre or solicitante or responsable_nombre or responsable or '—' %}
+{% set v_desc         = descripcion or detalle or motivo or '—' %}
+{% set v_fecha        = fecha_creacion or created_at or fecha or fecha_solicitud or '—' %}
+
+{% block content %}
+  <div class="badge">Nueva solicitud</div>
+  <h1 class="title">Nueva solicitud #{{ solicitud_id }}</h1>
+  <p class="lead">Se ha registrado una nueva solicitud de servicio.</p>
+
+  <div class="card">
+    <table role="presentation" class="meta">
+      <tr><th>Equipo</th><td>#{{ v_equipo }}</td></tr>
+      <tr><th>Solicitante</th><td>{{ v_solicitante }}</td></tr>
+      <tr><th>Descripción</th><td>{{ v_desc }}</td></tr>
+      <tr><th>Fecha</th><td>{{ v_fecha }}</td></tr>
+    </table>
+  </div>
+
+  <p class="lead" style="margin-top:14px;">
+    Puedes atender esta solicitud desde el panel de administración.
+  </p>
+{% endblock %}
