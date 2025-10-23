@@ -2,7 +2,7 @@ import React from "react";
 import { supabase } from "@/lib/supabase";
 import type { Profile, UserRole } from "./auth.types";
 
-type AuthState =
+export type AuthState =
   | { status: "loading" }
   | { status: "unauthenticated" }
   | { status: "authenticated"; profile: Profile };

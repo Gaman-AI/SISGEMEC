@@ -125,7 +125,7 @@ async def cors_and_error_shield(request: Request, call_next):
             # Permitir localhost y 127.0.0.1 por defecto
             resp.headers["Access-Control-Allow-Origin"] = "http://localhost:5173"
         resp.headers["Access-Control-Allow-Credentials"] = "true"
-        resp.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, X-Requested-With, Accept, Origin"
+        resp.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, X-Requested-With, Accept, Origin, Idempotency-Key"
         resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
         resp.headers["Access-Control-Max-Age"] = "86400"  # Cache preflight por 24h
         return resp
@@ -152,7 +152,7 @@ async def cors_and_error_shield(request: Request, call_next):
         # Fallback para desarrollo
         resp.headers["Access-Control-Allow-Origin"] = "http://localhost:5173"
     resp.headers["Access-Control-Allow-Credentials"] = "true"
-    resp.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
+    resp.headers["Access-Control-Expose-Headers"] = "Content-Disposition, Idempotency-Key"
     return resp
 
 # Middleware de logging
@@ -198,6 +198,28 @@ try:
         logging.getLogger("uvicorn").info("[DEBUG] Router /debug NO montado (EMAIL_DEBUG != 1)")
 except Exception as e:
     logging.getLogger("uvicorn").warning(f"[DEBUG] No se pudo montar /debug: {e}")
+
+# --- Montaje condicional del router de licencias ---
+FEATURE_LICENSES = os.getenv("FEATURE_LICENSES", "false").lower() in ("true", "1")
+if FEATURE_LICENSES:
+    try:
+        from app.routers.licenses.vendors import router as vendors_router
+        from app.routers.licenses.products import router as products_router
+        from app.routers.licenses.plans import router as plans_router
+        from app.routers.licenses.licenses import router as licenses_router
+        from app.routers.licenses.assignments import router as assignments_router
+        
+        app.include_router(vendors_router, prefix="/licenses/vendors", tags=["licenses-vendors"])
+        app.include_router(products_router, prefix="/licenses/products", tags=["licenses-products"])
+        app.include_router(plans_router, prefix="/licenses/plans", tags=["licenses-plans"])
+        app.include_router(licenses_router, prefix="/licenses", tags=["licenses"])
+        app.include_router(assignments_router, prefix="/licenses/assignments", tags=["licenses-assignments"])
+        
+        logging.getLogger("uvicorn").info("[LICENSES] Router /licenses montado (FEATURE_LICENSES=true)")
+    except Exception as e:
+        logging.getLogger("uvicorn").warning(f"[LICENSES] No se pudo montar /licenses: {e}")
+else:
+    logging.getLogger("uvicorn").info("[LICENSES] Router /licenses NO montado (FEATURE_LICENSES != true)")
 
 # Endpoint de diagnóstico para desarrollo
 if getattr(settings, "ENVIRONMENT", "development") != "production":

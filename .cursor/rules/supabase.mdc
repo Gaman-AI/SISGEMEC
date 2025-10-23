@@ -5,7 +5,8 @@
 
 This document incorporates directives from:
 - **PRD & Tech Stack**: FastAPI backend, Supabase (PostgreSQL + RLS), React + TypeScript frontend.
-- **Database Rules & Schema Design**: Tablas `equipos`, `tickets`, `tickets_hist`, índices y constraints; alineación con OpenAPI.
+- **Database Rules & Schema Design**: Tablas `equipos`, `tickets`, `ticket_events`, índices y constraints; alineación con OpenAPI.
+- **Tickets Module**: Nuevo módulo de gestión de incidencias con idempotencia por `external_id`.
 - **Auth Config Rules**: Roles (`admin`, `tecnico`, `usuario`), JWT/claims y políticas RLS.
 - **Implementation Plan**: CI gates, auditorías de seguridad y objetivos de rendimiento/observabilidad.
 - **Cursorrules / Memory Bank**: Trazabilidad de cambios (OpenAPI ↔ DB) y registro en `development-log.md`.
@@ -27,9 +28,10 @@ This document incorporates directives from:
 - **tickets**:
   - **usuario**: crear; leer propios o de sus equipos.
   - **tecnico**: leer/actualizar asignados (estado, notas).
+  - **service_role**: bypass para intake automático (Google Forms, email).
   - **admin**: acceso completo.
 
-- **tickets_hist**:
+- **ticket_events**:
   - Lectura según visibilidad del ticket origen.
   - Inserción: solo admin/sistema.
 
@@ -45,8 +47,9 @@ This document incorporates directives from:
 - **CHECK/enum** para `status` y eventos.
 
 ### Índices recomendados
-- `tickets(status)`, `tickets(assignee_id, status)`, `tickets(created_at DESC)`.
-- `tickets_hist(ticket_id, created_at)`.
+- `tickets(estado)`, `tickets(prioritario)`, `tickets(received_at)`, `tickets(closed_at)`, `tickets(fuente)`.
+- `tickets(external_id)` UNIQUE para idempotencia.
+- `ticket_events(ticket_id)`, `ticket_events(event_type)`, `ticket_events(created_at)`.
 - `equipos(owner_id)`, `equipos(serial)` UNIQUE.
 
 ### Paginación estable
@@ -54,6 +57,8 @@ This document incorporates directives from:
 
 ### OpenAPI Alignment
 - Todo cambio de esquema → **migración + actualización de contrato OpenAPI**.
+- Endpoints de intake deben documentar idempotencia por `external_id`.
+- Coherencia obligatoria: **DB ↔ OpenAPI ↔ Docs**.
 
 ---
 
@@ -111,7 +116,7 @@ This document incorporates directives from:
 ---
 
 ## Acceptance Checklist
-- ✔ RLS activo y probado en `equipos`, `tickets`, `tickets_hist`.  
+- ✔ RLS activo y probado en `equipos`, `tickets`, `ticket_events`.  
 - ✔ Índices creados según filtros/joins más comunes.  
 - ✔ Storage configurado por entorno; nombres UUID; sin PII en paths.  
 - ✔ Migraciones versionadas y aplicadas vía CI; rollback definido.  
@@ -119,6 +124,7 @@ This document incorporates directives from:
 - ✔ Logs estructurados + métricas (P95, errores) con `traceId`.  
 - ✔ Auditorías de seguridad sin High/Critical.  
 - ✔ Tests unit/integration/E2E verdes; consultas críticas revisadas con `EXPLAIN`.  
+- ✔ Idempotencia por `external_id` documentada y probada en intake.
 
 ---
 

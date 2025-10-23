@@ -11,10 +11,28 @@ SISGEMEC es una plataforma web para **registrar, atender y reportar** solicitude
 
 ## Módulos principales
 - **Inventario de equipos** (CRUD).
-- **Solicitudes de servicio** (creación, estados, atención por técnicos).
-- **Servicios realizados** (historial y evidencias).
+- **Tickets de soporte** (nuevo módulo que reemplaza gradualmente Solicitudes/Servicios).
+- **Solicitudes de servicio** (creación, estados, atención por técnicos) - *Legacy/Histórico*.
+- **Servicios realizados** (historial y evidencias) - *Legacy/Histórico*.
 - **Reportes** (filtros; exportación a Excel/PDF).
 - **Autenticación/Autorización** con roles (admin, técnico, responsable) y RLS.
+
+---
+
+## Módulo de Tickets (Nuevo)
+
+El **módulo de Tickets** es el nuevo sistema de gestión de incidencias que reemplaza gradualmente el sistema legacy de Solicitudes/Servicios. Incluye:
+
+- **Intake automático** desde Google Forms con idempotencia por `external_id`
+- **Clasificación automática** de tickets por email/equipo
+- **Flujo de estados**: Pendiente → En atención → Cerrado
+- **Métricas TTR** (Time to Resolution) y KPIs
+- **Auditoría completa** con `ticket_events`
+- **Notificaciones** de cierre automáticas
+
+**Documentación**: Ver [`docs/db/tickets.md`](docs/db/tickets.md) para detalles del esquema y [`docs/architecture/modules.md`](docs/architecture/modules.md) para arquitectura.
+
+**Compatibilidad**: No rompe módulos existentes; Solicitudes/Servicios queda como histórico.
 
 ---
 

@@ -1,0 +1,73 @@
+```mermaid
+erDiagram
+  profiles ||--o{ tickets : "solicitante_id / tecnico_id"
+  equipos ||--o{ tickets : "equipo_id"
+  tipos_servicio ||--o{ tickets : "tipo_servicio_id"
+  tickets ||--o{ ticket_events : "ticket_id"
+  notification_logs ||--o{ tickets : "ticket_id (opcional)"
+
+  profiles {
+    UUID user_id PK
+    text full_name
+    text email
+    text role
+    timestamptz created_at
+  }
+  
+  equipos {
+    BIGINT equipo_id PK
+    text num_serie
+    text marca
+    text modelo
+    UUID responsable_id FK
+    timestamptz created_at
+  }
+  
+  tipos_servicio {
+    BIGINT tipo_servicio_id PK
+    text nombre
+    text descripcion
+    timestamptz created_at
+  }
+  
+  tickets {
+    BIGINT ticket_id PK
+    text solicitante_email
+    text solicitante_nombre
+    text descripcion
+    BIGINT equipo_id FK
+    UUID solicitante_id FK
+    BIGINT tipo_servicio_id FK
+    text estado
+    boolean prioritario
+    text fuente
+    text external_id UK
+    jsonb raw_payload
+    boolean requires_classification
+    timestamptz received_at
+    timestamptz first_response_at
+    timestamptz closed_at
+    UUID tecnico_id FK
+    text trabajo_realizado
+    text notas_internas
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  
+  ticket_events {
+    BIGINT event_id PK
+    BIGINT ticket_id FK
+    UUID actor_id FK
+    text event_type
+    jsonb payload
+    timestamptz created_at
+  }
+  
+  notification_logs {
+    UUID notification_id PK
+    BIGINT ticket_id FK
+    text notification_type
+    text status
+    timestamptz created_at
+  }
+```

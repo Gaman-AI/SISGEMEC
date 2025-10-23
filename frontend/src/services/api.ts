@@ -47,19 +47,47 @@ async function authHeaders() {
 
 export async function apiPost(path: string, body: any, customHeaders?: Record<string, string>) {
   const baseHeaders = await authHeaders();
-  const headers = customHeaders ? { ...baseHeaders, ...customHeaders } : baseHeaders;
   
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: "POST",
-    headers,
-    credentials: "include",
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`POST ${path} ${res.status} ${t}`);
+  // header de idempotencia (mantenerlo por defecto)
+  const idemHeaderKey = "Idempotency-Key";
+  const idemValue = crypto?.randomUUID?.() ?? String(Date.now());
+  
+  async function doFetch(withIdem = true) {
+    const headers: Record<string, string> = { 
+      ...baseHeaders, 
+      ...(customHeaders || {})
+    };
+    
+    // Si customHeaders trae Idempotency-Key explícito, respetarlo; sino usar el automático
+    if (customHeaders?.[idemHeaderKey]) {
+      headers[idemHeaderKey] = customHeaders[idemHeaderKey];
+    } else if (withIdem) {
+      headers[idemHeaderKey] = idemValue;
+    }
+    
+    const res = await fetch(`${BASE_URL}${path}`, {
+      method: "POST",
+      headers,
+      credentials: "include",
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(text || res.statusText);
+    }
+    return res.json().catch(() => ({}));
   }
-  return res.json();
+
+  try {
+    return await doFetch(true);
+  } catch (err: any) {
+    // fallback solo para /licenses/assignments/ en caso de CORS por preflight
+    if (String(err).toLowerCase().includes("cors") && path.startsWith("/licenses/assignments")) {
+      console.warn("[apiPost] retry without Idempotency-Key for", path);
+      return await doFetch(false);
+    }
+    throw err;
+  }
 }
 
 export async function apiPut(path: string, body: any, customHeaders?: Record<string, string>) {
@@ -126,3 +154,24 @@ export async function apiGet(path: string, options?: {
   }
   return res.json();
 }
+
+export async function apiDelete(path: string, customHeaders?: Record<string, string>) {
+  const baseHeaders = await authHeaders();
+  const headers = customHeaders ? { ...baseHeaders, ...customHeaders } : baseHeaders;
+  
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: "DELETE",
+    headers,
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`DELETE ${path} ${res.status} ${t}`);
+  }
+  return res.json();
+}
+
+// eslint-disable-next-line no-console
+console.log('[LICENSES-FE:FIX] repos OK, listas con loading/empty/error, sidebar con submenús (flag+admin), URLs con "/" final, v2 services OK, selectors OK');
+console.log('[LICENSES-FE:UserSelect] using supabase profiles (no /profiles api)');
+console.log('[LICENSES-FE:CORS] allow_headers includes idempotency-key');

@@ -19,6 +19,10 @@ tags:
     description: Servicios realizados por técnicos
   - name: reportes
     description: Consultas y exportación de reportes
+  - name: tickets
+    description: Gestión de tickets de soporte técnico
+  - name: intake
+    description: Endpoints de intake para sistemas externos
 
 paths:
   /healthz:
@@ -293,6 +297,201 @@ paths:
                     type: string
                     example: https://supabase.storage/exports/reporte_2025_01.xlsx
 
+  # ============================================================================
+  # TICKETS ENDPOINTS
+  # ============================================================================
+  
+  /api/v1/intake/google-forms:
+    post:
+      summary: Intake desde Google Forms
+      tags: [intake]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: header
+          name: X-Intake-Secret
+          required: true
+          schema: { type: string }
+          description: Secret para autenticación de intake
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IntakeGoogleForms" }
+      responses:
+        "201":
+          description: Ticket creado desde Google Forms
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TicketOut" }
+        "409":
+          description: External ID ya existe (idempotencia)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /api/v1/tickets:
+    get:
+      summary: Listar tickets (solo ADMIN)
+      tags: [tickets]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: estado
+          schema:
+            type: string
+            enum: [Pendiente, En atención, Cerrado]
+        - in: query
+          name: prioritario
+          schema: { type: boolean }
+        - in: query
+          name: fuente
+          schema:
+            type: string
+            enum: [google_forms, email, manual]
+        - in: query
+          name: received_start
+          schema: { type: string, format: date-time }
+        - in: query
+          name: received_end
+          schema: { type: string, format: date-time }
+        - in: query
+          name: closed_start
+          schema: { type: string, format: date-time }
+        - in: query
+          name: closed_end
+          schema: { type: string, format: date-time }
+        - in: query
+          name: q
+          schema: { type: string }
+          description: Búsqueda por email, nombre o descripción
+      responses:
+        "200":
+          description: Lista de tickets
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TicketOut" }
+    post:
+      summary: Crear ticket manual (solo ADMIN)
+      tags: [tickets]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TicketIn" }
+      responses:
+        "201":
+          description: Ticket creado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TicketOut" }
+
+  /api/v1/tickets/{ticket_id}:
+    get:
+      summary: Obtener ticket por ID (solo ADMIN)
+      tags: [tickets]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: ticket_id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/TicketOut" } } } }
+        "404": { description: No encontrado }
+    put:
+      summary: Actualizar ticket (solo ADMIN)
+      tags: [tickets]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: ticket_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TicketUpdate" }
+      responses:
+        "200": { description: Actualizado }
+        "404": { description: No encontrado }
+
+  /api/v1/tickets/{ticket_id}/estado:
+    put:
+      summary: Cambiar estado del ticket (solo ADMIN)
+      tags: [tickets]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: ticket_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                estado:
+                  type: string
+                  enum: [Pendiente, En atención, Cerrado]
+              required: [estado]
+      responses:
+        "200": { description: Estado actualizado }
+
+  /api/v1/tickets/{ticket_id}/prioridad:
+    put:
+      summary: Cambiar prioridad del ticket (solo ADMIN)
+      tags: [tickets]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: ticket_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prioritario:
+                  type: boolean
+              required: [prioritario]
+      responses:
+        "200": { description: Prioridad actualizada }
+
+  /api/v1/tickets/{ticket_id}/clasificar:
+    put:
+      summary: Clasificar ticket (asignar solicitante/equipo) (solo ADMIN)
+      tags: [tickets]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: ticket_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                solicitante_id:
+                  type: string
+                  format: uuid
+                equipo_id:
+                  type: integer
+              additionalProperties: false
+      responses:
+        "200": { description: Ticket clasificado }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -415,6 +614,82 @@ components:
           type: string
           enum: [xlsx, pdf]
       required: [tipo, formato]
+      additionalProperties: false
+
+    # ============================================================================
+    # TICKETS SCHEMAS
+    # ============================================================================
+    
+    TicketIn:
+      type: object
+      properties:
+        solicitante_email: { type: string, format: email }
+        solicitante_nombre: { type: string }
+        descripcion: { type: string }
+        equipo_id: { type: integer }
+        tipo_servicio_id: { type: integer }
+        prioritario: { type: boolean, default: false }
+        fuente:
+          type: string
+          enum: [google_forms, email, manual]
+          default: manual
+        external_id: { type: string }
+        raw_payload: { type: object }
+      required: [solicitante_email, descripcion, fuente]
+      additionalProperties: false
+    
+    TicketUpdate:
+      type: object
+      properties:
+        tipo_servicio_id: { type: integer }
+        tecnico_id: { type: string, format: uuid }
+        trabajo_realizado: { type: string }
+        notas_internas: { type: string }
+      additionalProperties: false
+    
+    TicketOut:
+      type: object
+      properties:
+        ticket_id: { type: integer }
+        solicitante_email: { type: string }
+        solicitante_nombre: { type: string }
+        descripcion: { type: string }
+        equipo_id: { type: integer }
+        solicitante_id: { type: string, format: uuid }
+        tipo_servicio_id: { type: integer }
+        estado:
+          type: string
+          enum: [Pendiente, En atención, Cerrado]
+        prioritario: { type: boolean }
+        fuente:
+          type: string
+          enum: [google_forms, email, manual]
+        external_id: { type: string }
+        raw_payload: { type: object }
+        requires_classification: { type: boolean }
+        received_at: { type: string, format: date-time }
+        first_response_at: { type: string, format: date-time }
+        closed_at: { type: string, format: date-time }
+        tecnico_id: { type: string, format: uuid }
+        trabajo_realizado: { type: string }
+        notas_internas: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        # Campos enriquecidos
+        solicitante_nombre: { type: string }
+        tecnico_nombre: { type: string }
+        equipo_serial: { type: string }
+        tipo_servicio_nombre: { type: string }
+    
+    IntakeGoogleForms:
+      type: object
+      properties:
+        submissionId: { type: string }
+        email: { type: string, format: email }
+        nombre: { type: string }
+        descripcion: { type: string }
+        meta: { type: object }
+      required: [email, descripcion]
       additionalProperties: false
 
 security:

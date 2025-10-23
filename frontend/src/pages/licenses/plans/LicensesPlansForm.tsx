@@ -1,0 +1,151 @@
+import * as React from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { useAuth } from '@/auth/auth.store';
+import { isAuthenticated, hasRole } from '@/auth/guards';
+import { createPlan, getPlan, updatePlan, listProducts } from '@/data/licenses.repository';
+import type { PlanCreate, Product } from '@/data/licenses.types';
+import { FeaturesEditor } from '@/components/licenses/FeaturesEditor';
+
+export default function LicensesPlansForm() {
+  const nav = useNavigate();
+  const { id } = useParams();
+  const isEdit = Boolean(id);
+  const { state } = useAuth();
+  const [loading, setLoading] = React.useState(false);
+  const [products, setProducts] = React.useState<Product[]>([]);
+  const [productId, setProductId] = React.useState<number | ''>('');
+  const [planName, setPlanName] = React.useState('');
+  const [billing, setBilling] = React.useState<'annual' | 'monthly' | ''>('');
+  const [seatLimit, setSeatLimit] = React.useState<string>('');
+  const [currency, setCurrency] = React.useState<'MXN' | 'USD' | ''>('');
+  const [costPerCycle, setCostPerCycle] = React.useState<string>('');
+  const [features, setFeatures] = React.useState<Record<string, any>>({});
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
+
+  React.useEffect(() => {
+    listProducts({ page: 1, size: 100 }).then(r => setProducts(r.data)).catch(console.error);
+  }, []);
+
+  React.useEffect(() => {
+    if (!isEdit) return;
+    setLoading(true);
+    getPlan(Number(id))
+      .then(p => {
+        setProductId(p.product_id);
+        setPlanName(p.plan_name);
+        setBilling(p.billing_cycle);
+        setSeatLimit(p.seat_limit != null ? String(p.seat_limit) : '');
+                    setCurrency((p.currency as any) || '');
+                    setCostPerCycle(p.cost_per_cycle != null ? String(p.cost_per_cycle) : '');
+                    setFeatures(p.features ?? {});
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [id, isEdit]);
+
+  // Ya no necesitamos parseFeatures porque features es un objeto
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setErrors({});
+    if (!productId) { setErrors({ product_id: 'Producto requerido' }); return; }
+    if (!planName.trim()) { setErrors({ plan_name: 'Nombre requerido' }); return; }
+    if (!billing) { setErrors({ billing_cycle: 'Ciclo requerido' }); return; }
+    if (seatLimit && Number(seatLimit) < 0) { setErrors({ seat_limit: 'Debe ser >= 0' }); return; }
+    if (costPerCycle && Number(costPerCycle) < 0) { setErrors({ cost_per_cycle: 'Debe ser >= 0' }); return; }
+    setLoading(true);
+    try {
+      const body: PlanCreate = {
+        product_id: Number(productId),
+        plan_name: planName.trim(),
+        billing_cycle: billing as 'annual' | 'monthly',
+        seat_limit: seatLimit ? Number(seatLimit) : null,
+        currency: (currency || undefined) as any,
+        cost_per_cycle: costPerCycle ? Number(costPerCycle) : null,
+        features: features,
+      };
+      if (isEdit) await updatePlan(Number(id), body);
+      else await createPlan(body);
+      nav('/licenses/plans');
+    } catch (err: any) {
+      console.error(err);
+      if (err?.response?.status === 422 && err?.response?.data) setErrors(err.response.data);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (state.status === 'loading') return <div className="p-4">Cargando...</div>;
+  if (!isAuthenticated(state)) return <div className="p-4">No autorizado</div>;
+  if (!hasRole(state, 'ADMIN')) return <div className="p-4">No autorizado</div>;
+
+  return (
+    <div className="p-4">
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-xl font-semibold">{isEdit ? 'Editar' : 'Nuevo'} Plan</h1>
+      </div>
+      <Card className="p-4 max-w-2xl">
+        <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <label className="block text-sm mb-1">Producto</label>
+            <select className="w-full border rounded h-9 px-2" value={productId} onChange={e => setProductId(e.target.value ? Number(e.target.value) : '')}>
+              <option value="">Seleccione</option>
+              {products.map(p => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
+            </select>
+            {errors.product_id && <div className="text-sm text-red-600 mt-1">{errors.product_id}</div>}
+          </div>
+          <div>
+            <label className="block text-sm mb-1">Nombre del plan</label>
+            <Input value={planName} onChange={e => setPlanName(e.target.value)} placeholder="Plan" />
+            {errors.plan_name && <div className="text-sm text-red-600 mt-1">{errors.plan_name}</div>}
+          </div>
+          <div>
+            <label className="block text-sm mb-1">Ciclo</label>
+            <select className="w-full border rounded h-9 px-2" value={billing} onChange={e => setBilling(e.target.value as any)}>
+              <option value="">Seleccione</option>
+              <option value="annual">Anual</option>
+              <option value="monthly">Mensual</option>
+            </select>
+            {errors.billing_cycle && <div className="text-sm text-red-600 mt-1">{errors.billing_cycle}</div>}
+          </div>
+          <div>
+            <label className="block text-sm mb-1">Límite de asientos</label>
+            <Input type="number" value={seatLimit} onChange={e => setSeatLimit(e.target.value)} placeholder="Opcional" />
+            {errors.seat_limit && <div className="text-sm text-red-600 mt-1">{errors.seat_limit}</div>}
+          </div>
+          <div>
+            <label className="block text-sm mb-1">Moneda</label>
+            <select className="w-full border rounded h-9 px-2" value={currency} onChange={e => setCurrency(e.target.value as any)}>
+              <option value="">Seleccione</option>
+              <option value="MXN">MXN</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm mb-1">Costo por ciclo</label>
+            <Input type="number" value={costPerCycle} onChange={e => setCostPerCycle(e.target.value)} placeholder="Opcional" />
+            {errors.cost_per_cycle && <div className="text-sm text-red-600 mt-1">{errors.cost_per_cycle}</div>}
+          </div>
+          <div className="md:col-span-2">
+            <FeaturesEditor
+              value={features}
+              onChange={setFeatures}
+              label="Características"
+              helpText="Agregue características clave/valor para el plan. Use los presets o agregue las suyas."
+            />
+            {errors.features && <div className="text-sm text-red-600 mt-1">{errors.features}</div>}
+          </div>
+          <div className="md:col-span-2 flex items-center gap-2">
+            <Button type="submit" disabled={loading}>{isEdit ? 'Guardar' : 'Crear'}</Button>
+            <Button type="button" variant="outline" onClick={() => nav('/licenses/plans')}>Cancelar</Button>
+          </div>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
+

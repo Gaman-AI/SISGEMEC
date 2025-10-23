@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/hooks/useSidebar";
 import { useAuth } from "@/auth/auth.store";
+import { isAuthenticated } from "@/auth/guards";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -59,11 +60,17 @@ export default function Sidebar() {
   }, [signOut, navigate]);
 
   // No mostrar sidebar si no está autenticado
-  if (state.status !== "authenticated") {
+  if (!isAuthenticated(state)) {
     return null;
   }
 
-  const navItems = state.profile.role === "ADMIN" ? ADMIN_NAV_ITEMS : RESPONSABLE_NAV_ITEMS;
+  // A partir de aquí TypeScript sabe que state.profile existe
+  const ffOn = import.meta.env.VITE_FEATURE_LICENSES === 'true';
+  const authenticatedState = state as Extract<typeof state, { status: 'authenticated' }>;
+  const isAdmin = authenticatedState.profile.role === "ADMIN";
+  const isResponsable = authenticatedState.profile.role === "RESPONSABLE";
+  
+  const navItems = isAdmin ? ADMIN_NAV_ITEMS : RESPONSABLE_NAV_ITEMS;
 
   return (
     <aside
@@ -112,6 +119,101 @@ export default function Sidebar() {
               item
             );
           })}
+          
+          {/* Licencias condicionales por feature flag */}
+          {ffOn && isAuthenticated(state) && state.profile.role === 'ADMIN' && (
+            <>
+              <NavLink
+                to="/licenses"
+                onClick={handleNavClick}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white",
+                    "hover:bg-white/20 hover:text-white transition-colors",
+                    isActive && "bg-white/20 text-white"
+                  )
+                }
+              >
+                <FileText className="h-4 w-4 shrink-0" />
+                <span className={cn("truncate", collapsed && "sr-only")}>Licencias</span>
+              </NavLink>
+              <div className={cn("ml-4 space-y-1", collapsed && "hidden")}>
+                <NavLink
+                  to="/licenses/vendors"
+                  onClick={handleNavClick}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white/80",
+                      "hover:bg-white/10 hover:text-white transition-colors",
+                      isActive && "bg-white/10 text-white"
+                    )
+                  }
+                >
+                  <span className="text-xs">•</span>
+                  <span className="truncate">Proveedores</span>
+                </NavLink>
+                <NavLink
+                  to="/licenses/products"
+                  onClick={handleNavClick}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white/80",
+                      "hover:bg-white/10 hover:text-white transition-colors",
+                      isActive && "bg-white/10 text-white"
+                    )
+                  }
+                >
+                  <span className="text-xs">•</span>
+                  <span className="truncate">Productos</span>
+                </NavLink>
+                <NavLink
+                  to="/licenses/plans"
+                  onClick={handleNavClick}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white/80",
+                      "hover:bg-white/10 hover:text-white transition-colors",
+                      isActive && "bg-white/10 text-white"
+                    )
+                  }
+                >
+                  <span className="text-xs">•</span>
+                  <span className="truncate">Planes</span>
+                </NavLink>
+                <NavLink
+                  to="/licenses/assignments"
+                  onClick={handleNavClick}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white/80",
+                      "hover:bg-white/10 hover:text-white transition-colors",
+                      isActive && "bg-white/10 text-white"
+                    )
+                  }
+                >
+                  <span className="text-xs">•</span>
+                  <span className="truncate">Asignaciones</span>
+                </NavLink>
+              </div>
+            </>
+          )}
+          
+          {ffOn && isResponsable && (
+            <NavLink
+              to="/mis-licencias"
+              onClick={handleNavClick}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white",
+                  "hover:bg-white/20 hover:text-white transition-colors",
+                  isActive && "bg-white/20 text-white"
+                )
+              }
+            >
+              <FileText className="h-4 w-4 shrink-0" />
+              <span className={cn("truncate", collapsed && "sr-only")}>Mis Licencias</span>
+            </NavLink>
+          )}
           
           {/* Separador antes del logout */}
           <div className="my-2">

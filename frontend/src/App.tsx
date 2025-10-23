@@ -30,6 +30,19 @@ import ImportarPage from "./pages/ImportarPage";
 import ImportUsuariosPage from "./pages/import-usuarios/ImportUsuariosPage";
 import ImportEquiposPage from "./pages/import-equipos/ImportEquiposPage";
 import ReportesPage from "./pages/admin/ReportesPage";
+// Licencias (cargar lazy opcionalmente en el futuro)
+import LicensesVendorsList from "./pages/licenses/vendors/LicensesVendorsList";
+import LicensesVendorsForm from "./pages/licenses/vendors/LicensesVendorsForm";
+import LicensesProductsList from "./pages/licenses/products/LicensesProductsList";
+import LicensesProductsForm from "./pages/licenses/products/LicensesProductsForm";
+import LicensesPlansList from "./pages/licenses/plans/LicensesPlansList";
+import LicensesPlansForm from "./pages/licenses/plans/LicensesPlansForm";
+import LicensesList from "./pages/licenses/LicensesList";
+import LicensesForm from "./pages/licenses/LicensesForm";
+import LicensesAssignmentsList from "./pages/licenses/assignments/LicensesAssignmentsList";
+import LicensesAssignForm from "./pages/licenses/assignments/LicensesAssignForm";
+import MyLicensesList from "./pages/licenses/MyLicensesList";
+import MyLicenseDetail from "./pages/licenses/MyLicenseDetail";
 
 function RoleRedirect() {
   const { state } = useAuth();
@@ -79,11 +92,43 @@ export default function App() {
               <Route path="/import-equipos" element={<RequireAuth><RequireAdmin><ImportEquiposPage /></RequireAdmin></RequireAuth>} />
               <Route path="/reportes" element={<RequireAuth><RequireAdmin><ReportesPage /></RequireAdmin></RequireAuth>} />
 
+              {/* ADMIN - Licencias (condicional por feature flag) */}
+              {import.meta.env.VITE_FEATURE_LICENSES === 'true' && (
+                <>
+                  <Route path="/licenses" element={<RequireAuth><RequireAdmin><LicensesList /></RequireAdmin></RequireAuth>} />
+                  <Route path="/licenses/nuevo" element={<RequireAuth><RequireAdmin><LicensesForm /></RequireAdmin></RequireAuth>} />
+                  <Route path="/licenses/:id/editar" element={<RequireAuth><RequireAdmin><LicensesForm /></RequireAdmin></RequireAuth>} />
+
+                  <Route path="/licenses/vendors" element={<RequireAuth><RequireAdmin><LicensesVendorsList /></RequireAdmin></RequireAuth>} />
+                  <Route path="/licenses/vendors/nuevo" element={<RequireAuth><RequireAdmin><LicensesVendorsForm /></RequireAdmin></RequireAuth>} />
+                  <Route path="/licenses/vendors/:id/editar" element={<RequireAuth><RequireAdmin><LicensesVendorsForm /></RequireAdmin></RequireAuth>} />
+
+                  <Route path="/licenses/products" element={<RequireAuth><RequireAdmin><LicensesProductsList /></RequireAdmin></RequireAuth>} />
+                  <Route path="/licenses/products/nuevo" element={<RequireAuth><RequireAdmin><LicensesProductsForm /></RequireAdmin></RequireAuth>} />
+                  <Route path="/licenses/products/:id/editar" element={<RequireAuth><RequireAdmin><LicensesProductsForm /></RequireAdmin></RequireAuth>} />
+
+                  <Route path="/licenses/plans" element={<RequireAuth><RequireAdmin><LicensesPlansList /></RequireAdmin></RequireAuth>} />
+                  <Route path="/licenses/plans/nuevo" element={<RequireAuth><RequireAdmin><LicensesPlansForm /></RequireAdmin></RequireAuth>} />
+                  <Route path="/licenses/plans/:id/editar" element={<RequireAuth><RequireAdmin><LicensesPlansForm /></RequireAdmin></RequireAuth>} />
+
+                  <Route path="/licenses/assignments" element={<RequireAuth><RequireAdmin><LicensesAssignmentsList /></RequireAdmin></RequireAuth>} />
+                  <Route path="/licenses/assignments/asignar" element={<RequireAuth><RequireAdmin><LicensesAssignForm /></RequireAdmin></RequireAuth>} />
+                </>
+              )}
+
               {/* RESPONSABLE */}
               <Route path="/mis-equipos" element={<RequireAuth><RequireResponsable><MisEquiposList /></RequireResponsable></RequireAuth>} />
               <Route path="/mis-solicitudes" element={<RequireAuth><RequireResponsable><MisSolicitudesList /></RequireResponsable></RequireAuth>} />
               <Route path="/mis-solicitudes/nueva" element={<RequireAuth><RequireResponsable><MisSolicitudesForm /></RequireResponsable></RequireAuth>} />
               <Route path="/mis-solicitudes/:id" element={<RequireAuth><RequireResponsable><MisSolicitudDetalle /></RequireResponsable></RequireAuth>} />
+
+              {/* RESPONSABLE - Mis Licencias (condicional por feature flag) */}
+              {import.meta.env.VITE_FEATURE_LICENSES === 'true' && (
+                <>
+                  <Route path="/mis-licencias" element={<RequireAuth><RequireResponsable><MyLicensesList /></RequireResponsable></RequireAuth>} />
+                  <Route path="/mis-licencias/:id" element={<RequireAuth><RequireResponsable><MyLicenseDetail /></RequireResponsable></RequireAuth>} />
+                </>
+              )}
 
               {/* 404 dentro del layout para rutas protegidas no encontradas */}
               <Route path="*" element={<div className="p-6">404</div>} />

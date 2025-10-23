@@ -10,6 +10,7 @@ La base de datos utiliza **Supabase PostgreSQL** para el almacenamiento estructu
 - **Base de datos principal:** Supabase PostgreSQL.
 - **Propósito:**
     - Gestionar usuarios, equipos, solicitudes de servicio y reportes.
+    - Gestionar tickets de soporte técnico (nuevo módulo).
     - Controlar accesos mediante Row-Level Security (RLS).
 - **Almacenamiento de archivos:** Supabase Storage (exportes Excel/PDF).
 
@@ -79,49 +80,108 @@ La base de datos utiliza **Supabase PostgreSQL** para el almacenamiento estructu
 
 ---
 
+### 🔹 Tabla `tickets` (NUEVO)
+| Campo | Tipo | Descripción |
+| --- | --- | --- |
+| ticket_id | BIGINT (PK) | Identificador del ticket |
+| solicitante_email | TEXT NOT NULL | Email del solicitante |
+| solicitante_nombre | TEXT | Nombre del solicitante |
+| descripcion | TEXT NOT NULL | Descripción del problema |
+| equipo_id | BIGINT (FK → equipos.equipo_id) | Equipo asociado (opcional) |
+| solicitante_id | UUID (FK → profiles.user_id) | Usuario solicitante (opcional) |
+| tipo_servicio_id | BIGINT (FK → tipos_servicio.tipo_servicio_id) | Tipo de servicio (opcional) |
+| estado | TEXT (enum: Pendiente, En atención, Cerrado) | Estado actual |
+| prioritario | BOOLEAN NOT NULL DEFAULT FALSE | Si es prioritario |
+| fuente | TEXT (enum: google_forms, email, manual) | Fuente del ticket |
+| external_id | TEXT (único) | ID externo para idempotencia |
+| raw_payload | JSONB | Datos originales del intake |
+| requires_classification | BOOLEAN NOT NULL DEFAULT FALSE | Si requiere clasificación |
+| received_at | TIMESTAMPTZ NOT NULL DEFAULT now() | Fecha de recepción |
+| first_response_at | TIMESTAMPTZ | Primera respuesta |
+| closed_at | TIMESTAMPTZ | Fecha de cierre |
+| tecnico_id | UUID (FK → profiles.user_id) | Técnico asignado (opcional) |
+| trabajo_realizado | TEXT | Trabajo realizado |
+| notas_internas | TEXT | Notas internas |
+| created_at | TIMESTAMPTZ NOT NULL DEFAULT now() | Fecha de creación |
+| updated_at | TIMESTAMPTZ NOT NULL DEFAULT now() | Fecha de actualización |
+
+---
+
+### 🔹 Tabla `ticket_events` (NUEVO)
+| Campo | Tipo | Descripción |
+| --- | --- | --- |
+| event_id | BIGINT (PK) | Identificador del evento |
+| ticket_id | BIGINT (FK → tickets.ticket_id) | Ticket asociado |
+| actor_id | UUID (FK → profiles.user_id) | Usuario que genera el evento |
+| event_type | TEXT (enum: CREATED, STATE_CHANGED, PRIORITY_CHANGED, CLASSIFIED, ASSIGNED, UPDATED, CLOSED) | Tipo de evento |
+| payload | JSONB | Datos del evento |
+| created_at | TIMESTAMPTZ NOT NULL DEFAULT now() | Fecha del evento |
+
+---
+
 ## 4. Relaciones (ERD)
 ```mermaid
 erDiagram
-    usuarios ||--o{ equipos : "usuario_id"
-    usuarios ||--o{ solicitudes : "usuario_id"
-    usuarios ||--o{ servicios : "tecnico_id"
-    solicitudes ||--o{ servicios : "solicitud_id"
-    equipos ||--o{ solicitudes : "equipo_id"
-    usuarios ||--o{ reportes : "usuario_id"
+    profiles ||--o{ equipos : "responsable_id"
+    profiles ||--o{ tickets : "solicitante_id / tecnico_id"
+    equipos ||--o{ tickets : "equipo_id"
+    tipos_servicio ||--o{ tickets : "tipo_servicio_id"
+    tickets ||--o{ ticket_events : "ticket_id"
+    profiles ||--o{ ticket_events : "actor_id"
+    profiles ||--o{ reportes : "user_id"
+    notification_logs ||--o{ tickets : "ticket_id (opcional)"
 
-    usuarios {
-        UUID id PK
-        text nombre
-        text correo
-        text rol
+    profiles {
+        UUID user_id PK
+        text full_name
+        text email
+        text role
         timestamptz created_at
     }
     equipos {
-        UUID id PK
-        UUID usuario_id FK
-        text tipo
+        BIGINT equipo_id PK
+        text num_serie
         text marca
         text modelo
-        text num_serie
-        text estado
-        date fecha_ingreso
-    }
-    solicitudes {
-        UUID id PK
-        UUID usuario_id FK
-        UUID equipo_id FK
-        text descripcion
-        text estado
-        text respuesta
+        UUID responsable_id FK
         timestamptz created_at
     }
-    servicios {
-        UUID id PK
-        UUID solicitud_id FK
-        UUID tecnico_id FK
-        date fecha_inicio
-        date fecha_fin
+    tipos_servicio {
+        BIGINT tipo_servicio_id PK
+        text nombre
+        text descripcion
+        timestamptz created_at
+    }
+    tickets {
+        BIGINT ticket_id PK
+        text solicitante_email
+        text solicitante_nombre
+        text descripcion
+        BIGINT equipo_id FK
+        UUID solicitante_id FK
+        BIGINT tipo_servicio_id FK
         text estado
+        boolean prioritario
+        text fuente
+        text external_id UK
+        jsonb raw_payload
+        boolean requires_classification
+        timestamptz received_at
+        timestamptz first_response_at
+        timestamptz closed_at
+        UUID tecnico_id FK
+        text trabajo_realizado
+        text notas_internas
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    ticket_events {
+        BIGINT event_id PK
+        BIGINT ticket_id FK
+        UUID actor_id FK
+        text event_type
+        jsonb payload
+        timestamptz created_at
     }
     reportes {
         UUID id PK
@@ -129,6 +189,13 @@ erDiagram
         text tipo
         jsonb filtros
         boolean exportado
+        timestamptz created_at
+    }
+    notification_logs {
+        UUID notification_id PK
+        BIGINT ticket_id FK
+        text notification_type
+        text status
         timestamptz created_at
     }
 ```
@@ -140,8 +207,16 @@ erDiagram
 CREATE INDEX ON equipos (num_serie);
 CREATE INDEX ON solicitudes (estado);
 CREATE INDEX ON servicios (fecha_inicio, fecha_fin);
+CREATE INDEX ON tickets (estado);
+CREATE INDEX ON tickets (prioritario);
+CREATE INDEX ON tickets (received_at);
+CREATE INDEX ON tickets (closed_at);
+CREATE INDEX ON tickets (fuente);
+CREATE INDEX ON ticket_events (ticket_id);
+CREATE INDEX ON ticket_events (event_type);
+CREATE INDEX ON ticket_events (created_at);
 ```
-- **Full-Text Search (opcional)**: en `solicitudes.descripcion` para búsqueda rápida.
+- **Full-Text Search (opcional)**: en `solicitudes.descripcion` y `tickets.descripcion` para búsqueda rápida.
 
 ---
 
@@ -150,6 +225,8 @@ CREATE INDEX ON servicios (fecha_inicio, fecha_fin);
   - Los responsables solo pueden ver sus equipos y solicitudes.
   - Los técnicos solo ven solicitudes asignadas.
   - Los admins tienen acceso completo.
+  - **Tickets**: Solo ADMIN puede acceder a tickets y eventos (UI).
+  - **Service Role**: Bypass RLS para intake automático y operaciones internas.
 
 - **Cifrado:**
   - Datos en reposo → Supabase (AES-256).  
