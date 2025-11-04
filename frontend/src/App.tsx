@@ -43,6 +43,10 @@ import LicensesAssignmentsList from "./pages/licenses/assignments/LicensesAssign
 import LicensesAssignForm from "./pages/licenses/assignments/LicensesAssignForm";
 import MyLicensesList from "./pages/licenses/MyLicensesList";
 import MyLicenseDetail from "./pages/licenses/MyLicenseDetail";
+// Tickets
+import TicketsList from "./pages/tickets/TicketsList";
+import TicketDetail from "./pages/tickets/TicketDetail";
+import TicketsReports from "./pages/tickets/TicketsReports";
 
 function RoleRedirect() {
   const { state } = useAuth();
@@ -91,6 +95,11 @@ export default function App() {
               <Route path="/import-usuarios" element={<RequireAuth><RequireAdmin><ImportUsuariosPage /></RequireAdmin></RequireAuth>} />
               <Route path="/import-equipos" element={<RequireAuth><RequireAdmin><ImportEquiposPage /></RequireAdmin></RequireAuth>} />
               <Route path="/reportes" element={<RequireAuth><RequireAdmin><ReportesPage /></RequireAdmin></RequireAuth>} />
+              
+              {/* ADMIN - Tickets */}
+              <Route path="/tickets" element={<RequireAuth><RequireAdmin><TicketsList /></RequireAdmin></RequireAuth>} />
+              <Route path="/tickets/:id" element={<RequireAuth><RequireAdmin><TicketDetail /></RequireAdmin></RequireAuth>} />
+              <Route path="/tickets/reportes" element={<RequireAuth><RequireAdmin><TicketsReports /></RequireAdmin></RequireAuth>} />
 
               {/* ADMIN - Licencias (condicional por feature flag) */}
               {import.meta.env.VITE_FEATURE_LICENSES === 'true' && (

@@ -173,6 +173,39 @@ app.include_router(reportes_router)
 # Compatibilidad temporal para endpoints legacy
 app.include_router(deprecations_router)
 
+# ------------------------------------------------------------------
+# Registro de routers del módulo Tickets (seguro, sin romper nada).
+# Si tu proyecto usa otra estructura de paths, ajusta los imports.
+# ------------------------------------------------------------------
+try:
+    from app.routers.intake import router as intake_router
+    app.include_router(intake_router)
+    logging.getLogger("uvicorn").info("[TICKETS] Intake router registrado exitosamente")
+except Exception as e:
+    # Loguea de forma no intrusiva si tu proyecto tiene logger.
+    logging.getLogger("uvicorn").warning(f"[TICKETS] Intake router no registrado: {e}")
+
+try:
+    from app.routers.tickets import router as tickets_router
+    app.include_router(tickets_router)
+    logging.getLogger("uvicorn").info("[TICKETS] Tickets router registrado exitosamente")
+except Exception as e:
+    logging.getLogger("uvicorn").warning(f"[TICKETS] Tickets router no registrado: {e}")
+
+try:
+    from app.routers.tickets_reports import router as tickets_reports_router
+    app.include_router(tickets_reports_router)
+    logging.getLogger("uvicorn").info("[TICKETS] Reports router registrado exitosamente")
+except Exception as e:
+    logging.getLogger("uvicorn").warning(f"[TICKETS] Reports router no registrado: {e}")
+
+try:
+    from app.routers.catalog import router as catalog_router
+    app.include_router(catalog_router)
+    logging.getLogger("uvicorn").info("[CATALOG] Catalog router registrado exitosamente")
+except Exception as e:
+    logging.getLogger("uvicorn").warning(f"[CATALOG] Catalog router no registrado: {e}")
+
 # Debug endpoints (solo si EMAIL_DEBUG=1)
 EMAIL_DEBUG = os.getenv("EMAIL_DEBUG", "0")
 logging.getLogger("uvicorn").info(f"[EMAIL] env=development | EMAIL_DEBUG(env)={EMAIL_DEBUG} | SMTP_USER={os.getenv('SMTP_USER', 'NOT_SET')}")

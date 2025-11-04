@@ -90,21 +90,48 @@ export async function apiPost(path: string, body: any, customHeaders?: Record<st
   }
 }
 
-export async function apiPut(path: string, body: any, customHeaders?: Record<string, string>) {
+export async function apiPut(
+  path: string,
+  body: any,
+  customHeaders?: Record<string, string>
+) {
   const baseHeaders = await authHeaders();
   const headers = customHeaders ? { ...baseHeaders, ...customHeaders } : baseHeaders;
-  
+
   const res = await fetch(`${BASE_URL}${path}`, {
     method: "PUT",
     headers,
     credentials: "include",
     body: JSON.stringify(body),
   });
+
   if (!res.ok) {
-    const t = await res.text();
+    const t = await res.text().catch(() => "");
     throw new Error(`PUT ${path} ${res.status} ${t}`);
   }
-  return res.json();
+
+  // Normalizar SIEMPRE a { data, status }
+  const ct = res.headers.get("content-type") || "";
+  // Puede haber 200 OK sin cuerpo
+  const text = await res.text().catch(() => "");
+
+  if (!text) {
+    return { data: null, status: res.status };
+  }
+
+  if (ct.includes("application/json")) {
+    try {
+      const parsed = JSON.parse(text);
+      return { data: parsed, status: res.status };
+    } catch (e) {
+      console.warn(`[apiPut] JSON parse error for ${path}:`, e);
+      // Considerar éxito sin data válida
+      return { data: null, status: res.status };
+    }
+  }
+
+  // No JSON: devolver texto crudo como data
+  return { data: text, status: res.status };
 }
 
 export async function apiGet(path: string, options?: { 

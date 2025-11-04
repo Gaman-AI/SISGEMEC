@@ -17,7 +17,7 @@ env = Environment(
     autoescape=select_autoescape(["html", "xml"])
 )
 
-EventType = Literal["SOLICITUD_NUEVA", "SERVICIO_COMPLETADO", "SERVICIO_ATENDIDO"]
+EventType = Literal["SOLICITUD_NUEVA", "SERVICIO_COMPLETADO", "SERVICIO_ATENDIDO", "TICKET_CLOSED_USER"]
 
 class NotificationService:
     def __init__(self, settings: Optional[EmailSettings] = None):
@@ -26,7 +26,15 @@ class NotificationService:
 
     def _render(self, html_name: str, txt_name: str, ctx: dict):
         html = env.get_template(f"email/{html_name}").render(**ctx)
-        txt  = env.get_template(f"email/{txt_name}").render(**ctx)
+        try:
+            txt = env.get_template(f"email/{txt_name}").render(**ctx)
+        except Exception as e:
+            logger.warning("[EMAIL] Template TXT no encontrado: email/%s - usando HTML como fallback - %s", txt_name, e)
+            # Fallback: convertir HTML básico a texto plano
+            import re
+            txt = re.sub(r'<[^>]+>', '', html).strip()
+            # Limpiar espacios múltiples y saltos de línea
+            txt = re.sub(r'\n\s*\n', '\n\n', txt)
         return html, txt
 
 
@@ -70,12 +78,17 @@ class NotificationService:
              solicitud_id: Optional[int] = None, servicio_id: Optional[int] = None):
         successes = 0
         failures = 0
+        logger.info("[EMAIL] Renderizando plantillas: %s.html.j2 y %s.txt.j2 para evento %s",
+                    template_name, template_name, event)
         for to in filter(None, map(str.strip, to_emails)):
             try:
                 html_body = self._render(template_name + ".html.j2", template_name + ".txt.j2", context)[0]
                 text_body = self._render(template_name + ".html.j2", template_name + ".txt.j2", context)[1]
                 msg = self._build_message(subject, html_body, text_body, to)
                 status = self._send_smtp(msg, to)
+                
+                logger.info("[EMAIL] %s -> status=%s to=%s subject=%s",
+                            event, status, to, subject)
                 
                 # Registrar en logs
                 log_id = self.logs.insert_event(
@@ -89,6 +102,7 @@ class NotificationService:
                 )
                 successes += 1
             except Exception as e:
+                logger.error("[EMAIL] %s -> ERROR to=%s: %s", event, to, e)
                 # Registrar fallo en logs
                 self.logs.insert_event(
                     event_type=event,

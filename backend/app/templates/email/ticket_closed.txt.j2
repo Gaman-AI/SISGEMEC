@@ -1,0 +1,22 @@
+Hola {{ ticket.solicitante_nombre or ticket.solicitante_email }},
+
+Tu ticket #{{ ticket.ticket_id }} ha sido marcado como {{ ticket.estado }}.
+
+Descripción: {{ ticket.descripcion }}
+{% if ticket.tipo_servicio_id %}
+Tipo de servicio: {{ ticket.tipo_servicio_nombre or ('ID: ' ~ ticket.tipo_servicio_id) }}
+{% endif %}
+Trabajo realizado: {{ ticket.trabajo_realizado or 'N/A' }}
+{% if ticket.observaciones %}
+Observaciones: {{ ticket.observaciones }}
+{% endif %}
+Recibido: {{ ticket.received_at }}
+Cerrado: {{ ticket.closed_at }}
+Fuente: {{ ticket.fuente }}
+Prioridad: {{ ticket.priority or 'Medium' }}
+
+{% if app_base_url %}
+Ver ticket: {{ app_base_url }}/tickets/{{ ticket.ticket_id }}
+{% endif %}
+
+Si necesitas más ayuda, responde a este correo.
