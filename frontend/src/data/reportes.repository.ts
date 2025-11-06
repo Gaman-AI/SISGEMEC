@@ -5,7 +5,8 @@ export interface EquiposFilters {
   tipo_equipo?: string;
   marca?: string;
   estado_equipo?: string;
-  responsable_id?: string;
+  responsable_id?: string;  // Mantener para compatibilidad
+  responsable?: string;     // Búsqueda por nombre o email
   num_serie?: string;
   ubicacion_actual?: string;
   from_dt?: string; // YYYY-MM-DD
@@ -25,6 +26,18 @@ export interface ServiciosFilters {
   size?: number;
 }
 
+export type TicketsFilters = {
+  estado?: string | null;
+  priority?: 'Urgent' | 'Important' | 'Medium' | 'Low' | null;
+  tipo_servicio_id?: number | null;
+  equipo_id?: number | null;
+  fuente?: string | null;
+  from_dt?: string | null; // 'YYYY-MM-DD'
+  to_dt?: string | null;   // 'YYYY-MM-DD'
+  page?: number;
+  size?: number;
+};
+
 // Tipos para las respuestas
 export interface ReportPage {
   items: any[];
@@ -34,6 +47,8 @@ export interface ReportPage {
   summary?: {
     equipos_por_estado?: Array<{ estado_equipo: string; total: number }>;
     servicios_por_tipo?: Array<{ tipo_servicio: string; total: number }>;
+    by_estado?: Array<{ estado: string; total: number }>;
+    by_priority?: Array<{ priority: string; total: number }>;
   };
 }
 
@@ -98,13 +113,47 @@ export class ReportesRepository {
   }
   
   /**
+   * Obtiene catálogos para filtros de equipos
+   */
+  async fetchEquiposCatalogs(): Promise<{
+    estado_equipo: string[];
+    fecha_min: string;
+    fecha_max: string;
+  }> {
+    return await apiGet('/reportes/equipos/catalogs');
+  }
+  
+  /**
+   * Obtiene reporte de tickets con filtros y paginación
+   */
+  async fetchReportTickets(filters: TicketsFilters): Promise<ReportPage> {
+    const clean = cleanParams(filters);
+    return await apiGet('/reportes/tickets', { params: clean });
+  }
+  
+  /**
+   * Obtiene catálogos para filtros de tickets
+   */
+  async fetchTicketsCatalogs(): Promise<{
+    estados: string[];
+    prioridades: string[];
+    fuentes: string[];
+    tipos_servicio: { id: number; nombre: string }[];
+    equipos: { id: number; label: string }[];
+    fecha_min?: string;
+    fecha_max?: string;
+  }> {
+    return await apiGet('/reportes/tickets/catalogs');
+  }
+  
+  /**
    * Exporta reporte a Excel o PDF
    * Usa el endpoint unificado /reportes/{slug}/export según el backend
    */
   async exportReport(
-    slug: 'equipos' | 'servicios',
+    slug: 'equipos' | 'servicios' | 'tickets',
     format: 'excel' | 'pdf',
-    filters: EquiposFilters | ServiciosFilters
+    filters: EquiposFilters | ServiciosFilters | TicketsFilters
   ): Promise<Blob> {
     const clean = cleanParams({ ...filters, format });
     const res = await api.get(`/reportes/${slug}/export`, {

@@ -17,7 +17,7 @@ env = Environment(
     autoescape=select_autoescape(["html", "xml"])
 )
 
-EventType = Literal["SOLICITUD_NUEVA", "SERVICIO_COMPLETADO", "SERVICIO_ATENDIDO", "TICKET_CLOSED_USER"]
+EventType = Literal["SOLICITUD_NUEVA", "SERVICIO_COMPLETADO", "SERVICIO_ATENDIDO", "TICKET_CLOSED_USER", "TICKET_CREATED_ADMIN_ALERT"]
 
 class NotificationService:
     def __init__(self, settings: Optional[EmailSettings] = None):

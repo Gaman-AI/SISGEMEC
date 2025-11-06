@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { EquiposFilters } from '@/data/reportes.repository';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { EquiposFilters, reportesRepo } from '@/data/reportes.repository';
+import { listActiveProfilesLite, type ProfileLite } from '@/data/users.licenses.repository';
 
 interface ReportFiltersEquiposProps {
   onSubmit: (filters: EquiposFilters) => void;
@@ -17,7 +19,91 @@ export default function ReportFiltersEquipos({
   onClear, 
   loading = false 
 }: ReportFiltersEquiposProps) {
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<EquiposFilters>();
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<EquiposFilters>();
+  const responsableValue = watch('responsable');
+  const responsableRef = useRef<HTMLDivElement>(null);
+  
+  // Estado para catálogos de equipos
+  const [catalogs, setCatalogs] = useState<{
+    estado_equipo: string[];
+    fecha_min: string;
+    fecha_max: string;
+  } | null>(null);
+  const [catalogError, setCatalogError] = useState(false);
+  
+  // Estado para autocomplete de responsable
+  const [responsableSearch, setResponsableSearch] = useState('');
+  const [responsableOptions, setResponsableOptions] = useState<ProfileLite[]>([]);
+  const [responsableLoading, setResponsableLoading] = useState(false);
+  const [showResponsableDropdown, setShowResponsableDropdown] = useState(false);
+  
+  // Cargar catálogos al montar
+  useEffect(() => {
+    const loadCatalogs = async () => {
+      try {
+        const data = await reportesRepo.fetchEquiposCatalogs();
+        setCatalogs(data);
+        setCatalogError(false);
+      } catch (error) {
+        console.warn('[ReportFiltersEquipos] Error cargando catálogos, usando input de texto:', error);
+        setCatalogError(true);
+      }
+    };
+    loadCatalogs();
+  }, []);
+  
+  // Cerrar dropdown al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (responsableRef.current && !responsableRef.current.contains(event.target as Node)) {
+        setShowResponsableDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+  
+  // Debounce para búsqueda de responsable
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(responsableSearch), 250);
+    return () => clearTimeout(id);
+  }, [responsableSearch]);
+
+  // Cargar opciones de responsable
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setResponsableLoading(true);
+        const res = await listActiveProfilesLite({ 
+          page: 1, 
+          size: 10, 
+          search: debouncedSearch 
+        });
+        if (!cancelled) {
+          setResponsableOptions(res.data);
+        }
+      } catch (e) {
+        console.error('[ReportFiltersEquipos] Error cargando responsables', e);
+        if (!cancelled) {
+          setResponsableOptions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setResponsableLoading(false);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [debouncedSearch]);
+
+  // Sincronizar input con valor del form
+  useEffect(() => {
+    if (!responsableValue) {
+      setResponsableSearch('');
+    }
+  }, [responsableValue]);
 
   const handleFormSubmit = (data: EquiposFilters) => {
     // Limpiar valores vacíos
@@ -32,7 +118,19 @@ export default function ReportFiltersEquipos({
 
   const handleClear = () => {
     reset();
+    setResponsableSearch('');
+    setShowResponsableDropdown(false);
     onClear();
+  };
+  
+  const estadoEquipoValue = watch('estado_equipo');
+
+  const handleResponsableSelect = (profile: ProfileLite) => {
+    // Preferir email, si no hay usar full_name
+    const value = profile.email || profile.full_name || '';
+    setValue('responsable', value);
+    setResponsableSearch(`${profile.full_name || '(Sin nombre)'} · ${profile.email || '(Sin correo)'}`);
+    setShowResponsableDropdown(false);
   };
 
   return (
@@ -64,21 +162,77 @@ export default function ReportFiltersEquipos({
           {/* Estado del Equipo */}
           <div className="space-y-2">
             <Label htmlFor="estado_equipo">Estado del Equipo</Label>
-            <Input
-              id="estado_equipo"
-              {...register('estado_equipo')}
-              placeholder="Ej: Buen estado, En mantenimiento"
-            />
+            {catalogError || !catalogs ? (
+              // Fallback a input si el catálogo falla
+              <Input
+                id="estado_equipo"
+                {...register('estado_equipo')}
+                placeholder="Ej: ACTIVO, EN_MANTENIMIENTO, DE_BAJA"
+              />
+            ) : (
+              <Select 
+                value={estadoEquipoValue || 'all'} 
+                onValueChange={(value) => setValue('estado_equipo', value === 'all' ? undefined : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los estados</SelectItem>
+                  {catalogs.estado_equipo.map((estado) => (
+                    <SelectItem key={estado} value={estado}>{estado}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
-          {/* Responsable ID */}
-          <div className="space-y-2">
-            <Label htmlFor="responsable_id">ID del Responsable</Label>
+          {/* Responsable (Autocomplete) */}
+          <div className="space-y-2 relative" ref={responsableRef}>
+            <Label htmlFor="responsable">Responsable (nombre o correo)</Label>
             <Input
-              id="responsable_id"
-              {...register('responsable_id')}
-              placeholder="UUID del responsable"
+              id="responsable"
+              value={responsableSearch}
+              onChange={(e) => {
+                setResponsableSearch(e.target.value);
+                setShowResponsableDropdown(true);
+                // Si se limpia manualmente, limpiar el valor del form
+                if (!e.target.value) {
+                  setValue('responsable', undefined);
+                }
+              }}
+              onFocus={() => setShowResponsableDropdown(true)}
+              placeholder="Ej. Ana López o ana@empresa.com"
+              autoComplete="off"
             />
+            {/* Input oculto para el valor real del form */}
+            <input type="hidden" {...register('responsable')} />
+            
+            {/* Dropdown de opciones */}
+            {showResponsableDropdown && (
+              <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+                {responsableLoading ? (
+                  <div className="p-3 text-sm text-gray-500">Cargando...</div>
+                ) : responsableOptions.length === 0 ? (
+                  <div className="p-3 text-sm text-gray-500">
+                    {responsableSearch ? 'No se encontraron resultados' : 'Escriba para buscar'}
+                  </div>
+                ) : (
+                  <ul className="divide-y">
+                    {responsableOptions.map((profile) => (
+                      <li
+                        key={profile.user_id}
+                        className="px-3 py-2 cursor-pointer text-sm hover:bg-gray-50"
+                        onClick={() => handleResponsableSelect(profile)}
+                      >
+                        <div className="font-medium">{profile.full_name || '(Sin nombre)'}</div>
+                        <div className="text-xs text-gray-500">{profile.email || '(Sin correo)'}</div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Número de Serie */}

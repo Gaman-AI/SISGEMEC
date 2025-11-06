@@ -2,10 +2,10 @@ import asyncio
 import time
 import logging
 from typing import Dict, List, Any, Optional
-from datetime import date
+from datetime import date, datetime, timezone
 from fastapi import HTTPException
 from app.core.supabase_client import get_supabase
-from app.schemas.reportes import EquiposFilters, ServiciosFilters
+from app.schemas.reportes import EquiposFilters, ServiciosFilters, TicketsFilters
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +40,15 @@ class ReportesRepository:
             if filters.marca:
                 query = query.ilike("marca", f"%{filters.marca}%")
             if filters.estado_equipo:
-                query = query.ilike("estado_equipo", f"%{filters.estado_equipo}%")
+                # Usar eq para match exacto (mejor precisión con select)
+                query = query.eq("estado_equipo", filters.estado_equipo)
             if filters.responsable_id:
+                # Prioridad: si viene responsable_id, usar ese (compatibilidad)
                 query = query.eq("responsable_id", filters.responsable_id)
+            elif filters.responsable:
+                # Si viene responsable (nombre o email), buscar en responsable o responsable_email
+                # La vista vw_inventario_equipos tiene: responsable (full_name) y responsable_email
+                query = query.or_(f"responsable.ilike.%{filters.responsable}%,responsable_email.ilike.%{filters.responsable}%")
             if filters.num_serie:
                 query = query.ilike("num_serie", f"%{filters.num_serie}%")
             if filters.ubicacion_actual:
@@ -78,9 +84,14 @@ class ReportesRepository:
             if filters.marca:
                 summary_query = summary_query.ilike("marca", f"%{filters.marca}%")
             if filters.estado_equipo:
-                summary_query = summary_query.ilike("estado_equipo", f"%{filters.estado_equipo}%")
+                # Usar eq para match exacto (mejor precisión con select)
+                summary_query = summary_query.eq("estado_equipo", filters.estado_equipo)
             if filters.responsable_id:
+                # Prioridad: si viene responsable_id, usar ese (compatibilidad)
                 summary_query = summary_query.eq("responsable_id", filters.responsable_id)
+            elif filters.responsable:
+                # Si viene responsable (nombre o email), buscar en responsable o responsable_email
+                summary_query = summary_query.or_(f"responsable.ilike.%{filters.responsable}%,responsable_email.ilike.%{filters.responsable}%")
             if filters.num_serie:
                 summary_query = summary_query.ilike("num_serie", f"%{filters.num_serie}%")
             if filters.ubicacion_actual:
@@ -279,3 +290,319 @@ class ReportesRepository:
         finally:
             dur = (time.perf_counter() - t0) * 1000
             logger.info(f"[reportes] /servicios/catalogs dur_ms={dur:.1f}")
+    
+    async def get_equipos_catalogs(self) -> Dict[str, Any]:
+        """
+        Obtiene catálogos para filtros de equipos
+        Retorna estados de equipo y rangos de fechas
+        """
+        t0 = time.perf_counter()
+        try:
+            # Obtener estados de equipo desde la tabla estados_equipo
+            estados_query = self.supabase.table("estados_equipo").select("nombre").order("nombre")
+            estados_result = await _with_timeout(
+                asyncio.to_thread(estados_query.execute), 10
+            )
+            estados_data = estados_result.data or []
+            estados_equipo = sorted([e.get("nombre") for e in estados_data if e.get("nombre")])
+            
+            # Obtener rango de fechas desde la vista
+            fechas_query = self.supabase.table("vw_inventario_equipos").select("fecha_ingreso")
+            fechas_result = await _with_timeout(
+                asyncio.to_thread(fechas_query.execute), 10
+            )
+            fechas_data = fechas_result.data or []
+            fechas = [item.get("fecha_ingreso") for item in fechas_data if item.get("fecha_ingreso")]
+            fecha_min = min(fechas) if fechas else None
+            fecha_max = max(fechas) if fechas else None
+            
+            return {
+                "estado_equipo": estados_equipo,
+                "fecha_min": fecha_min,
+                "fecha_max": fecha_max
+            }
+            
+        except Exception as e:
+            logger.exception(f"Error en get_equipos_catalogs: {e}")
+            raise HTTPException(status_code=502, detail="Error consultando catálogos")
+        finally:
+            dur = (time.perf_counter() - t0) * 1000
+            logger.info(f"[reportes] /equipos/catalogs dur_ms={dur:.1f}")
+    
+    async def get_tickets_catalogs(self) -> Dict[str, Any]:
+        """
+        Obtiene catálogos para filtros de tickets
+        Retorna estados, prioridades, fuentes, tipos de servicio, equipos y rangos de fechas
+        """
+        t0 = time.perf_counter()
+        try:
+            sb = self.supabase
+            
+            # Estados fijos
+            estados = ['Pendiente', 'En atención', 'Cerrado']
+            
+            # Prioridades fijas
+            prioridades = ['Urgent', 'Important', 'Medium', 'Low']
+            
+            # Fuentes fijas
+            fuentes = ['google_forms', 'email', 'manual']
+            
+            # Tipos de servicio
+            ts_result = await _with_timeout(
+                asyncio.to_thread(
+                    lambda: sb.table("tipos_servicio")
+                    .select("tipo_servicio_id,nombre")
+                    .order("nombre")
+                    .execute()
+                ), 10
+            )
+            tipos_servicio = [
+                {"id": r["tipo_servicio_id"], "nombre": r["nombre"]}
+                for r in (ts_result.data or [])
+            ]
+            
+            # Equipos (limitar a activos, máximo 500)
+            eq_result = await _with_timeout(
+                asyncio.to_thread(
+                    lambda: sb.table("equipos")
+                    .select("equipo_id,num_serie,marca,modelo")
+                    .limit(500)
+                    .execute()
+                ), 10
+            )
+            equipos = [
+                {
+                    "id": r["equipo_id"],
+                    "label": " ".join(filter(None, [
+                        r.get("marca"),
+                        r.get("modelo"),
+                        f"({r.get('num_serie')})" if r.get("num_serie") else None
+                    ]))
+                }
+                for r in (eq_result.data or [])
+            ]
+            
+            # Fechas mín/max desde tickets
+            fecha_result = await _with_timeout(
+                asyncio.to_thread(
+                    lambda: sb.table("tickets")
+                    .select("received_at")
+                    .execute()
+                ), 10
+            )
+            fechas_data = fecha_result.data or []
+            fechas = [item.get("received_at") for item in fechas_data if item.get("received_at")]
+            fecha_min = min(fechas) if fechas else None
+            fecha_max = max(fechas) if fechas else None
+            
+            return {
+                "estados": estados,
+                "prioridades": prioridades,
+                "fuentes": fuentes,
+                "tipos_servicio": tipos_servicio,
+                "equipos": equipos,
+                "fecha_min": fecha_min,
+                "fecha_max": fecha_max,
+            }
+            
+        except Exception as e:
+            logger.exception(f"Error en get_tickets_catalogs: {e}")
+            raise HTTPException(status_code=502, detail="Error consultando catálogos")
+        finally:
+            dur = (time.perf_counter() - t0) * 1000
+            logger.info(f"[reportes] /tickets/catalogs dur_ms={dur:.1f}")
+    
+    async def query_tickets(self, filters: TicketsFilters) -> Dict[str, Any]:
+        """
+        Consulta tickets con filtros y métricas calculadas
+        Retorna items paginados con TTR, TTA, edad, SLA y summary
+        """
+        t0 = time.perf_counter()
+        try:
+            sb = self.supabase
+            page = max(1, filters.page or 1)
+            size = max(1, min(1000, filters.size or 20))
+            
+            # Query base
+            q = sb.table("tickets").select(
+                "ticket_id, estado, priority, fuente, descripcion, received_at, closed_at, "
+                "first_response_at, tipo_servicio_id, equipo_id, solicitante_nombre, solicitante_email"
+            )
+            
+            # Aplicar filtros
+            if filters.estado:
+                q = q.eq("estado", filters.estado)
+            if filters.priority:
+                q = q.eq("priority", filters.priority)
+            if filters.fuente:
+                q = q.eq("fuente", filters.fuente)
+            if filters.tipo_servicio_id:
+                q = q.eq("tipo_servicio_id", filters.tipo_servicio_id)
+            if filters.equipo_id:
+                q = q.eq("equipo_id", filters.equipo_id)
+            if filters.from_dt:
+                q = q.gte("received_at", str(filters.from_dt))
+            if filters.to_dt:
+                # Incluir todo el día
+                q = q.lte("received_at", str(filters.to_dt) + " 23:59:59")
+            
+            # Orden por fecha desc
+            q = q.order("received_at", desc=True)
+            
+            # Paginación
+            from_idx = (page - 1) * size
+            to_idx = from_idx + size - 1
+            
+            result = await _with_timeout(
+                asyncio.to_thread(lambda: q.range(from_idx, to_idx).execute()), 10
+            )
+            rows = result.data or []
+            
+            # Enriquecer con relaciones (tipos_servicio, equipos)
+            ts_ids = sorted({r["tipo_servicio_id"] for r in rows if r.get("tipo_servicio_id")})
+            ts_map = {}
+            if ts_ids:
+                ts_result = await _with_timeout(
+                    asyncio.to_thread(
+                        lambda: sb.table("tipos_servicio")
+                        .select("tipo_servicio_id,nombre")
+                        .in_("tipo_servicio_id", ts_ids)
+                        .execute()
+                    ), 10
+                )
+                ts_map = {t["tipo_servicio_id"]: t["nombre"] for t in (ts_result.data or [])}
+            
+            eq_ids = sorted({r["equipo_id"] for r in rows if r.get("equipo_id")})
+            eq_map = {}
+            if eq_ids:
+                eq_result = await _with_timeout(
+                    asyncio.to_thread(
+                        lambda: sb.table("equipos")
+                        .select("equipo_id,marca,modelo,num_serie")
+                        .in_("equipo_id", eq_ids)
+                        .execute()
+                    ), 10
+                )
+                for e in (eq_result.data or []):
+                    label = " ".join(filter(None, [
+                        e.get("marca"),
+                        e.get("modelo"),
+                        f"({e.get('num_serie')})" if e.get("num_serie") else None
+                    ]))
+                    eq_map[e["equipo_id"]] = label
+            
+            # Calcular métricas (TTR, edad, SLA)
+            def to_dt(s):
+                if not s:
+                    return None
+                try:
+                    return datetime.fromisoformat(s.replace("Z", "+00:00")).astimezone(timezone.utc)
+                except:
+                    return None
+            
+            SLA = {
+                "Urgent": 4 * 3600,
+                "Important": 24 * 3600,
+                "Medium": 3 * 24 * 3600,
+                "Low": 5 * 24 * 3600,
+            }
+            
+            now = datetime.now(timezone.utc)
+            
+            items: List[Dict[str, Any]] = []
+            for r in rows:
+                received = to_dt(r.get("received_at"))
+                closed = to_dt(r.get("closed_at"))
+                first_response = to_dt(r.get("first_response_at"))
+                
+                # TTR (Tiempo de Resolución)
+                ttr_seconds = None
+                if received and closed:
+                    ttr_seconds = int((closed - received).total_seconds())
+                
+                # TTA (Tiempo de Atención) - desde received_at hasta first_response_at
+                tta_seconds = None
+                if received and first_response:
+                    tta_seconds = int((first_response - received).total_seconds())
+                
+                # Edad actual
+                edad_dias = None
+                if received:
+                    edad_dias = int((now - received).total_seconds() // 86400)
+                
+                # SLA
+                priority = r.get("priority") or "Medium"
+                sla_limit = SLA.get(priority, SLA["Medium"])
+                sla_cumplido = bool(ttr_seconds is not None and ttr_seconds <= sla_limit)
+                
+                items.append({
+                    **r,
+                    "tipo_servicio_nombre": ts_map.get(r.get("tipo_servicio_id")),
+                    "equipo_label": eq_map.get(r.get("equipo_id")),
+                    "ttr_seconds": ttr_seconds,
+                    "ttr_hours": round(ttr_seconds / 3600, 2) if ttr_seconds else None,
+                    "tta_seconds": tta_seconds,
+                    "tta_hours": round(tta_seconds / 3600, 2) if tta_seconds else None,
+                    "edad_dias": edad_dias,
+                    "sla_cumplido": sla_cumplido,
+                    "sla_limite_hours": round(sla_limit / 3600, 2),
+                })
+            
+            # Conteo total (con los mismos filtros) -------------------------------
+            total: int = 0
+            try:
+                cq = sb.table("tickets").select("ticket_id", count="exact")
+
+                if filters.estado:
+                    cq = cq.eq("estado", filters.estado)
+                if filters.priority:
+                    cq = cq.eq("priority", filters.priority)
+                if filters.fuente:
+                    cq = cq.eq("fuente", filters.fuente)
+                if filters.tipo_servicio_id:
+                    cq = cq.eq("tipo_servicio_id", filters.tipo_servicio_id)
+                if filters.equipo_id:
+                    cq = cq.eq("equipo_id", filters.equipo_id)
+                if filters.from_dt:
+                    cq = cq.gte("received_at", str(filters.from_dt))
+                if filters.to_dt:
+                    cq = cq.lte("received_at", str(filters.to_dt) + " 23:59:59")
+
+                cnt_res = await _with_timeout(
+                    asyncio.to_thread(lambda: cq.execute()), 10
+                )
+                # Algunos clientes devuelven count en la respuesta:
+                total = int(getattr(cnt_res, "count", None) or 0)
+            except Exception:
+                total = 0
+
+            if not total:
+                # Fallback seguro para cumplir con Page[int]:
+                total = len(items)
+            
+            # Summary por estado y prioridad
+            by_estado = {}
+            by_priority = {}
+            for it in items:
+                estado = it.get("estado") or "Sin estado"
+                by_estado[estado] = by_estado.get(estado, 0) + 1
+                pr = it.get("priority") or "Sin prioridad"
+                by_priority[pr] = by_priority.get(pr, 0) + 1
+            
+            return {
+                "items": items,
+                "page": page,
+                "size": size,
+                "total": total,
+                "summary": {
+                    "by_estado": [{"estado": k, "total": v} for k, v in by_estado.items()],
+                    "by_priority": [{"priority": k, "total": v} for k, v in by_priority.items()],
+                }
+            }
+            
+        except Exception as e:
+            logger.exception(f"Error en query_tickets: {e}")
+            raise HTTPException(status_code=502, detail="Error consultando datos")
+        finally:
+            dur = (time.perf_counter() - t0) * 1000
+            logger.info(f"[reportes] /tickets filtros={filters.dict()} dur_ms={dur:.1f}")

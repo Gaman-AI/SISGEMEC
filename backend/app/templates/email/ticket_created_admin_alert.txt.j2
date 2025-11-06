@@ -1,0 +1,20 @@
+Nuevo ticket #{{ ticket.ticket_id }}
+
+Folio: {{ ticket.ticket_id }}
+Solicitante: {{ ticket.solicitante_nombre or ticket.solicitante_email }}
+Descripción: {{ ticket.descripcion[:160] }}{% if ticket.descripcion|length > 160 %}...{% endif %}
+Prioridad: {{ ticket.priority or 'Por clasificar' }}
+{% if ticket.equipo_nombre or ticket.equipo_alias or ticket.equipo_num_serie or ticket.equipo_id -%}
+Equipo: {{ ticket.equipo_nombre or ticket.equipo_alias or ticket.equipo_num_serie or ticket.equipo_id }}
+{% else -%}
+Equipo: Por clasificar
+{% endif -%}
+{% if ticket.tipo_servicio_nombre or ticket.tipo_servicio or ticket.tipo_servicio_id -%}
+Tipo de servicio: {{ ticket.tipo_servicio_nombre or ticket.tipo_servicio or ticket.tipo_servicio_id }}
+{% else -%}
+Tipo de servicio: Por clasificar
+{% endif -%}
+{% if app_base_url -%}
+Ver ticket: {{ app_base_url }}/tickets/{{ ticket.ticket_id }}
+{% endif -%}
+

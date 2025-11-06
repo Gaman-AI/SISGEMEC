@@ -142,6 +142,17 @@ class TicketsService:
         except Exception:
             pass
 
+        # Notificación a admins (no rompe si falla)
+        try:
+            if hasattr(self, "notifier") and self.notifier:
+                count = self.notifier.send_ticket_created_admin_alert({"ticket": created})
+                if count > 0:
+                    self.logger.info("[TicketsService] Admin alert para ticket #%s: enviados=%s",
+                                     created.get("ticket_id"), count)
+        except Exception as e:
+            self.logger.warning("[TicketsService] Error al notificar admins de ticket #%s: %s",
+                                created.get("ticket_id"), e)
+
         return TicketIntakeResponse(
             ticket_id=created["ticket_id"],
             estado=created["estado"],

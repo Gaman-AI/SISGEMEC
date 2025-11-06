@@ -17,7 +17,8 @@ class EquiposFilters(BaseModel):
     tipo_equipo: Optional[str] = None
     marca: Optional[str] = None
     estado_equipo: Optional[str] = None
-    responsable_id: Optional[str] = None
+    responsable_id: Optional[str] = None  # Mantener para compatibilidad
+    responsable: Optional[str] = None  # Búsqueda por nombre o email
     num_serie: Optional[str] = None
     ubicacion_actual: Optional[str] = None
     from_dt: Optional[date] = None
@@ -65,3 +66,16 @@ class ServiciosFilters(BaseModel):
 class ExportFormat(BaseModel):
     """Formato de exportación"""
     format: str  # "excel" o "pdf"
+
+
+class TicketsFilters(BaseModel):
+    """Filtros para reporte de tickets"""
+    estado: Optional[str] = None         # 'Pendiente', 'En atención', 'Cerrado'
+    priority: Optional[str] = None       # 'Urgent', 'Important', 'Medium', 'Low'
+    tipo_servicio_id: Optional[int] = None
+    equipo_id: Optional[int] = None
+    fuente: Optional[str] = None         # 'google_forms', 'email', 'manual' (si aplica)
+    from_dt: Optional[date] = None       # filtra por received_at >=
+    to_dt: Optional[date] = None         # filtra por received_at <=
+    page: int = 1
+    size: int = 20

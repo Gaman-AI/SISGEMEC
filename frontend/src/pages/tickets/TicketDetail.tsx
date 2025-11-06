@@ -54,10 +54,15 @@ export default function TicketDetail() {
   const { show, Toast } = useToast();
   const { ticket, loading, error, refetch } = useTicketDetail(ticketId);
   const updater = useUpdateTicket();
-  const { events, loading: eventsLoading } = useTicketEvents(ticketId); // NUEVO
+  const { events, loading: eventsLoading, refetch: refetchEvents } = useTicketEvents(ticketId);
   const [classifyOpen, setClassifyOpen] = React.useState(false);
 
   React.useEffect(() => { if (error) show(error, 'error'); }, [error]);
+
+  // Helper: refrescar ticket + eventos en paralelo
+  const refreshAll = React.useCallback(async () => {
+    await Promise.all([refetch(), refetchEvents()]);
+  }, [refetch, refetchEvents]);
 
   if (!id || Number.isNaN(ticketId)) return <div>Id inválido</div>;
   if (loading || !ticket) return <div>Cargando...</div>;
@@ -66,7 +71,7 @@ export default function TicketDetail() {
     const res = await updater.changeState(ticketId, estado);
     if (res) { 
       show('Estado actualizado'); 
-      await refetch(); 
+      await refreshAll();
     }
   };
 
@@ -74,7 +79,7 @@ export default function TicketDetail() {
     const res = await updater.updatePriority(ticketId, priority);
     if (res) { 
       show('Prioridad actualizada'); 
-      await refetch(); 
+      await refreshAll();
     }
   };
 
@@ -82,7 +87,8 @@ export default function TicketDetail() {
     const res = await updater.classify(ticketId, data);
     if (res) {
       show('Ticket clasificado');
-      await refetch();
+      await refreshAll();
+      setClassifyOpen(false); // Cerrar modal después de guardar exitosamente
     }
   };
 
@@ -90,7 +96,7 @@ export default function TicketDetail() {
     const res = await updater.update(ticketId, data);
     if (res) { 
       show('Notas guardadas'); 
-      await refetch(); 
+      await refreshAll();
     }
   };
 

@@ -5,11 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
-import { reportesRepo, EquiposFilters, ServiciosFilters, ReportPage } from '@/data/reportes.repository';
+import { reportesRepo, EquiposFilters, ServiciosFilters, TicketsFilters, ReportPage } from '@/data/reportes.repository';
 import ReportFiltersEquipos from '@/components/reportes/ReportFiltersEquipos';
 import ReportFiltersServicios from '@/components/reportes/ReportFiltersServicios';
+import ReportFiltersTickets from '@/components/reportes/ReportFiltersTickets';
 
-type ReportType = 'equipos' | 'servicios';
+type ReportType = 'equipos' | 'servicios' | 'tickets';
 
 // Hook de toast local
 function useToast() {
@@ -44,18 +45,23 @@ export default function ReportesPage() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ReportPage | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [lastFilters, setLastFilters] = useState<EquiposFilters | ServiciosFilters>({});
+  const [lastFilters, setLastFilters] = useState<EquiposFilters | ServiciosFilters | TicketsFilters>({});
   const { show, Toast } = useToast();
 
-  const handleFiltersSubmit = async (filters: EquiposFilters | ServiciosFilters) => {
+  const handleFiltersSubmit = async (filters: EquiposFilters | ServiciosFilters | TicketsFilters) => {
     setLoading(true);
     setError(null);
     setLastFilters(filters);
     
     try {
-      const result = reportType === 'equipos' 
-        ? await reportesRepo.fetchReportEquipos({ ...filters, page: 1, size: 20 })
-        : await reportesRepo.fetchReportServicios({ ...filters, page: 1, size: 20 });
+      let result: ReportPage;
+      if (reportType === 'equipos') {
+        result = await reportesRepo.fetchReportEquipos({ ...filters as EquiposFilters, page: 1, size: 20 });
+      } else if (reportType === 'servicios') {
+        result = await reportesRepo.fetchReportServicios({ ...filters as ServiciosFilters, page: 1, size: 20 });
+      } else {
+        result = await reportesRepo.fetchReportTickets({ ...filters as TicketsFilters, page: 1, size: 20 });
+      }
       setData(result);
     } catch (err: any) {
       console.error('Report error', err);
@@ -128,6 +134,16 @@ export default function ReportesPage() {
               {item.tipo_servicio}: {item.total}
             </Badge>
           ))}
+          {summary.by_estado?.map((item, index) => (
+            <Badge key={index} variant="secondary">
+              {item.estado}: {item.total}
+            </Badge>
+          ))}
+          {summary.by_priority?.map((item, index) => (
+            <Badge key={index} variant="secondary">
+              {item.priority}: {item.total}
+            </Badge>
+          ))}
         </div>
       </div>
     );
@@ -167,7 +183,7 @@ export default function ReportesPage() {
         <div className="p-4">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">
-              {reportType === 'equipos' ? 'Equipos' : 'Servicios'} ({data.total})
+              {reportType === 'equipos' ? 'Equipos' : reportType === 'servicios' ? 'Servicios' : 'Tickets'} ({data.total || 'N/A'})
             </h3>
             <div className="flex gap-2">
               <Button 
@@ -235,6 +251,7 @@ export default function ReportesPage() {
             <SelectContent>
               <SelectItem value="equipos">Equipos</SelectItem>
               <SelectItem value="servicios">Servicios</SelectItem>
+              <SelectItem value="tickets">Tickets</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -247,8 +264,14 @@ export default function ReportesPage() {
           onClear={handleClearFilters}
           loading={loading}
         />
-      ) : (
+      ) : reportType === 'servicios' ? (
         <ReportFiltersServicios
+          onSubmit={handleFiltersSubmit}
+          onClear={handleClearFilters}
+          loading={loading}
+        />
+      ) : (
+        <ReportFiltersTickets
           onSubmit={handleFiltersSubmit}
           onClear={handleClearFilters}
           loading={loading}

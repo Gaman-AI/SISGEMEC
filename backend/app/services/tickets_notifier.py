@@ -166,3 +166,80 @@ class TicketsNotifier:
                 logger.warning("[TicketsNotifier] Error al registrar fallo en logs: %s", log_err)
             
             return False
+
+    def send_ticket_created_admin_alert(self, context: dict) -> int:
+        """
+        Envía correo de alerta a todos los admins cuando se crea un ticket.
+        Retorna cantidad de envíos exitosos (0 si ninguno).
+        No lanza excepciones.
+        """
+        if not self.ns:
+            logger.warning("[TicketsNotifier] NotificationService no disponible - alerta admins omitida")
+            return 0
+
+        ticket = (context.get("ticket") or {}) if isinstance(context, dict) else {}
+        ticket_id = ticket.get("ticket_id")
+        if not ticket_id:
+            logger.warning("[TicketsNotifier] ticket_id ausente en contexto de alerta a admins")
+            return 0
+
+        # Enriquecer contexto con app_base_url si existe (siguiendo patrón)
+        ctx = dict(context or {})
+        try:
+            app_base_url = getattr(getattr(self.ns, "s", None), "app_base_url", None)
+            if app_base_url:
+                ctx["app_base_url"] = app_base_url
+        except Exception as e:
+            logger.debug("[TicketsNotifier] app_base_url no disponible: %s", e)
+
+        # Obtener emails de admins desde Supabase
+        admin_emails = []
+        try:
+            sb = None
+            try:
+                from app.deps.supabase_client import supa_service
+                sb = supa_service()
+            except Exception:
+                try:
+                    from app.core.supabase_client import get_supabase
+                    sb = get_supabase()
+                except Exception:
+                    sb = None
+
+            if sb:
+                res = sb.table("profiles") \
+                    .select("email") \
+                    .eq("role", "ADMIN") \
+                    .eq("active", True) \
+                    .not_.is_("email", "null") \
+                    .execute()
+                rows = res.data or []
+                admin_emails = list({(r.get("email") or "").strip().lower() for r in rows if r.get("email")})
+            else:
+                logger.warning("[TicketsNotifier] Supabase client no disponible para obtener admins")
+        except Exception as e:
+            logger.warning("[TicketsNotifier] Error obteniendo admins: %s", e)
+
+        if not admin_emails:
+            logger.warning("[TicketsNotifier] No hay admins activos para notificar ticket #%s", ticket_id)
+            return 0
+
+        subject = f"[SISGEMEC] Nuevo ticket #{ticket_id}"
+
+        try:
+            result = self.ns.send(
+                event="TICKET_CREATED_ADMIN_ALERT",
+                to_emails=admin_emails,
+                subject=subject,
+                template_name="ticket_created_admin_alert",
+                context=ctx,
+                solicitud_id=None,
+                servicio_id=None,
+            )
+            ok = int(result.get("ok", 0) or 0)
+            fail = int(result.get("fail", 0) or 0)
+            logger.info("[TicketsNotifier] Alerta ticket #%s -> ok=%s fail=%s", ticket_id, ok, fail)
+            return ok
+        except Exception as e:
+            logger.exception("[TicketsNotifier] Error enviando alerta admins para ticket #%s: %s", ticket_id, e)
+            return 0

@@ -126,10 +126,6 @@ export default function TicketsList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">🎫 Tickets</h1>
-        <div className="text-xs px-2 py-1 rounded-md bg-slate-100 text-slate-700">
-          <span className="font-semibold">debug:</span>{' '}
-          items=<b>{itemsLen}</b> · total=<b>{total}</b> · page=<b>{filters.page || 1}</b> · size=<b>{filters.size || 20}</b> · order_by=<b>{filters.order_by ?? '-'}</b>
-        </div>
       </div>
       <TicketFilters initial={filters} onSubmit={apply} onClear={clear} loading={loading} />
                   <TicketsTable
