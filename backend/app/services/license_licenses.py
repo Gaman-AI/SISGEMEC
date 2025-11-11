@@ -138,6 +138,29 @@ class LicenseLicensesService:
     
     def create_license(self, license_data: LicenseCreate, created_by: str) -> LicenseRead:
         """Crea una nueva licencia"""
+        # Validación: seats_total debe ser mayor que 0
+        if license_data.seats_total <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="seats_total debe ser mayor que 0"
+            )
+        
+        # Validación: fechas start_date <= end_date (si ambas están presentes)
+        if license_data.start_date and license_data.end_date:
+            if license_data.start_date > license_data.end_date:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="start_date debe ser anterior o igual a end_date"
+                )
+        
+        # Validación: renewal_date debe ser posterior a end_date (si ambas están presentes)
+        if license_data.renewal_date and license_data.end_date:
+            if license_data.renewal_date <= license_data.end_date:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="renewal_date debe ser posterior a end_date"
+                )
+        
         # Verificar que el plan existe
         plan_check = self.supabase.table("license_plans").select("plan_id").eq("plan_id", license_data.plan_id).execute()
         
@@ -211,6 +234,51 @@ class LicenseLicensesService:
                 )
             
             current_seats_in_use = existing.data[0]["seats_in_use"]
+            
+            # Validación: seats_total debe ser mayor que 0 (si se actualiza)
+            if license_data.seats_total is not None and license_data.seats_total <= 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="seats_total debe ser mayor que 0"
+                )
+            
+            # Validación: fechas start_date <= end_date (si ambas están presentes)
+            # Obtener fechas actuales si no se están actualizando
+            current_license = self.supabase.table(self.table_name).select("start_date, end_date, renewal_date").eq("license_id", license_id).execute()
+            current_data = current_license.data[0] if current_license.data else {}
+            
+            # Convertir strings a date si es necesario
+            def parse_date(d):
+                if d is None:
+                    return None
+                if isinstance(d, date):
+                    return d
+                if isinstance(d, str):
+                    return date.fromisoformat(d)
+                return None
+            
+            current_start = parse_date(current_data.get("start_date"))
+            current_end = parse_date(current_data.get("end_date"))
+            current_renewal = parse_date(current_data.get("renewal_date"))
+            
+            start_date_to_check = license_data.start_date if license_data.start_date is not None else current_start
+            end_date_to_check = license_data.end_date if license_data.end_date is not None else current_end
+            renewal_date_to_check = license_data.renewal_date if license_data.renewal_date is not None else current_renewal
+            
+            if start_date_to_check and end_date_to_check:
+                if start_date_to_check > end_date_to_check:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="start_date debe ser anterior o igual a end_date"
+                    )
+            
+            # Validación: renewal_date debe ser posterior a end_date (si ambas están presentes)
+            if renewal_date_to_check and end_date_to_check:
+                if renewal_date_to_check <= end_date_to_check:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="renewal_date debe ser posterior a end_date"
+                    )
             
             # Verificar plan si se está actualizando
             if license_data.plan_id:

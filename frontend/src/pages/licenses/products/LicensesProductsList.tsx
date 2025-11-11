@@ -8,9 +8,38 @@ import { isAuthenticated, hasRole } from '@/auth/guards';
 import { listProducts, removeProduct, listVendors } from '@/data/licenses.repository';
 import type { Product, ProductFilters, Vendor } from '@/data/licenses.types';
 
+// Hook de toast local (reutilizando patrón existente)
+function useToast() {
+  const [msg, setMsg] = React.useState<string | null>(null);
+  const [type, setType] = React.useState<"success" | "error" | null>(null);
+  const show = (m: string, t: "success" | "error" = "success") => {
+    setMsg(m);
+    setType(t);
+    window.clearTimeout((show as any)._t);
+    (show as any)._t = window.setTimeout(() => {
+      setMsg(null);
+      setType(null);
+    }, 5000);
+  };
+  const Toast = () =>
+    msg ? (
+      <div
+        className={`fixed bottom-4 right-4 rounded-md px-4 py-2 text-sm shadow-md z-50 ${
+          type === "success" ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"
+        }`}
+        role="status"
+        aria-live="polite"
+      >
+        {msg}
+      </div>
+    ) : null;
+  return { show, Toast };
+}
+
 export default function LicensesProductsList() {
   const nav = useNavigate();
   const { state } = useAuth();
+  const { show, Toast } = useToast();
   const [loading, setLoading] = React.useState(false);
   const [search, setSearch] = React.useState('');
   const [vendorId, setVendorId] = React.useState<number | ''>('');
@@ -45,12 +74,24 @@ export default function LicensesProductsList() {
   }, [load]);
 
   async function onDelete(id: number) {
-    if (!confirm('¿Eliminar producto?')) return;
+    if (!window.confirm('¿Eliminar producto?')) return;
     try {
       await removeProduct(id);
+      show('Producto eliminado correctamente', 'success');
       await load();
-    } catch (e) {
-      console.error(e);
+    } catch (err: any) {
+      console.error('[LicensesProductsList] Error eliminando producto:', err);
+      
+      const status = err?.response?.status;
+      const backendDetail = err?.response?.data?.detail;
+      
+      if (status === 409) {
+        // Mensaje específico desde el backend (tiene planes asociados)
+        show(backendDetail || 'No se puede eliminar el producto porque tiene elementos asociados.', 'error');
+      } else {
+        const msg = backendDetail || err?.message || 'Error inesperado al eliminar el producto. Intente de nuevo o contacte al administrador.';
+        show(msg, 'error');
+      }
     }
   }
 
@@ -118,6 +159,7 @@ export default function LicensesProductsList() {
           <Button variant="outline" disabled={(page*size)>=total} onClick={() => setPage(p => p+1)}>Siguiente</Button>
         </div>
       </div>
+      <Toast />
     </div>
   );
 }

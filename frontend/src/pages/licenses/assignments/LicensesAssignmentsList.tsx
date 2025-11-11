@@ -9,9 +9,38 @@ import { listAssignments, revokeAssignment } from '@/data/licenses.repository';
 import type { Assignment, AssignmentFilters } from '@/data/licenses.types';
 import AssignmentStatusBadge from '@/components/licenses/AssignmentStatusBadge';
 
+// Hook de toast local (reutilizando patrón existente)
+function useToast() {
+  const [msg, setMsg] = React.useState<string | null>(null);
+  const [type, setType] = React.useState<"success" | "error" | null>(null);
+  const show = (m: string, t: "success" | "error" = "success") => {
+    setMsg(m);
+    setType(t);
+    window.clearTimeout((show as any)._t);
+    (show as any)._t = window.setTimeout(() => {
+      setMsg(null);
+      setType(null);
+    }, 5000);
+  };
+  const Toast = () =>
+    msg ? (
+      <div
+        className={`fixed bottom-4 right-4 rounded-md px-4 py-2 text-sm shadow-md z-50 ${
+          type === "success" ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"
+        }`}
+        role="status"
+        aria-live="polite"
+      >
+        {msg}
+      </div>
+    ) : null;
+  return { show, Toast };
+}
+
 export default function LicensesAssignmentsList() {
   const nav = useNavigate();
   const { state } = useAuth();
+  const { show, Toast } = useToast();
   const [loading, setLoading] = React.useState(false);
   const [licenseId, setLicenseId] = React.useState('');
   const [userId, setUserId] = React.useState('');
@@ -33,8 +62,10 @@ export default function LicensesAssignmentsList() {
       const res = await listAssignments(filters);
       setRows(res.data); 
       setTotal(res.total);
-    } catch (e) {
-      console.error('Error loading assignments:', e);
+    } catch (err: any) {
+      console.error('Error loading assignments:', err);
+      const errorMsg = err?.response?.data?.detail || err?.message || 'Error al cargar asignaciones';
+      show(errorMsg, 'error');
       setRows([]);
       setTotal(0);
     } finally {
@@ -50,9 +81,12 @@ export default function LicensesAssignmentsList() {
     if (!confirm('¿Revocar asignación?')) return;
     try {
       await revokeAssignment(id);
+      show('Asignación revocada correctamente');
       await load();
-    } catch (e) {
-      console.error(e);
+    } catch (err: any) {
+      console.error('Error revoking assignment:', err);
+      const errorMsg = err?.response?.data?.detail || err?.message || 'Error al revocar asignación';
+      show(errorMsg, 'error');
     }
   }
 
@@ -118,8 +152,15 @@ export default function LicensesAssignmentsList() {
                 </td>
               </tr>
             ))}
+            {loading && rows.length === 0 && (
+              <tr>
+                <td className="p-3 text-slate-500" colSpan={7}>
+                  Cargando...
+                </td>
+              </tr>
+            )}
             {!rows.length && !loading && (
-              <tr><td className="p-3 text-slate-500" colSpan={7}>Sin resultados</td></tr>
+              <tr><td className="p-3 text-slate-500" colSpan={7}>No hay asignaciones registradas</td></tr>
             )}
           </tbody>
         </table>
@@ -128,11 +169,12 @@ export default function LicensesAssignmentsList() {
       <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
         <div>Mostrando {rows.length} de {total}</div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" disabled={page<=1} onClick={() => setPage(p => Math.max(1, p-1))}>Anterior</Button>
+          <Button variant="outline" disabled={page<=1 || loading} onClick={() => setPage(p => Math.max(1, p-1))}>Anterior</Button>
           <div>Página {page}</div>
-          <Button variant="outline" disabled={(page*size)>=total} onClick={() => setPage(p => p+1)}>Siguiente</Button>
+          <Button variant="outline" disabled={(page*size)>=total || loading} onClick={() => setPage(p => p+1)}>Siguiente</Button>
         </div>
       </div>
+      <Toast />
     </div>
   );
 }

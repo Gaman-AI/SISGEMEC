@@ -8,12 +8,42 @@ import { isAuthenticated, hasRole } from '@/auth/guards';
 import { createPlan, getPlan, updatePlan, listProducts } from '@/data/licenses.repository';
 import type { PlanCreate, Product } from '@/data/licenses.types';
 import { FeaturesEditor } from '@/components/licenses/FeaturesEditor';
+import { parseApiError } from '../utils';
+
+// Hook de toast local
+function useToast() {
+  const [msg, setMsg] = React.useState<string | null>(null);
+  const [type, setType] = React.useState<"success" | "error" | null>(null);
+  const show = (m: string, t: "success" | "error" = "success") => {
+    setMsg(m);
+    setType(t);
+    window.clearTimeout((show as any)._t);
+    (show as any)._t = window.setTimeout(() => {
+      setMsg(null);
+      setType(null);
+    }, 5000);
+  };
+  const Toast = () =>
+    msg ? (
+      <div
+        className={`fixed bottom-4 right-4 rounded-md px-4 py-2 text-sm shadow-md z-50 ${
+          type === "success" ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"
+        }`}
+        role="status"
+        aria-live="polite"
+      >
+        {msg}
+      </div>
+    ) : null;
+  return { show, Toast };
+}
 
 export default function LicensesPlansForm() {
   const nav = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
   const { state } = useAuth();
+  const { show, Toast } = useToast();
   const [loading, setLoading] = React.useState(false);
   const [products, setProducts] = React.useState<Product[]>([]);
   const [productId, setProductId] = React.useState<number | ''>('');
@@ -69,10 +99,23 @@ export default function LicensesPlansForm() {
       };
       if (isEdit) await updatePlan(Number(id), body);
       else await createPlan(body);
+      show('Plan guardado correctamente', 'success');
       nav('/licenses/plans');
     } catch (err: any) {
-      console.error(err);
-      if (err?.response?.status === 422 && err?.response?.data) setErrors(err.response.data);
+      console.error('[LicensesPlansForm] Error guardando:', err);
+      const { status, detail, data } = parseApiError(err);
+
+      if (status === 409) {
+        show(detail || 'Ya existe un plan con ese nombre para este producto', 'error');
+      } else if (status === 422) {
+        if (data && typeof data === 'object' && !data.detail) {
+          setErrors(data);
+        } else {
+          show(detail || 'Error de validación', 'error');
+        }
+      } else {
+        show(detail || 'Error inesperado. Intente de nuevo o contacte al administrador.', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -144,6 +187,7 @@ export default function LicensesPlansForm() {
           </div>
         </form>
       </Card>
+      <Toast />
     </div>
   );
 }

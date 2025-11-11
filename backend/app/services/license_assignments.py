@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, date
 from uuid import UUID
 from fastapi import HTTPException, status, Header
 from app.core.supabase_client import get_supabase
@@ -148,7 +148,7 @@ class LicenseAssignmentsService:
                 return self.get_assignment(existing_assignment_id)
         
         # Verificar que la licencia existe
-        license_check = self.supabase.table("licenses").select("license_id, seats_total, seats_in_use").eq("license_id", assignment_data.license_id).execute()
+        license_check = self.supabase.table("licenses").select("license_id, seats_total, seats_in_use, end_date").eq("license_id", assignment_data.license_id).execute()
         
         if not license_check.data:
             raise HTTPException(
@@ -158,7 +158,23 @@ class LicenseAssignmentsService:
         
         license_info = license_check.data[0]
         
-        # Verificar capacidad
+        # Validación: no se puede asignar si la licencia está expirada
+        if license_info.get("end_date"):
+            end_date_str = license_info["end_date"]
+            # Convertir string a date si es necesario
+            if isinstance(end_date_str, str):
+                end_date_obj = date.fromisoformat(end_date_str)
+            else:
+                end_date_obj = end_date_str
+            
+            if end_date_obj < date.today():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="No se puede asignar una licencia expirada",
+                    headers={"code": "LICENSE_EXPIRED"}
+                )
+        
+        # Validación: verificar capacidad (seats_in_use < seats_total)
         if license_info["seats_in_use"] >= license_info["seats_total"]:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -309,9 +325,10 @@ class LicenseAssignmentsService:
         # Obtener información de la licencia usando helper v2
         try:
             license_info = exec_single(
-                self.supabase, "licenses", 
-                "seats_in_use", 
-                ("license_id", license_id)
+                self.supabase, 
+                "licenses", 
+                select_fields="seats_in_use", 
+                match=("license_id", license_id)
             )
             current_seats_in_use = license_info["seats_in_use"]
         except Exception as e:

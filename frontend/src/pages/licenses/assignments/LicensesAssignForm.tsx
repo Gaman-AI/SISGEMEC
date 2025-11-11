@@ -8,6 +8,7 @@ import { isAuthenticated, hasRole } from '@/auth/guards';
 import { createAssignment, listLicenses } from '@/data/licenses.repository';
 import type { AssignmentCreate, License } from '@/data/licenses.types';
 import UserSelect from '@/components/licenses/UserSelect';
+import { parseApiError } from '../utils';
 
 export default function LicensesAssignForm() {
   const nav = useNavigate();
@@ -59,18 +60,19 @@ export default function LicensesAssignForm() {
       // Feedback de éxito: navega a la lista
       nav('/licenses/assignments');
     } catch (err: any) {
-      console.error(err);
-      
-      // Normaliza según tu api.ts: err?.response?.status o err.status
-      const status = err?.response?.status ?? err?.status;
-      const detail = err?.response?.data?.detail ?? err?.detail ?? err?.message ?? 'Error inesperado';
+      console.error('[LicensesAssignForm] Error guardando:', err);
+      const { status, detail, data } = parseApiError(err);
 
       if (status === 409) {
-        setFormError('Ese usuario ya tiene una asignación activa para esta licencia.');
-      } else if (status === 422 && err?.response?.data) {
-        setErrors(err.response.data);
+        setFormError(detail || 'Ya existe una asignación activa para este usuario y licencia.');
+      } else if (status === 422) {
+        if (data && typeof data === 'object' && !data.detail) {
+          setErrors(data);
+        } else {
+          setFormError(detail || 'Error de validación.');
+        }
       } else {
-        setFormError(typeof detail === 'string' ? detail : JSON.stringify(detail));
+        setFormError(detail || 'Error inesperado. Intente nuevamente.');
       }
     } finally {
       setSubmitting(false);

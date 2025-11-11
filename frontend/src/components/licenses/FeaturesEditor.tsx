@@ -1,7 +1,5 @@
 import * as React from "react";
 
-type KV = { key: string; value: string };
-
 type Props = {
   value?: Record<string, any>;
   onChange: (val: Record<string, any>) => void;
@@ -9,74 +7,55 @@ type Props = {
   helpText?: string;
 };
 
-const PRESETS = [
-  { key: "apps", value: ["Word","Excel","PowerPoint","Teams","Outlook"] },
-  { key: "storage_gb", value: 1000 },
-  { key: "soporte", value: "24/7" },
-];
+/**
+ * Extrae el texto de descripción del objeto features
+ */
+function getDescriptionFromValue(v?: Record<string, any>): string {
+  if (!v || typeof v !== "object") return "";
 
-function normalizeToPairs(obj?: Record<string, any>): KV[] {
-  if (!obj || typeof obj !== "object") return [];
-  return Object.entries(obj).map(([k, v]) => ({ key: String(k), value: JSON.stringify(v) }));
+  // Si tiene 'description' como string, usarlo directamente
+  if (typeof v.description === "string") {
+    return v.description;
+  }
+
+  // Si tiene otras claves, mostrar como JSON legible (para planes viejos)
+  if (Object.keys(v).length > 0) {
+    try {
+      return JSON.stringify(v, null, 2);
+    } catch {
+      return "";
+    }
+  }
+
+  return "";
 }
 
-function parseValue(raw: string): any {
-  const t = raw.trim();
-  if (t === "") return "";
-  // intenta JSON parse
-  try { return JSON.parse(t); } catch {}
-  // boolean
-  if (t.toLowerCase() === "true") return true;
-  if (t.toLowerCase() === "false") return false;
-  // number
-  const n = Number(t);
-  if (!Number.isNaN(n) && /^\d+(\.\d+)?$/.test(t)) return n;
-  // string como fallback
-  return t;
-}
+export const FeaturesEditor: React.FC<Props> = ({
+  value,
+  onChange,
+  label = "Características",
+  helpText = "Describe brevemente qué incluye este plan. Este texto se guardará como parte de la configuración del plan.",
+}) => {
+  const [text, setText] = React.useState<string>(() => getDescriptionFromValue(value));
 
-export const FeaturesEditor: React.FC<Props> = ({ value, onChange, label = "Características", helpText = "Agrega pares clave/valor. Los valores pueden ser números, booleanos o JSON (e.g., [\"Word\",\"Excel\"])." }) => {
-  const [rows, setRows] = React.useState<KV[]>(() => normalizeToPairs(value));
-
+  // Sincronizar cuando value cambia externamente (ej: al cargar un plan para editar)
   React.useEffect(() => {
-    setRows(normalizeToPairs(value));
+    setText(getDescriptionFromValue(value));
   }, [value]);
 
-  const emit = (r: KV[]) => {
-    const out: Record<string, any> = {};
-    r.forEach(({ key, value }) => {
-      if (key.trim() === "") return;
-      out[key.trim()] = parseValue(value);
-    });
-    onChange(out);
-  };
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newText = e.target.value;
+    setText(newText);
 
-  const addRow = () => {
-    const next = [...rows, { key: "", value: "" }];
-    setRows(next); emit(next);
-  };
+    const trimmed = newText.trim();
 
-  const removeRow = (idx: number) => {
-    const next = rows.filter((_, i) => i !== idx);
-    setRows(next); emit(next);
-  };
-
-  const updateRow = (idx: number, patch: Partial<KV>) => {
-    const next = rows.map((r, i) => (i === idx ? { ...r, ...patch } : r));
-    setRows(next); emit(next);
-  };
-
-  const applyPreset = (k: string, v: any) => {
-    const s = JSON.stringify(v);
-    // si ya existe la clave, la reemplazamos
-    const idx = rows.findIndex(r => r.key === k);
-    let next: KV[];
-    if (idx >= 0) {
-      next = rows.map((r, i) => i === idx ? ({ key: k, value: s }) : r);
+    // Si está vacío, enviar objeto vacío
+    // Si tiene contenido, enviar { description: "<texto>" }
+    if (!trimmed) {
+      onChange({});
     } else {
-      next = [...rows, { key: k, value: s }];
+      onChange({ description: trimmed });
     }
-    setRows(next); emit(next);
   };
 
   return (
@@ -85,56 +64,13 @@ export const FeaturesEditor: React.FC<Props> = ({ value, onChange, label = "Cara
         <label className="text-sm font-medium">{label}</label>
         <p className="text-xs text-gray-500">{helpText}</p>
       </div>
-
-      <div className="flex flex-wrap gap-2">
-        {PRESETS.map(p => (
-          <button
-            key={p.key}
-            type="button"
-            className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
-            onClick={() => applyPreset(p.key, p.value)}
-          >
-            + {p.key}
-          </button>
-        ))}
-      </div>
-
-      <div className="rounded-md border divide-y">
-        {rows.length === 0 && (
-          <div className="p-3 text-sm text-gray-500">Sin características. Agrega una fila.</div>
-        )}
-        {rows.map((row, idx) => (
-          <div key={idx} className="grid grid-cols-12 gap-2 p-2 items-center">
-            <input
-              className="col-span-4 rounded border px-2 py-1 text-sm"
-              placeholder="clave (p. ej. apps)"
-              value={row.key}
-              onChange={(e) => updateRow(idx, { key: e.target.value })}
-            />
-            <input
-              className="col-span-7 rounded border px-2 py-1 text-sm"
-              placeholder='valor (p. ej. ["Word","Excel"])'
-              value={row.value}
-              onChange={(e) => updateRow(idx, { value: e.target.value })}
-            />
-            <button
-              type="button"
-              className="col-span-1 rounded border px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-              onClick={() => removeRow(idx)}
-            >
-              X
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <button
-        type="button"
-        className="rounded border px-2 py-1 text-xs"
-        onClick={addRow}
-      >
-        + Agregar característica
-      </button>
+      <textarea
+        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[90px]"
+        placeholder="Ej: Acceso a todas las apps de Adobe para equipo creativo. Incluye Photoshop, Illustrator, Premiere Pro y soporte 24/7."
+        value={text}
+        onChange={handleChange}
+        rows={3}
+      />
     </div>
   );
 };

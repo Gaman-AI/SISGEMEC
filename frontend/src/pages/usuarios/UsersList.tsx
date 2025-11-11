@@ -232,12 +232,15 @@ export default function UsersList() {
           <FancySelect
             id="role"
             value={role || ''}
-            onChange={(val) => { setRole((val || '') as UserRole | ''); setPage(1); }}
+            onChange={(val) => {
+              setRole((val || '') as UserRole | '');
+              setPage(1);
+            }}
             placeholder="Todos los roles"
             icon={<UserRound className="h-4 w-4" />}
           >
+            <option value="">Todos los roles</option>
             <option value="ADMIN">ADMIN</option>
-            <option value="TECNICO">TECNICO</option>
             <option value="RESPONSABLE">RESPONSABLE</option>
           </FancySelect>
 

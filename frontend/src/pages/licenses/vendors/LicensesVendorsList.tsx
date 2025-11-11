@@ -8,9 +8,38 @@ import { isAuthenticated, hasRole } from '@/auth/guards';
 import { listVendors, removeVendor } from '@/data/licenses.repository';
 import type { Vendor, VendorFilters } from '@/data/licenses.types';
 
+// Hook de toast local (reutilizando patrón existente)
+function useToast() {
+  const [msg, setMsg] = React.useState<string | null>(null);
+  const [type, setType] = React.useState<"success" | "error" | null>(null);
+  const show = (m: string, t: "success" | "error" = "success") => {
+    setMsg(m);
+    setType(t);
+    window.clearTimeout((show as any)._t);
+    (show as any)._t = window.setTimeout(() => {
+      setMsg(null);
+      setType(null);
+    }, 5000);
+  };
+  const Toast = () =>
+    msg ? (
+      <div
+        className={`fixed bottom-4 right-4 rounded-md px-4 py-2 text-sm shadow-md z-50 ${
+          type === "success" ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"
+        }`}
+        role="status"
+        aria-live="polite"
+      >
+        {msg}
+      </div>
+    ) : null;
+  return { show, Toast };
+}
+
 export default function LicensesVendorsList() {
   const nav = useNavigate();
   const { state } = useAuth();
+  const { show, Toast } = useToast();
   const [loading, setLoading] = React.useState(false);
   const [search, setSearch] = React.useState('');
   const [page, setPage] = React.useState(1);
@@ -39,12 +68,24 @@ export default function LicensesVendorsList() {
   }, [load]);
 
   async function onDelete(id: number) {
-    if (!confirm('¿Eliminar proveedor?')) return;
+    if (!window.confirm('¿Eliminar proveedor?')) return;
     try {
       await removeVendor(id);
+      show('Proveedor eliminado correctamente', 'success');
       await load();
-    } catch (e) {
-      console.error(e);
+    } catch (err: any) {
+      console.error('[LicensesVendorsList] Error eliminando proveedor:', err);
+      
+      const status = err?.response?.status;
+      const backendDetail = err?.response?.data?.detail;
+      
+      if (status === 409) {
+        // Mensaje específico desde el backend (tiene productos/planes asociados)
+        show(backendDetail || 'No se puede eliminar el proveedor porque tiene elementos asociados.', 'error');
+      } else {
+        const msg = backendDetail || err?.message || 'Error inesperado al eliminar el proveedor. Intente de nuevo o contacte al administrador.';
+        show(msg, 'error');
+      }
     }
   }
 
@@ -102,6 +143,7 @@ export default function LicensesVendorsList() {
           <Button variant="outline" disabled={(page*size)>=total} onClick={() => setPage(p => p+1)}>Siguiente</Button>
         </div>
       </div>
+      <Toast />
     </div>
   );
 }

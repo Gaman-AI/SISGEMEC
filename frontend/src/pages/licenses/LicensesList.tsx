@@ -9,9 +9,38 @@ import { listLicenses, listVendors, listProducts, listPlans } from '@/data/licen
 import LicenseCapacityIndicator from '@/components/licenses/LicenseCapacityIndicator';
 import type { License, LicenseFilters, Vendor, Product, Plan } from '@/data/licenses.types';
 
+// Hook de toast local (reutilizando patrón existente)
+function useToast() {
+  const [msg, setMsg] = React.useState<string | null>(null);
+  const [type, setType] = React.useState<"success" | "error" | null>(null);
+  const show = (m: string, t: "success" | "error" = "success") => {
+    setMsg(m);
+    setType(t);
+    window.clearTimeout((show as any)._t);
+    (show as any)._t = window.setTimeout(() => {
+      setMsg(null);
+      setType(null);
+    }, 5000);
+  };
+  const Toast = () =>
+    msg ? (
+      <div
+        className={`fixed bottom-4 right-4 rounded-md px-4 py-2 text-sm shadow-md z-50 ${
+          type === "success" ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"
+        }`}
+        role="status"
+        aria-live="polite"
+      >
+        {msg}
+      </div>
+    ) : null;
+  return { show, Toast };
+}
+
 export default function LicensesList() {
   const nav = useNavigate();
   const { state } = useAuth();
+  const { show, Toast } = useToast();
   const [loading, setLoading] = React.useState(false);
   const [code, setCode] = React.useState('');
   const [vendorId, setVendorId] = React.useState<number | ''>('');
@@ -26,18 +55,33 @@ export default function LicensesList() {
   const [total, setTotal] = React.useState(0);
 
   React.useEffect(() => {
-    listVendors({ page: 1, size: 100 }).then(r => setVendors(r.data)).catch(console.error);
-  }, []);
+    listVendors({ page: 1, size: 100 })
+      .then(r => setVendors(r.data))
+      .catch(err => {
+        console.error('Error loading vendors:', err);
+        show('Error al cargar proveedores', 'error');
+      });
+  }, [show]);
 
   React.useEffect(() => {
     const v = vendorId || undefined;
-    listProducts({ vendor_id: v as any, page: 1, size: 100 }).then(r => setProducts(r.data)).catch(console.error);
-  }, [vendorId]);
+    listProducts({ vendor_id: v as any, page: 1, size: 100 })
+      .then(r => setProducts(r.data))
+      .catch(err => {
+        console.error('Error loading products:', err);
+        show('Error al cargar productos', 'error');
+      });
+  }, [vendorId, show]);
 
   React.useEffect(() => {
     const p = productId || undefined;
-    listPlans({ product_id: p as any, page: 1, size: 100 }).then(r => setPlans(r.data)).catch(console.error);
-  }, [productId]);
+    listPlans({ product_id: p as any, page: 1, size: 100 })
+      .then(r => setPlans(r.data))
+      .catch(err => {
+        console.error('Error loading plans:', err);
+        show('Error al cargar planes', 'error');
+      });
+  }, [productId, show]);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -52,8 +96,10 @@ export default function LicensesList() {
       const res = await listLicenses(filters);
       setRows(res.data); 
       setTotal(res.total);
-    } catch (e) {
-      console.error('Error loading licenses:', e);
+    } catch (err: any) {
+      console.error('Error loading licenses:', err);
+      const errorMsg = err?.response?.data?.detail || err?.message || 'Error al cargar licencias';
+      show(errorMsg, 'error');
       setRows([]);
       setTotal(0);
     } finally {
@@ -131,8 +177,15 @@ export default function LicensesList() {
                 </td>
               </tr>
             ))}
+            {loading && rows.length === 0 && (
+              <tr>
+                <td className="p-3 text-slate-500" colSpan={6}>
+                  Cargando...
+                </td>
+              </tr>
+            )}
             {!rows.length && !loading && (
-              <tr><td className="p-3 text-slate-500" colSpan={6}>Sin resultados</td></tr>
+              <tr><td className="p-3 text-slate-500" colSpan={6}>No hay licencias registradas</td></tr>
             )}
           </tbody>
         </table>
@@ -141,11 +194,12 @@ export default function LicensesList() {
       <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
         <div>Mostrando {rows.length} de {total}</div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" disabled={page<=1} onClick={() => setPage(p => Math.max(1, p-1))}>Anterior</Button>
+          <Button variant="outline" disabled={page<=1 || loading} onClick={() => setPage(p => Math.max(1, p-1))}>Anterior</Button>
           <div>Página {page}</div>
-          <Button variant="outline" disabled={(page*size)>=total} onClick={() => setPage(p => p+1)}>Siguiente</Button>
+          <Button variant="outline" disabled={(page*size)>=total || loading} onClick={() => setPage(p => p+1)}>Siguiente</Button>
         </div>
       </div>
+      <Toast />
     </div>
   );
 }
