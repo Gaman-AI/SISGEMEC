@@ -43,14 +43,14 @@ export default function ReportFiltersTickets({
   }, []);
 
   const handleFormSubmit = (data: TicketsFilters) => {
-    // Limpiar valores vacíos
-    const cleanData: TicketsFilters = {};
+    // Limpiar valores vacíos con tipado laxo y casteo final
+    const cleanData: Partial<TicketsFilters> = {};
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
-        cleanData[key as keyof TicketsFilters] = value;
+        (cleanData as any)[key] = value;
       }
     });
-    onSubmit(cleanData);
+    onSubmit(cleanData as TicketsFilters);
   };
 
   const handleClear = () => {

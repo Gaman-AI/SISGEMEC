@@ -38,11 +38,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (mounted) setState({ status: "unauthenticated" });
           return;
         }
+        const role = (data.role || "").toUpperCase();
+        
+        // Validar que solo ADMIN puede acceder al sistema
+        if (role !== "ADMIN") {
+          // Limpia cualquier sesión local y marca como no autenticado
+          await supabase.auth.signOut();
+          if (mounted) setState({ status: "unauthenticated" });
+          return;
+        }
+        
         const profile: Profile = {
           user_id: data.user_id,
           full_name: data.full_name ?? null,
           email: data.email ?? null,
-          role: data.role as UserRole,
+          role: role as UserRole,
           active: !!data.active,
         };
         if (mounted) setState({ status: "authenticated", profile });
@@ -69,13 +79,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!data) {
           setState({ status: "unauthenticated" });
         } else {
+          const role = (data.role || "").toUpperCase();
+          
+          // Validar que solo ADMIN puede acceder al sistema
+          if (role !== "ADMIN") {
+            // Limpia cualquier sesión local y marca como no autenticado
+            await supabase.auth.signOut();
+            if (mounted) setState({ status: "unauthenticated" });
+            return;
+          }
+          
           setState({
             status: "authenticated",
             profile: {
               user_id: data.user_id,
               full_name: data.full_name ?? null,
               email: data.email ?? null,
-              role: data.role as UserRole,
+              role: role as UserRole,
               active: !!data.active,
             },
           });
@@ -90,9 +110,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (error || !data.user) {
+        return { ok: false, error: error?.message ?? "No se pudo iniciar sesión." };
+      }
+
+      // Después de autenticar, verificar que el usuario sea ADMIN
+      // El onAuthStateChange se encargará de obtener el perfil y validar el rol
+      // Si no es ADMIN, el onAuthStateChange lo marcará como unauthenticated
+      return { ok: true };
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Error inesperado al iniciar sesión." };
+    }
   }
   async function signOut() {
     await supabase.auth.signOut();

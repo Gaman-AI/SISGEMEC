@@ -11,7 +11,8 @@ export default function RequireAdmin({ children }: { children: React.ReactNode }
     return <Navigate to="/login" replace />;
   }
   if (state.profile.role !== "ADMIN") {
-    return <Navigate to="/mis-solicitudes" replace />;
+    // DEPRECATED: cambiado de /mis-solicitudes a /dashboard
+    return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;
 }

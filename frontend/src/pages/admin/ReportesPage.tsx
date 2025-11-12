@@ -7,10 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Separator } from '@/components/ui/separator';
 import { reportesRepo, EquiposFilters, ServiciosFilters, TicketsFilters, ReportPage } from '@/data/reportes.repository';
 import ReportFiltersEquipos from '@/components/reportes/ReportFiltersEquipos';
-import ReportFiltersServicios from '@/components/reportes/ReportFiltersServicios';
+// DEPRECATED: Componente de filtros de servicios no se usa en el UI. Se mantiene para referencia histórica.
+// import ReportFiltersServicios from '@/components/reportes/ReportFiltersServicios';
 import ReportFiltersTickets from '@/components/reportes/ReportFiltersTickets';
 
-type ReportType = 'equipos' | 'servicios' | 'tickets';
+type ReportType = 'equipos' | 'tickets';
+// DEPRECATED: 'servicios' removido del selector de reportes. Backend /reportes/servicios se conserva para históricos.
 
 // Hook de toast local
 function useToast() {
@@ -45,10 +47,12 @@ export default function ReportesPage() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ReportPage | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [lastFilters, setLastFilters] = useState<EquiposFilters | ServiciosFilters | TicketsFilters>({});
+  const [lastFilters, setLastFilters] = useState<EquiposFilters | TicketsFilters>({});
+  // DEPRECATED: ServiciosFilters removido aquí. No se usan filtros de servicios en el UI.
   const { show, Toast } = useToast();
 
-  const handleFiltersSubmit = async (filters: EquiposFilters | ServiciosFilters | TicketsFilters) => {
+  const handleFiltersSubmit = async (filters: EquiposFilters | TicketsFilters) => {
+    // DEPRECATED: Se elimina soporte a 'servicios' en el formulario UI.
     setLoading(true);
     setError(null);
     setLastFilters(filters);
@@ -57,11 +61,11 @@ export default function ReportesPage() {
       let result: ReportPage;
       if (reportType === 'equipos') {
         result = await reportesRepo.fetchReportEquipos({ ...filters as EquiposFilters, page: 1, size: 20 });
-      } else if (reportType === 'servicios') {
-        result = await reportesRepo.fetchReportServicios({ ...filters as ServiciosFilters, page: 1, size: 20 });
       } else {
+        // reportType === 'tickets'
         result = await reportesRepo.fetchReportTickets({ ...filters as TicketsFilters, page: 1, size: 20 });
       }
+      // DEPRECATED: Rama para 'servicios' eliminada solo en el UI. Backend /reportes/servicios se conserva para históricos.
       setData(result);
     } catch (err: any) {
       console.error('Report error', err);
@@ -183,7 +187,8 @@ export default function ReportesPage() {
         <div className="p-4">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">
-              {reportType === 'equipos' ? 'Equipos' : reportType === 'servicios' ? 'Servicios' : 'Tickets'} ({data.total || 'N/A'})
+              {reportType === 'equipos' ? 'Equipos' : 'Tickets'} ({data.total || 'N/A'})
+              {/* DEPRECATED: Referencia a 'servicios' removida del título. */}
             </h3>
             <div className="flex gap-2">
               <Button 
@@ -250,8 +255,8 @@ export default function ReportesPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="equipos">Equipos</SelectItem>
-              <SelectItem value="servicios">Servicios</SelectItem>
               <SelectItem value="tickets">Tickets</SelectItem>
+              {/* DEPRECATED: Opción "Servicios" removida del selector de reportes en el UI. Backend /reportes/servicios se conserva para históricos. */}
             </SelectContent>
           </Select>
         </div>
@@ -264,12 +269,6 @@ export default function ReportesPage() {
           onClear={handleClearFilters}
           loading={loading}
         />
-      ) : reportType === 'servicios' ? (
-        <ReportFiltersServicios
-          onSubmit={handleFiltersSubmit}
-          onClear={handleClearFilters}
-          loading={loading}
-        />
       ) : (
         <ReportFiltersTickets
           onSubmit={handleFiltersSubmit}
@@ -277,6 +276,7 @@ export default function ReportesPage() {
           loading={loading}
         />
       )}
+      {/* DEPRECATED: Filtros de servicios removidos del renderizado. Componente ReportFiltersServicios se mantiene pero no se usa en el UI. */}
 
       {/* Error */}
       {error && (

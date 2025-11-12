@@ -65,6 +65,8 @@ async def get_report_equipos(
         raise HTTPException(status_code=500, detail=f"Error al generar reporte de equipos: {str(e)}")
 
 
+# DEPRECATED: Endpoint mantenido solo para consulta de históricos de servicios.
+# No usar para nuevos desarrollos. El flujo oficial de reportes es /reportes/tickets.
 @router.get("/servicios", response_model=Page)
 async def get_report_servicios(
     tipo_servicio: Optional[str] = Query(None),

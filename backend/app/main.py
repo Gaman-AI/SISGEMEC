@@ -28,8 +28,9 @@ logger = logging.getLogger("uvicorn")
 
 from app.routers.me import router as me_router
 from app.routers.equipos import router as equipos_router
-from app.routers.servicios import router as servicios_router
-from app.routers.solicitudes import router as solicitudes_router
+# DEPRECATED: import routers servicios/solicitudes (ocultos del API público)
+# from app.routers.servicios import router as servicios_router
+# from app.routers.solicitudes import router as solicitudes_router
 from app.routers.auth import router as auth_router
 from app.routers.import_usuarios import router as import_usuarios_router
 from app.routers.import_equipos import router as import_equipos_router
@@ -163,8 +164,9 @@ app.include_router(health_router)  # Health check (sin auth)
 app.include_router(auth_router)
 app.include_router(me_router)
 app.include_router(equipos_router)
-app.include_router(servicios_router)
-app.include_router(solicitudes_router)
+# DEPRECATED: routers de servicios/solicitudes deshabilitados del enrutador principal.
+# app.include_router(servicios_router, prefix="/servicios", tags=["Servicios"])
+# app.include_router(solicitudes_router, prefix="/solicitudes", tags=["Solicitudes"])
 app.include_router(import_usuarios_router)
 app.include_router(import_equipos_router)
 app.include_router(admin_users_router)

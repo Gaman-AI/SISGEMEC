@@ -35,17 +35,14 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
   { label: "Usuarios", to: "/usuarios", icon: Users },
   { label: "Equipos", to: "/equipos", icon: Laptop },
   { label: "Tipos de Servicio", to: "/tipos-servicio", icon: ListChecks },
-  { label: "Servicios", to: "/servicios", icon: Wrench },
-  { label: "Solicitudes", to: "/solicitudes", icon: FileText },
+  // DEPRECATED: enlaces a módulos antiguos de servicios/solicitudes removidos del menú.
+  // { label: "Servicios", to: "/servicios", icon: Wrench },
+  // { label: "Solicitudes", to: "/solicitudes", icon: FileText },
   { label: "Tickets", to: "/tickets", icon: Ticket },
   { label: "Reportes", to: "/reportes", icon: BarChart3 },
   { label: "Importar", to: "/import", icon: Upload },
 ];
 
-const RESPONSABLE_NAV_ITEMS: NavItem[] = [
-  { label: "Mis Equipos", to: "/mis-equipos", icon: Laptop },
-  { label: "Mis Solicitudes", to: "/mis-solicitudes", icon: FileText },
-];
 
 export default function Sidebar() {
   const { collapsed, set, toggle } = useSidebar();
@@ -70,9 +67,9 @@ export default function Sidebar() {
   const ffOn = import.meta.env.VITE_FEATURE_LICENSES === 'true';
   const authenticatedState = state as Extract<typeof state, { status: 'authenticated' }>;
   const isAdmin = authenticatedState.profile.role === "ADMIN";
-  const isResponsable = authenticatedState.profile.role === "RESPONSABLE";
   
-  const navItems = isAdmin ? ADMIN_NAV_ITEMS : RESPONSABLE_NAV_ITEMS;
+  // Solo ADMIN puede acceder al sistema (validado en auth.store)
+  const navItems = isAdmin ? ADMIN_NAV_ITEMS : [];
 
   return (
     <aside
@@ -198,23 +195,6 @@ export default function Sidebar() {
                 </NavLink>
               </div>
             </>
-          )}
-          
-          {ffOn && isResponsable && (
-            <NavLink
-              to="/mis-licencias"
-              onClick={handleNavClick}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white",
-                  "hover:bg-white/20 hover:text-white transition-colors",
-                  isActive && "bg-white/20 text-white"
-                )
-              }
-            >
-              <FileText className="h-4 w-4 shrink-0" />
-              <span className={cn("truncate", collapsed && "sr-only")}>Mis Licencias</span>
-            </NavLink>
           )}
           
           {/* Separador antes del logout */}

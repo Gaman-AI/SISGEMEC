@@ -6,7 +6,6 @@ import AppLayout from "./components/layout/AppLayout";
 import { AuthProvider, useAuth } from "./auth/auth.store";
 import RequireAuth from "./routes/guards/RequireAuth";
 import RequireAdmin from "./routes/guards/RequireAdmin";
-import RequireResponsable from "./routes/guards/RequireResponsable";
 
 import LoginPage from "./pages/auth/LoginPage";
 import LogoutPage from "./pages/auth/LogoutPage";
@@ -17,14 +16,15 @@ import UsersList from "./pages/usuarios/UsersList";
 import UsersForm from "./pages/usuarios/UsersForm";
 import TiposServicioList from "./pages/tipos-servicio/TiposServicioList";
 import TiposServicioForm from "./pages/tipos-servicio/TiposServicioForm";
-import ServiciosList from "./pages/servicios/ServiciosList";
-import ServiciosForm from "./pages/servicios/ServiciosForm";
-import MisEquiposList from "./pages/solicitudes/MisEquiposList";
-import MisSolicitudesList from "./pages/solicitudes/MisSolicitudesList";
-import MisSolicitudesForm from "./pages/solicitudes/MisSolicitudesForm";
-import MisSolicitudDetalle from "./pages/solicitudes/MisSolicitudDetalle";
-import SolicitudesDeServicioList from "./pages/solicitudes/SolicitudesDeServicioList";
-import SolicitudDetalle from "./pages/solicitudes/SolicitudDetalle";
+// DEPRECATED: imports de módulos antiguos de servicios/solicitudes. Mantener componentes solo como legado temporal.
+// import ServiciosList from "./pages/servicios/ServiciosList";
+// import ServiciosForm from "./pages/servicios/ServiciosForm";
+// import MisEquiposList from "./pages/solicitudes/MisEquiposList";
+// import MisSolicitudesList from "./pages/solicitudes/MisSolicitudesList";
+// import MisSolicitudesForm from "./pages/solicitudes/MisSolicitudesForm";
+// import MisSolicitudDetalle from "./pages/solicitudes/MisSolicitudDetalle";
+// import SolicitudesDeServicioList from "./pages/solicitudes/SolicitudesDeServicioList";
+// import SolicitudDetalle from "./pages/solicitudes/SolicitudDetalle";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import ImportarPage from "./pages/ImportarPage";
 import ImportUsuariosPage from "./pages/import-usuarios/ImportUsuariosPage";
@@ -41,8 +41,9 @@ import LicensesList from "./pages/licenses/LicensesList";
 import LicensesForm from "./pages/licenses/LicensesForm";
 import LicensesAssignmentsList from "./pages/licenses/assignments/LicensesAssignmentsList";
 import LicensesAssignForm from "./pages/licenses/assignments/LicensesAssignForm";
-import MyLicensesList from "./pages/licenses/MyLicensesList";
-import MyLicenseDetail from "./pages/licenses/MyLicenseDetail";
+// DEPRECATED: componentes de "Mis Licencias" para responsables - ya no accesibles
+// import MyLicensesList from "./pages/licenses/MyLicensesList";
+// import MyLicenseDetail from "./pages/licenses/MyLicenseDetail";
 // Tickets
 import TicketsList from "./pages/tickets/TicketsList";
 import TicketDetail from "./pages/tickets/TicketDetail";
@@ -54,9 +55,11 @@ function RoleRedirect() {
     return <div className="p-4 text-sm text-slate-600">Cargando...</div>;
   }
   if (state.status === "unauthenticated") return <Navigate to="/login" replace />;
-  return state.profile.role === "ADMIN"
-    ? <Navigate to="/dashboard" replace />
-    : <Navigate to="/mis-solicitudes" replace />;
+  // Solo ADMIN puede autenticarse (validado en auth.store)
+  if (state.status === "authenticated" && state.profile.role === "ADMIN") {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <Navigate to="/login" replace />;
 }
 
 export default function App() {
@@ -86,11 +89,12 @@ export default function App() {
               <Route path="/tipos-servicio" element={<RequireAuth><RequireAdmin><TiposServicioList /></RequireAdmin></RequireAuth>} />
               <Route path="/tipos-servicio/nuevo" element={<RequireAuth><RequireAdmin><TiposServicioForm /></RequireAdmin></RequireAuth>} />
               <Route path="/tipos-servicio/:id/editar" element={<RequireAuth><RequireAdmin><TiposServicioForm /></RequireAdmin></RequireAuth>} />
-              <Route path="/servicios" element={<RequireAuth><RequireAdmin><ServiciosList /></RequireAdmin></RequireAuth>} />
-              <Route path="/servicios/nuevo" element={<RequireAuth><RequireAdmin><ServiciosForm /></RequireAdmin></RequireAuth>} />
-              <Route path="/servicios/:id/editar" element={<RequireAuth><RequireAdmin><ServiciosForm /></RequireAdmin></RequireAuth>} />
-              <Route path="/solicitudes" element={<RequireAuth><RequireAdmin><SolicitudesDeServicioList /></RequireAdmin></RequireAuth>} />
-              <Route path="/solicitudes/:id" element={<RequireAuth><RequireAdmin><SolicitudDetalle /></RequireAdmin></RequireAuth>} />
+              {/* DEPRECATED: rutas antiguas de solicitudes/servicios ocultas. Mantener componentes solo como legado temporal. */}
+              {/* <Route path="/servicios" element={<RequireAuth><RequireAdmin><ServiciosList /></RequireAdmin></RequireAuth>} /> */}
+              {/* <Route path="/servicios/nuevo" element={<RequireAuth><RequireAdmin><ServiciosForm /></RequireAdmin></RequireAuth>} /> */}
+              {/* <Route path="/servicios/:id/editar" element={<RequireAuth><RequireAdmin><ServiciosForm /></RequireAdmin></RequireAuth>} /> */}
+              {/* <Route path="/solicitudes" element={<RequireAuth><RequireAdmin><SolicitudesDeServicioList /></RequireAdmin></RequireAuth>} /> */}
+              {/* <Route path="/solicitudes/:id" element={<RequireAuth><RequireAdmin><SolicitudDetalle /></RequireAdmin></RequireAuth>} /> */}
               <Route path="/import" element={<RequireAuth><RequireAdmin><ImportarPage /></RequireAdmin></RequireAuth>} />
               <Route path="/import-usuarios" element={<RequireAuth><RequireAdmin><ImportUsuariosPage /></RequireAdmin></RequireAuth>} />
               <Route path="/import-equipos" element={<RequireAuth><RequireAdmin><ImportEquiposPage /></RequireAdmin></RequireAuth>} />
@@ -125,19 +129,7 @@ export default function App() {
                 </>
               )}
 
-              {/* RESPONSABLE */}
-              <Route path="/mis-equipos" element={<RequireAuth><RequireResponsable><MisEquiposList /></RequireResponsable></RequireAuth>} />
-              <Route path="/mis-solicitudes" element={<RequireAuth><RequireResponsable><MisSolicitudesList /></RequireResponsable></RequireAuth>} />
-              <Route path="/mis-solicitudes/nueva" element={<RequireAuth><RequireResponsable><MisSolicitudesForm /></RequireResponsable></RequireAuth>} />
-              <Route path="/mis-solicitudes/:id" element={<RequireAuth><RequireResponsable><MisSolicitudDetalle /></RequireResponsable></RequireAuth>} />
-
-              {/* RESPONSABLE - Mis Licencias (condicional por feature flag) */}
-              {import.meta.env.VITE_FEATURE_LICENSES === 'true' && (
-                <>
-                  <Route path="/mis-licencias" element={<RequireAuth><RequireResponsable><MyLicensesList /></RequireResponsable></RequireAuth>} />
-                  <Route path="/mis-licencias/:id" element={<RequireAuth><RequireResponsable><MyLicenseDetail /></RequireResponsable></RequireAuth>} />
-                </>
-              )}
+              {/* DEPRECATED: Rutas de responsables eliminadas - solo ADMIN puede acceder al sistema */}
 
               {/* 404 dentro del layout para rutas protegidas no encontradas */}
               <Route path="*" element={<div className="p-6">404</div>} />

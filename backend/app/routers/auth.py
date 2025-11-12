@@ -83,12 +83,25 @@ async def login(login_data: LoginRequest):
             # Continuar con rol por defecto
             role = "USER"
         
+        # Validar que solo ADMIN puede acceder al sistema
+        role_upper = (role or "").upper()
+        if role_upper != "ADMIN":
+            # Cerrar sesión en Supabase si aplica
+            try:
+                supabase.auth.sign_out()
+            except Exception:
+                pass
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo usuarios administradores pueden acceder al sistema SISGEMEC."
+            )
+        
         return LoginResponse(
             access_token=auth_response.session.access_token,
             refresh_token=auth_response.session.refresh_token,
             user_id=auth_response.user.id,
             email=auth_response.user.email,
-            role=role
+            role=role_upper
         )
         
     except Exception as e:

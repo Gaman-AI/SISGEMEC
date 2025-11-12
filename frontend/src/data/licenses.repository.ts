@@ -43,20 +43,18 @@ export async function getVendor(vendor_id: number): Promise<Vendor> {
 }
 
 export async function createVendor(payload: VendorCreate): Promise<{ ok: boolean; id: number }> {
-  // Backend devuelve VendorRead completo, extraemos el ID
-  const res = await apiPost<Vendor>(ensureSlash('/licenses/vendors'), payload);
+  const res = await apiPost(ensureSlash('/licenses/vendors'), payload) as Vendor;
   return { ok: true, id: res.vendor_id };
 }
 
 export async function updateVendor(vendor_id: number, payload: VendorUpdate): Promise<{ ok: boolean; id: number }> {
-  // Backend devuelve VendorRead completo, extraemos el ID
-  const res = await apiPut<Vendor>(`/licenses/vendors/${vendor_id}`, payload);
-  return { ok: true, id: res.vendor_id };
+  const res = await apiPut(`/licenses/vendors/${vendor_id}`, payload);
+  const vendor = res.data as Vendor;
+  return { ok: true, id: vendor.vendor_id };
 }
 
 export async function removeVendor(vendor_id: number): Promise<{ ok: boolean; id: number }> {
-  // DELETE devuelve SuccessResponse con ok e id
-  const res = await apiDelete<{ ok: boolean; message: string; id: number }>(`/licenses/vendors/${vendor_id}`);
+  const res = await apiDelete(`/licenses/vendors/${vendor_id}`) as { ok: boolean; message: string; id: number };
   return { ok: res.ok, id: res.id };
 }
 
@@ -80,20 +78,18 @@ export async function getProduct(product_id: number): Promise<Product> {
 }
 
 export async function createProduct(payload: ProductCreate): Promise<{ ok: boolean; id: number }> {
-  // Backend devuelve ProductRead completo, extraemos el ID
-  const res = await apiPost<Product>(ensureSlash('/licenses/products'), payload);
+  const res = await apiPost(ensureSlash('/licenses/products'), payload) as Product;
   return { ok: true, id: res.product_id };
 }
 
 export async function updateProduct(product_id: number, payload: ProductUpdate): Promise<{ ok: boolean; id: number }> {
-  // Backend devuelve ProductRead completo, extraemos el ID
-  const res = await apiPut<Product>(`/licenses/products/${product_id}`, payload);
-  return { ok: true, id: res.product_id };
+  const res = await apiPut(`/licenses/products/${product_id}`, payload);
+  const product = res.data as Product;
+  return { ok: true, id: product.product_id };
 }
 
 export async function removeProduct(product_id: number): Promise<{ ok: boolean; id: number }> {
-  // DELETE devuelve SuccessResponse con ok e id
-  const res = await apiDelete<{ ok: boolean; message: string; id: number }>(`/licenses/products/${product_id}`);
+  const res = await apiDelete(`/licenses/products/${product_id}`) as { ok: boolean; message: string; id: number };
   return { ok: res.ok, id: res.id };
 }
 
@@ -121,20 +117,18 @@ export async function getPlan(plan_id: number): Promise<Plan> {
 }
 
 export async function createPlan(payload: PlanCreate): Promise<{ ok: boolean; id: number }> {
-  // Backend devuelve PlanRead completo, extraemos el ID
-  const res = await apiPost<Plan>(ensureSlash('/licenses/plans'), payload);
+  const res = await apiPost(ensureSlash('/licenses/plans'), payload) as Plan;
   return { ok: true, id: res.plan_id };
 }
 
 export async function updatePlan(plan_id: number, payload: PlanUpdate): Promise<{ ok: boolean; id: number }> {
-  // Backend devuelve PlanRead completo, extraemos el ID
-  const res = await apiPut<Plan>(`/licenses/plans/${plan_id}`, payload);
-  return { ok: true, id: res.plan_id };
+  const res = await apiPut(`/licenses/plans/${plan_id}`, payload);
+  const plan = res.data as Plan;
+  return { ok: true, id: plan.plan_id };
 }
 
 export async function removePlan(plan_id: number): Promise<{ ok: boolean; id: number }> {
-  // DELETE devuelve SuccessResponse con ok e id
-  const res = await apiDelete<{ ok: boolean; message: string; id: number }>(`/licenses/plans/${plan_id}`);
+  const res = await apiDelete(`/licenses/plans/${plan_id}`) as { ok: boolean; message: string; id: number };
   return { ok: res.ok, id: res.id };
 }
 
@@ -163,20 +157,18 @@ export async function getLicense(license_id: number): Promise<License> {
 }
 
 export async function createLicense(payload: LicenseCreate): Promise<{ ok: boolean; id: number }> {
-  // Backend devuelve LicenseRead completo, extraemos el ID
-  const res = await apiPost<License>(ensureSlash('/licenses'), payload);
+  const res = await apiPost(ensureSlash('/licenses'), payload) as License;
   return { ok: true, id: res.license_id };
 }
 
 export async function updateLicense(license_id: number, payload: LicenseUpdate): Promise<{ ok: boolean; id: number }> {
-  // Backend devuelve LicenseRead completo, extraemos el ID
-  const res = await apiPut<License>(`/licenses/${license_id}`, payload);
-  return { ok: true, id: res.license_id };
+  const res = await apiPut(`/licenses/${license_id}`, payload);
+  const license = res.data as License;
+  return { ok: true, id: license.license_id };
 }
 
 export async function removeLicense(license_id: number): Promise<{ ok: boolean; id: number }> {
-  // DELETE devuelve SuccessResponse con ok e id
-  const res = await apiDelete<{ ok: boolean; message: string; id: number }>(`/licenses/${license_id}`);
+  const res = await apiDelete(`/licenses/${license_id}`) as { ok: boolean; message: string; id: number };
   return { ok: res.ok, id: res.id };
 }
 
@@ -209,21 +201,19 @@ export async function getAssignment(assignment_id: number): Promise<Assignment> 
 }
 
 export async function createAssignment(payload: AssignmentCreate, idempotencyKey?: string): Promise<{ ok: boolean; id: number }> {
-  // Backend devuelve AssignmentRead completo, extraemos el ID
   const headers = idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined;
-  const res = await apiPost<Assignment>(ensureSlash('/licenses/assignments'), payload, headers);
+  const res = await apiPost(ensureSlash('/licenses/assignments'), payload, headers) as Assignment;
   return { ok: true, id: res.assignment_id };
 }
 
 export async function updateAssignment(assignment_id: number, payload: AssignmentUpdate): Promise<{ ok: boolean; id: number }> {
-  // Backend devuelve AssignmentRead completo, extraemos el ID
-  const res = await apiPut<Assignment>(`/licenses/assignments/${assignment_id}`, payload);
-  return { ok: true, id: res.assignment_id };
+  const res = await apiPut(`/licenses/assignments/${assignment_id}`, payload);
+  const assignment = res.data as Assignment;
+  return { ok: true, id: assignment.assignment_id };
 }
 
 export async function revokeAssignment(assignment_id: number): Promise<{ ok: boolean; id: number }> {
-  // DELETE devuelve AssignmentRead completo (no SuccessResponse), extraemos el ID
-  const res = await apiDelete<Assignment>(`/licenses/assignments/${assignment_id}`);
+  const res = await apiDelete(`/licenses/assignments/${assignment_id}`) as Assignment;
   return { ok: true, id: res.assignment_id };
 }
 

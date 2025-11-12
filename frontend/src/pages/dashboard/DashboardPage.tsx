@@ -5,8 +5,10 @@ import { Separator } from "../../components/ui/separator";
 import { Monitor, Users as UsersIcon, Wrench, Ticket } from "lucide-react";
 import { listEquipos, countEquiposNuevosSemana } from "../../data/equipos.repository";
 import { countResponsablesActivos, countResponsablesNuevosSemana } from "../../data/usuarios.repository";
-import { countServiciosNoAtendidos, countServiciosNuevosSemana, listServiciosByTipoCounts } from "../../data/servicios.repository";
-import { countSolicitudesNoConvertidas, countSolicitudesNuevasSemana } from "../../data/solicitudes.repository";
+// DEPRECATED: imports de repositorios antiguos de servicios/solicitudes
+// import { countServiciosNoAtendidos, countServiciosNuevosSemana, listServiciosByTipoCounts } from "../../data/servicios.repository";
+// import { countSolicitudesNoConvertidas, countSolicitudesNuevasSemana } from "../../data/solicitudes.repository";
+import { fetchTickets } from "../../services/tickets";
 import { supabase } from "../../lib/supabase";
 
 /* ⬇️ NUEVO: imports para navegar y botón */
@@ -31,28 +33,26 @@ export default function DashboardPage() {
   // métricas
   const [equiposTotal, setEquiposTotal] = React.useState<number>(0);
   const [usuariosActivos, setUsuariosActivos] = React.useState<number>(0);
-  const [mantenimientosSemana, setMantenimientosSemana] = React.useState<number>(0);
-  const [solicitudesAbiertas, setSolicitudesAbiertas] = React.useState<number>(0);
+  const [ticketsPendientes, setTicketsPendientes] = React.useState<number>(0);
+  const [ticketsAbiertos, setTicketsAbiertos] = React.useState<number>(0);
 
   // métricas semanales
   const [eqWeek, setEqWeek] = React.useState(0);
   const [usrWeek, setUsrWeek] = React.useState(0);
-  const [srvWeek, setSrvWeek] = React.useState(0);
-  const [solWeek, setSolWeek] = React.useState(0);
+  const [ticketsWeek, setTicketsWeek] = React.useState(0);
 
-  // actividad y gráfica
+  // actividad reciente
   const [recent, setRecent] = React.useState<{ts:string,label:string}[]>([]);
-  const [svcChart, setSvcChart] = React.useState<{tipo_servicio_id:number, count:number, nombre:string}[]>([]);
 
   /* ⬇️ NUEVO: hook para navegar */
   const navigate = useNavigate();
 
   async function getRecentActivity() {
+    // TODO: Unificar completamente actividad reciente con tickets. Módulos antiguos removidos.
     const pulls = [
       supabase.from('equipos').select('equipo_id, num_serie, created_at, fecha_ingreso').order('created_at', { ascending: false }).limit(5),
       supabase.from('profiles').select('user_id, full_name, role, created_at').order('created_at', { ascending: false }).limit(5),
-      supabase.from('servicios').select('servicio_id, tipo_servicio_id, created_at, fecha_inicio').order('created_at', { ascending: false }).limit(5),
-      supabase.from('solicitudes').select('solicitud_id, estado_solicitud_id, created_at').order('created_at', { ascending: false }).limit(5),
+      supabase.from('tickets').select('ticket_id, estado, descripcion, received_at, created_at').order('received_at', { ascending: false }).limit(5),
     ];
 
     const results = await Promise.allSettled(pulls);
@@ -66,13 +66,52 @@ export default function DashboardPage() {
       for (const r of results[1].value.data as any[]) items.push({ ts: r.created_at, label: `Usuario ${r.role ?? ''} agregado: ${r.full_name ?? r.user_id}` });
     }
     if (results[2].status === 'fulfilled' && results[2].value.data) {
-      for (const r of results[2].value.data as any[]) items.push({ ts: pickDate(r, ['created_at','fecha_inicio']), label: `Servicio registrado: #${r.servicio_id}` });
-    }
-    if (results[3].status === 'fulfilled' && results[3].value.data) {
-      for (const r of results[3].value.data as any[]) items.push({ ts: r.created_at, label: `Solicitud creada: #${r.solicitud_id}` });
+      for (const r of results[2].value.data as any[]) {
+        const fecha = pickDate(r, ['received_at', 'created_at']);
+        items.push({ ts: fecha, label: `Ticket ${r.estado ?? 'Pendiente'}: #${r.ticket_id}` });
+      }
     }
 
     return items.filter(i => !!i.ts).sort((a,b) => new Date(b.ts).getTime() - new Date(a.ts).getTime()).slice(0, 6);
+  }
+
+  // Helper para contar tickets pendientes
+  async function countTicketsPendientes(): Promise<number> {
+    try {
+      const result = await fetchTickets({ estado: 'Pendiente', page: 1, size: 1 });
+      return result.total || 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  // Helper para contar tickets abiertos (Pendiente + En atención)
+  async function countTicketsAbiertos(): Promise<number> {
+    try {
+      const [pendientes, enAtencion] = await Promise.all([
+        fetchTickets({ estado: 'Pendiente', page: 1, size: 1 }),
+        fetchTickets({ estado: 'En atención', page: 1, size: 1 }),
+      ]);
+      return (pendientes.total || 0) + (enAtencion.total || 0);
+    } catch {
+      return 0;
+    }
+  }
+
+  // Helper para contar tickets nuevos esta semana
+  async function countTicketsNuevosSemana(): Promise<number> {
+    try {
+      const semanaAtras = new Date();
+      semanaAtras.setDate(semanaAtras.getDate() - 7);
+      const result = await fetchTickets({ 
+        received_start: semanaAtras.toISOString().split('T')[0],
+        page: 1, 
+        size: 1 
+      });
+      return result.total || 0;
+    } catch {
+      return 0;
+    }
   }
 
   React.useEffect(() => {
@@ -85,26 +124,22 @@ export default function DashboardPage() {
         const [
           totalEquiposRes,
           responsablesActivosRes,
-          serviciosNoAtendidosRes,
-          solicitudesNoConvertidasRes,
+          ticketsPendientesRes,
+          ticketsAbiertosRes,
           eqNew,
           usrNew,
-          srvNew,
-          solNew,
-          recentRes,
-          chartRes
+          ticketsNew,
+          recentRes
         ] = await Promise.all([
           // Si ya tienes una función que devuelve count de equipos, úsala; si no, usa el listado con count exact:
           listEquipos({ page: 1, pageSize: 1 }), // ya presente en el panel
           countResponsablesActivos(),
-          countServiciosNoAtendidos(),
-          countSolicitudesNoConvertidas(),
+          countTicketsPendientes(),
+          countTicketsAbiertos(),
           countEquiposNuevosSemana(),
           countResponsablesNuevosSemana(),
-          countServiciosNuevosSemana(),
-          countSolicitudesNuevasSemana(),
+          countTicketsNuevosSemana(),
           getRecentActivity(),
-          listServiciosByTipoCounts(),
         ]);
 
         if (!mounted) return;
@@ -115,19 +150,17 @@ export default function DashboardPage() {
         // Usuarios responsables activos
         setUsuariosActivos(responsablesActivosRes?.count ?? 0);
 
-        // Mantenimientos: servicios no atendidos
-        setMantenimientosSemana(serviciosNoAtendidosRes?.count ?? 0);
+        // Tickets pendientes
+        setTicketsPendientes(ticketsPendientesRes);
 
-        // Solicitudes: no convertidas a servicio
-        setSolicitudesAbiertas(solicitudesNoConvertidasRes?.count ?? 0);
+        // Tickets abiertos (pendientes + en atención)
+        setTicketsAbiertos(ticketsAbiertosRes);
 
         // Métricas semanales
         setEqWeek(eqNew?.count ?? 0);
         setUsrWeek(usrNew?.count ?? 0);
-        setSrvWeek(srvNew?.count ?? 0);
-        setSolWeek(solNew?.count ?? 0);
+        setTicketsWeek(ticketsNew);
         setRecent(Array.isArray(recentRes) ? recentRes : []);
-        setSvcChart(Array.isArray(chartRes?.data) ? chartRes.data : []);
       } catch (e: any) {
         console.warn('Dashboard load error', e);
         setError(e?.message ?? "Error al cargar dashboard");
@@ -214,43 +247,43 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Mantenimientos (conectar repo cuando lo tengas) */}
+            {/* Tickets Pendientes */}
             <Card className="rounded-2xl">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Mantenimientos</CardTitle>
-                <Wrench className="h-5 w-5 opacity-70" />
+                <CardTitle className="text-sm font-medium">Tickets Pendientes</CardTitle>
+                <Ticket className="h-5 w-5 opacity-70" />
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold text-[#264a55]">{mantenimientosSemana}</div>
+                <div className="text-4xl font-bold text-[#264a55]">{ticketsPendientes}</div>
                 <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white bg-[#527779] mt-2">
-                  {srvWeek} esta semana
+                  {ticketsWeek} esta semana
                 </span>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Programados para esta semana
+                  Tickets pendientes de atención
+                </div>
+
+                {/* Botón de acceso directo a la bandeja */}
+                <div className="mt-4">
+                  <Button className="rounded-xl bg-[#264a55] hover:opacity-90" onClick={() => navigate("/tickets")}>
+                    Abrir bandeja
+                  </Button>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Solicitudes de servicio (antes alertas) */}
+            {/* Tickets Abiertos */}
             <Card className="rounded-2xl">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Solicitudes de servicio</CardTitle>
-                <Ticket className="h-5 w-5 opacity-70" />
+                <CardTitle className="text-sm font-medium">Tickets Abiertos</CardTitle>
+                <Wrench className="h-5 w-5 opacity-70" />
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold text-[#264a55]">{solicitudesAbiertas}</div>
+                <div className="text-4xl font-bold text-[#264a55]">{ticketsAbiertos}</div>
                 <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white bg-[#527779] mt-2">
-                  {solWeek} esta semana
+                  Pendientes + En atención
                 </span>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Abiertas y pendientes de atención
-                </div>
-
-                {/* ⬇️ NUEVO: botón de acceso directo a la bandeja */}
-                <div className="mt-4">
-                  <Button className="rounded-xl bg-[#264a55] hover:opacity-90" onClick={() => navigate("/solicitudes")}>
-                    Abrir bandeja
-                  </Button>
+                  Tickets en proceso de resolución
                 </div>
               </CardContent>
             </Card>
@@ -286,37 +319,29 @@ export default function DashboardPage() {
 
         <Card className="rounded-2xl">
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Gráfica</CardTitle>
+            <CardTitle className="text-sm font-medium">Resumen</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
             <section className="mt-6">
-              <h3 className="text-sm font-semibold mb-2">Tipos de servicio más solicitados</h3>
-              {svcChart.length === 0 ? (
-                <div className="text-sm text-muted-foreground">Sin datos suficientes.</div>
-              ) : (
-                <div className="space-y-2">
-                  {(() => {
-                    const max = Math.max(...svcChart.map(d => Number(d.count) || 0)) || 1;
-                    return svcChart
-                      .sort((a,b) => (b.count as number) - (a.count as number))
-                      .slice(0,5)
-                      .map((d, idx) => {
-                        const pct = Math.round((Number(d.count) / max) * 100);
-                        return (
-                          <div key={idx}>
-                            <div className="flex items-center justify-between text-xs mb-1">
-                              <span>{d.nombre || `Tipo ${d.tipo_servicio_id}`}</span>
-                              <span>{d.count}</span>
-                            </div>
-                            <div className="h-2 rounded bg-slate-200">
-                              <div className="h-2 rounded bg-[#208692]" style={{ width: `${pct}%` }} />
-                            </div>
-                          </div>
-                        );
-                      });
-                  })()}
+              <h3 className="text-sm font-semibold mb-2">Estado del sistema</h3>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span>Equipos totales</span>
+                  <span className="font-medium">{equiposTotal}</span>
                 </div>
-              )}
+                <div className="flex items-center justify-between text-xs">
+                  <span>Usuarios activos</span>
+                  <span className="font-medium">{usuariosActivos}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span>Tickets pendientes</span>
+                  <span className="font-medium">{ticketsPendientes}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span>Tickets abiertos</span>
+                  <span className="font-medium">{ticketsAbiertos}</span>
+                </div>
+              </div>
             </section>
           </CardContent>
         </Card>
