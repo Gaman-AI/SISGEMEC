@@ -129,25 +129,33 @@ export default function EquiposList() {
   const load = React.useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
-    const res = await listEquipos({
-      page,
-      pageSize,
-      search: q,
-      estado_equipo_id: estadoId === '' ? null : Number(estadoId),
-      responsable_id: respId === '' ? null : respId,
-    });
-    if (signal?.aborted) return;
+    try {
+      const res = await listEquipos({
+        page,
+        pageSize,
+        search: q,
+        estado_equipo_id: estadoId === '' ? null : Number(estadoId),
+        responsable_id: respId === '' ? null : respId,
+      });
+      if (signal?.aborted) return;
 
-    if (res.error) {
-      setError(res.error.message || 'Error al listar equipos');
+      if (res.error) {
+        setError(res.error.message || 'Error al listar equipos');
+        setRows([]);
+        setCount(0);
+      } else {
+        setRows((res.data as Row[]) || []);
+        setCount(res.count || 0);
+      }
+    } catch (e: any) {
+      if (signal?.aborted) return;
+      setError(e?.message || 'Error al listar equipos');
       setRows([]);
       setCount(0);
-    } else {
-      setRows((res.data as Row[]) || []);
-      setCount(res.count || 0);
-    }
-    if (!signal?.aborted) {
-      setLoading(false);
+    } finally {
+      if (!signal?.aborted) {
+        setLoading(false); // 🔑 nunca dejamos loading=true
+      }
     }
   }, [page, pageSize, q, estadoId, respId]);
 

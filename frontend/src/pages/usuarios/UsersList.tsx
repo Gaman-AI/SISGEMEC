@@ -106,26 +106,34 @@ export default function UsersList() {
   const load = React.useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
-    const res = await listUsers({
-      page,
-      pageSize,
-      search,
-      role,
-      active,
-      department,
-    });
-    if (signal?.aborted) return;
+    try {
+      const res = await listUsers({
+        page,
+        pageSize,
+        search,
+        role,
+        active,
+        department,
+      });
+      if (signal?.aborted) return;
 
-    if (res.error) {
-      setError(res.error.message || 'Error al listar usuarios');
+      if (res.error) {
+        setError(res.error.message || 'Error al listar usuarios');
+        setRows([]);
+        setCount(0);
+      } else {
+        setRows(res.data);
+        setCount(res.count);
+      }
+    } catch (e: any) {
+      if (signal?.aborted) return;
+      setError(e?.message || 'Error al listar usuarios');
       setRows([]);
       setCount(0);
-    } else {
-      setRows(res.data);
-      setCount(res.count);
-    }
-    if (!signal?.aborted) {
-      setLoading(false);
+    } finally {
+      if (!signal?.aborted) {
+        setLoading(false); // 🔑 garantizado
+      }
     }
   }, [page, pageSize, search, role, active, department]);
 

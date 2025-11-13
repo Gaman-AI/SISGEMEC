@@ -1,13 +1,60 @@
-import { getSupabaseClient } from '@/lib/supabaseClient';
+import { getSupabaseClient, supabase } from '@/lib/supabaseClient';
 import axios from 'axios';
 
 // Resolver VITE_API_BASE_URL con fallback automático
 const BASE_URL = (import.meta as any).env.VITE_BACKEND_URL || 
                  (import.meta as any).env.VITE_API_BASE_URL || 
                  "http://localhost:8000";
-const supabase = getSupabaseClient();
+const supabaseClient = getSupabaseClient();
 
-// Cliente axios con interceptor de auth
+// Manejo centralizado de refresh de sesión (evita múltiples refresh simultáneos)
+let _refreshing = false;
+let _waiters: Array<() => void> = [];
+
+async function refreshOnce(): Promise<boolean> {
+  if (_refreshing) {
+    await new Promise<void>((r) => _waiters.push(r));
+    return true; // otro proceso ya refrescó
+  }
+  _refreshing = true;
+  try {
+    const { error, data } = await supabase.auth.refreshSession();
+    return !error && !!data.session;
+  } finally {
+    _refreshing = false;
+    _waiters.forEach((r) => r());
+    _waiters = [];
+  }
+}
+
+async function withAuth(input: RequestInfo, init: RequestInit = {}): Promise<Response> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers = new Headers(init.headers || {});
+  if (session?.access_token) headers.set('Authorization', `Bearer ${session.access_token}`);
+  if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+  return fetch(input, { ...init, headers });
+}
+
+async function doRequest(url: string, init: RequestInit, attempt = 0): Promise<Response> {
+  // Timeout suave 15s para evitar "pending" infinito
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const res = await withAuth(url, { ...init, signal: ctrl.signal });
+    if (res.status !== 401) return res;
+    if (attempt === 0) {
+      const ok = await refreshOnce();
+      if (ok) return doRequest(url, init, 1); // reintento único
+    }
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+    throw new Error('UNAUTHENTICATED');
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Cliente axios con interceptor de auth (mantener para compatibilidad)
 export const api = axios.create({
   baseURL: BASE_URL,
   timeout: 20000,
@@ -27,11 +74,26 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor de response
+// Interceptor de response (mejorado con manejo de 401)
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    console.error(`[api] Error ${error.response?.status}: ${error.message}`);
+  async (error) => {
+    const status = error.response?.status;
+    if (status === 401) {
+      const ok = await refreshOnce();
+      if (ok) {
+        // Retry la petición original con nuevo token
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          error.config.headers.Authorization = `Bearer ${session.access_token}`;
+          return api.request(error.config);
+        }
+      }
+      // Si refresh falla, hacer signOut y redirigir
+      await supabase.auth.signOut();
+      window.location.href = '/login';
+    }
+    console.error(`[api] Error ${status}: ${error.message}`);
     return Promise.reject(error);
   }
 );
@@ -65,7 +127,7 @@ export async function apiPost(path: string, body: any, customHeaders?: Record<st
       headers[idemHeaderKey] = idemValue;
     }
     
-    const res = await fetch(`${BASE_URL}${path}`, {
+    const res = await doRequest(`${BASE_URL}${path}`, {
       method: "POST",
       headers,
       credentials: "include",
@@ -98,7 +160,7 @@ export async function apiPut(
   const baseHeaders = await authHeaders();
   const headers = customHeaders ? { ...baseHeaders, ...customHeaders } : baseHeaders;
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await doRequest(`${BASE_URL}${path}`, {
     method: "PUT",
     headers,
     credentials: "include",
@@ -160,7 +222,7 @@ export async function apiGet(path: string, options?: {
   // Log de consola para debugging
   console.debug(`[apiGet] GET ${url}`);
   
-  const res = await fetch(url, {
+  const res = await doRequest(url, {
     method: "GET",
     headers,
     credentials: "include",
@@ -186,7 +248,7 @@ export async function apiDelete(path: string, customHeaders?: Record<string, str
   const baseHeaders = await authHeaders();
   const headers = customHeaders ? { ...baseHeaders, ...customHeaders } : baseHeaders;
   
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await doRequest(`${BASE_URL}${path}`, {
     method: "DELETE",
     headers,
     credentials: "include",

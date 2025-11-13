@@ -4,6 +4,16 @@ from app.config import settings
 _sb_client: Client | None = None
 _sb_service_client: Client | None = None
 
+def reset_supabase_service_client() -> None:
+    """Invalidar el cliente service role para forzar su recreación."""
+    global _sb_service_client
+    _sb_service_client = None
+
+def reset_supabase_client() -> None:
+    """Invalidar el cliente anon para forzar su recreación."""
+    global _sb_client
+    _sb_client = None
+
 def supa() -> Client:
     global _sb_client
     if _sb_client is None:

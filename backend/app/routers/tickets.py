@@ -1,4 +1,6 @@
 from typing import Dict, Any, Optional
+import httpx
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Path
 from app.schemas.tickets import (
     TicketListFilters, TicketOut, TicketUpdate,
@@ -6,6 +8,15 @@ from app.schemas.tickets import (
     TicketEvent  # NUEVO
 )
 from app.services.tickets_service import TicketsService
+from app.core.supabase_client import reset_supabase_client
+
+# Intentar importar reset de deps también (por si TicketsService usa ese cliente)
+try:
+    from app.deps.supabase_client import reset_supabase_service_client
+except ImportError:
+    reset_supabase_service_client = None
+
+logger = logging.getLogger("app.routers.tickets")
 
 # Guardia ADMIN existente en el repo; si no coincide el path, ajusta import.
 try:
@@ -19,7 +30,15 @@ router = APIRouter(prefix="/tickets", tags=["tickets"])
 @router.get("", response_model=Dict[str, Any])
 def list_tickets(filters: TicketListFilters = Depends(), _=Depends(require_admin_user)):
     svc = TicketsService()
-    return svc.list_tickets(filters)
+    try:
+        return svc.list_tickets(filters)
+    except (httpx.RemoteProtocolError, httpx.ConnectError, ConnectionError) as e:
+        logger.warning("[TICKETS:list] Supabase link dropped (%s). Resetting client and retrying once.", e.__class__.__name__)
+        reset_supabase_client()  # Reset core client
+        if reset_supabase_service_client:
+            reset_supabase_service_client()  # Reset deps client si existe
+        svc = TicketsService()  # re-instancia para que tome cliente fresco
+        return svc.list_tickets(filters)
 
 @router.get("/{ticket_id}", response_model=TicketOut)
 def get_ticket(ticket_id: int = Path(..., ge=1), _=Depends(require_admin_user)):

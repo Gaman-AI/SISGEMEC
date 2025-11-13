@@ -53,16 +53,23 @@ export default function TiposServicioList() {
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
-    const res = await listTiposServicio({ page, pageSize, search, active });
-    if (res.error) {
-      setError(res.error.message || "Error al listar");
+    try {
+      const res = await listTiposServicio({ page, pageSize, search, active });
+      if (res.error) {
+        setError(res.error.message || "Error al listar");
+        setRows([]);
+        setCount(0);
+      } else {
+        setRows(res.data);
+        setCount(res.count);
+      }
+    } catch (e: any) {
+      setError(e?.message || "Error al listar");
       setRows([]);
       setCount(0);
-    } else {
-      setRows(res.data);
-      setCount(res.count);
+    } finally {
+      setLoading(false); // 🔑 garantizado
     }
-    setLoading(false);
   }, [page, pageSize, search, active]);
 
   React.useEffect(() => {

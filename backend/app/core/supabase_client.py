@@ -11,6 +11,19 @@ from app.core.env import load_env_if_needed
 logger = logging.getLogger("supabase")
 _client: Optional[Client] = None
 
+def _reset_client() -> None:
+    """Invalidar el cliente global para forzar su recreación en el siguiente uso."""
+    global _client
+    _client = None
+    try:
+        logger.warning("Supabase client invalidated; will be recreated on next request.")
+    except Exception:
+        pass
+
+def reset_supabase_client() -> None:
+    """Export público para que otros módulos puedan forzar el reset del cliente Supabase."""
+    _reset_client()
+
 def _read_envs() -> Dict[str, str]:
     load_env_if_needed()
     return {
