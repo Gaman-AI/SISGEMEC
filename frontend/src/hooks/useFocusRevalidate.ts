@@ -1,21 +1,18 @@
 import { useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 
 /**
- * Hook para revalidar sesión y datos al volver al foco de la ventana
- * Evita "zombie sessions" y datos obsoletos
+ * Hook para revalidar datos al volver al foco de la ventana
+ * 
+ * NOTA: Este hook NO debe usarse para manejar sesión de autenticación.
+ * La sesión se maneja automáticamente a través de AuthProvider y onAuthStateChange.
+ * Supabase tiene autoRefreshToken: true configurado, por lo que no es necesario
+ * llamar a refreshSession() manualmente.
+ * 
+ * Este hook solo ejecuta el callback de invalidación si se proporciona.
  */
 export function useFocusRevalidate(invalidate?: () => void) {
   useEffect(() => {
-    async function onFocus() {
-      try {
-        // Siempre intentar refrescar la sesión al volver al foco
-        await supabase.auth.refreshSession();
-      } catch (error) {
-        // Si falla el refresh, no hacer nada - el interceptor de API lo manejará
-        console.debug('[useFocusRevalidate] Session refresh failed:', error);
-      }
-      
+    function onFocus() {
       // Ejecutar callback de invalidación si se proporciona
       if (invalidate) {
         invalidate();

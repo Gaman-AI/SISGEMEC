@@ -22,23 +22,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
     (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !sessionData?.session) {
           if (mounted) setState({ status: "unauthenticated" });
           return;
         }
+        const session = sessionData.session;
         // Obtener perfil
         const userId = session.user.id;
-        const { data, error } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("user_id, full_name, email, role, active")
           .eq("user_id", userId)
           .maybeSingle();
-        if (error || !data) {
+        if (profileError || !profileData) {
           if (mounted) setState({ status: "unauthenticated" });
           return;
         }
-        const role = (data.role || "").toUpperCase();
+        const role = (profileData.role || "").toUpperCase();
         
         // Validar que solo ADMIN puede acceder al sistema
         if (role !== "ADMIN") {
@@ -49,14 +50,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         
         const profile: Profile = {
-          user_id: data.user_id,
-          full_name: data.full_name ?? null,
-          email: data.email ?? null,
+          user_id: profileData.user_id,
+          full_name: profileData.full_name ?? null,
+          email: profileData.email ?? null,
           role: role as UserRole,
-          active: !!data.active,
+          active: !!profileData.active,
         };
         if (mounted) setState({ status: "authenticated", profile });
-      } catch {
+      } catch (err: any) {
+        // Cualquier error (incluyendo timeout) debe resultar en unauthenticated
+        console.warn('[AuthProvider] Error en inicialización:', err?.message || err);
         if (mounted) setState({ status: "unauthenticated" });
       }
     })();
@@ -137,30 +140,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sub.subscription.unsubscribe();
     };
   }, []);
-
-  // Watchdog: Si el estado es "loading" por más de 10 segundos, forzar resolución
-  React.useEffect(() => {
-    if (state.status !== "loading") return;
-    
-    const timer = setTimeout(() => {
-      console.warn('[AuthProvider] Estado "loading" por más de 10s, verificando sesión...');
-      (async () => {
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session) {
-            setState({ status: "unauthenticated" });
-          }
-          // Si hay sesión, onAuthStateChange lo manejará
-        } catch (err) {
-          console.error('[AuthProvider] Error verificando sesión en watchdog:', err);
-          // En caso de error, mejor marcar como unauthenticated que quedarse en loading
-          setState({ status: "unauthenticated" });
-        }
-      })();
-    }, 10000); // 10 segundos
-    
-    return () => clearTimeout(timer);
-  }, [state.status]);
 
   async function signIn(email: string, password: string) {
     try {

@@ -7,44 +7,25 @@ const BASE_URL = (import.meta as any).env.VITE_BACKEND_URL ||
                  "http://localhost:8000";
 const supabaseClient = getSupabaseClient();
 
-// Manejo centralizado de refresh de sesión (evita múltiples refresh simultáneos)
-let _refreshing = false;
-let _waiters: Array<() => void> = [];
-
-async function refreshOnce(): Promise<boolean> {
-  if (_refreshing) {
-    await new Promise<void>((r) => _waiters.push(r));
-    return true; // otro proceso ya refrescó
-  }
-  _refreshing = true;
-  try {
-    const { error, data } = await supabase.auth.refreshSession();
-    return !error && !!data.session;
-  } finally {
-    _refreshing = false;
-    _waiters.forEach((r) => r());
-    _waiters = [];
-  }
-}
-
 async function withAuth(input: RequestInfo, init: RequestInit = {}): Promise<Response> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data } = await supabase.auth.getSession();
+  const session = data?.session;
   const headers = new Headers(init.headers || {});
   if (session?.access_token) headers.set('Authorization', `Bearer ${session.access_token}`);
   if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
   return fetch(input, { ...init, headers });
 }
 
-async function doRequest(url: string, init: RequestInit, attempt = 0): Promise<Response> {
+async function doRequest(url: string, init: RequestInit = {}): Promise<Response> {
   // Timeout suave 15s para evitar "pending" infinito
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 15000);
   try {
     const res = await withAuth(url, { ...init, signal: ctrl.signal });
     if (res.status !== 401) return res;
-    if (attempt === 0) {
-      const ok = await refreshOnce();
-      if (ok) return doRequest(url, init, 1); // reintento único
+    // Si hay 401, verificar si estamos en login antes de hacer signOut y redirigir
+    if (window.location.pathname === '/login') {
+      throw new Error('UNAUTHENTICATED');
     }
     await supabase.auth.signOut();
     window.location.href = '/login';
@@ -65,7 +46,7 @@ export const api = axios.create({
 api.interceptors.request.use(
   async (config) => {
     const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
+    const token = data?.session?.access_token;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -74,22 +55,18 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor de response (mejorado con manejo de 401)
+// Interceptor de response (simplificado: ante 401, signOut y redirigir, pero no si estamos en login)
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const status = error.response?.status;
     if (status === 401) {
-      const ok = await refreshOnce();
-      if (ok) {
-        // Retry la petición original con nuevo token
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          error.config.headers.Authorization = `Bearer ${session.access_token}`;
-          return api.request(error.config);
-        }
+      // Si hay 401, verificar si estamos en login antes de hacer signOut y redirigir
+      if (window.location.pathname === '/login') {
+        // Si ya estamos en login, solo rechazar la promesa sin hacer signOut ni redirect
+        return Promise.reject(error);
       }
-      // Si refresh falla, hacer signOut y redirigir
+      // Si NO estamos en login, hacer signOut y redirigir
       await supabase.auth.signOut();
       window.location.href = '/login';
     }
@@ -100,7 +77,7 @@ api.interceptors.response.use(
 
 async function authHeaders() {
   const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+  const token = data?.session?.access_token;
   const h: Record<string, string> = { "Content-Type": "application/json" };
   if (token) h.Authorization = `Bearer ${token}`;
   return h;
