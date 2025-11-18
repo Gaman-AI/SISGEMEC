@@ -97,8 +97,23 @@ function EstadoPill({ nombre }: { nombre: string | null }) {
   return <span className={classes}>{nombre || '-'}</span>;
 }
 
+// ID único de instancia para debugging
+let instanceIdCounter = 0;
+
 export default function EquiposList() {
   const nav = useNavigate();
+
+  // ID de esta instancia del componente
+  const instanceId = React.useRef(++instanceIdCounter).current;
+  const mountCount = React.useRef(0);
+
+  React.useEffect(() => {
+    mountCount.current++;
+    console.log('[EquiposList] Instancia#' + instanceId + ' montada (mount#' + mountCount.current + ')');
+    return () => {
+      console.log('[EquiposList] Instancia#' + instanceId + ' desmontada');
+    };
+  }, [instanceId]);
 
   // filtros
   const [q, setQ] = React.useState('');
@@ -116,6 +131,7 @@ export default function EquiposList() {
   const pageSize = 10;
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [reloadKey, setReloadKey] = React.useState(0);
 
   // cargar catálogos
   React.useEffect(() => {
@@ -126,51 +142,85 @@ export default function EquiposList() {
     })();
   }, []);
 
-  const load = React.useCallback(async (signal?: AbortSignal) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await listEquipos({
+  // ✅ Carga de equipos: useEffect directo sin useCallback
+  React.useEffect(() => {
+    let mounted = true;
+    const controller = new AbortController();
+    
+    console.log('[EquiposList] useEffect montado, disparando load()');
+    
+    (async () => {
+      console.log('[EquiposList:load] Iniciando carga de equipos...', {
+        estadoId,
+        responsableId: respId,
+        q,
         page,
-        pageSize,
-        search: q,
-        estado_equipo_id: estadoId === '' ? null : Number(estadoId),
-        responsable_id: respId === '' ? null : respId,
       });
-      if (signal?.aborted) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        console.log('[EquiposList:load] Llamando listEquipos()...');
+        const res = await listEquipos({
+          page,
+          pageSize,
+          search: q,
+          estado_equipo_id: estadoId === '' ? null : Number(estadoId),
+          responsable_id: respId === '' ? null : respId,
+        });
+        
+        // Verificar si fue abortado o desmontado antes de actualizar estado
+        if (controller.signal.aborted || !mounted) {
+          console.log('[EquiposList:load] Petición abortada o componente desmontado, ignorando resultado');
+          return;
+        }
 
-      if (res.error) {
-        setError(res.error.message || 'Error al listar equipos');
+        if (res.error) {
+          setError(res.error.message || 'Error al listar equipos');
+          setRows([]);
+          setCount(0);
+        } else {
+          console.log('[EquiposList:load] listEquipos() completado', {
+            count: res.count,
+            rowsLength: res.data?.length,
+          });
+          setRows((res.data as Row[]) || []);
+          setCount(res.count || 0);
+        }
+      } catch (e: any) {
+        // Solo manejar error si no fue abortado y el componente sigue montado
+        if (controller.signal.aborted || !mounted) {
+          console.log('[EquiposList:load] Error en petición abortada, ignorando');
+          return;
+        }
+        console.error('[EquiposList:load] Error en listEquipos():', e);
+        setError(e?.message || 'Error al listar equipos');
         setRows([]);
         setCount(0);
-      } else {
-        setRows((res.data as Row[]) || []);
-        setCount(res.count || 0);
+      } finally {
+        // ✅ SIEMPRE poner loading en false si el componente sigue montado
+        // Esto evita que loading quede atrapado en true aunque la petición haya sido abortada
+        if (mounted) {
+          console.log('[EquiposList:load] finally, setLoading(false)', {
+            aborted: controller.signal.aborted,
+          });
+          setLoading(false);
+        }
       }
-    } catch (e: any) {
-      if (signal?.aborted) return;
-      setError(e?.message || 'Error al listar equipos');
-      setRows([]);
-      setCount(0);
-    } finally {
-      if (!signal?.aborted) {
-        setLoading(false); // 🔑 nunca dejamos loading=true
-      }
-    }
-  }, [page, pageSize, q, estadoId, respId]);
+    })();
 
-  // ✅ wrapper sin argumentos para usar en onClick
+    return () => {
+      console.log('[EquiposList] useEffect cleanup, abortando controller');
+      mounted = false;
+      controller.abort();
+    };
+  }, [page, q, estadoId, respId, reloadKey]); // ✅ Dependencias directas, no de useCallback
+
+  // ✅ Función para recarga manual
   const loadNow = React.useCallback(() => {
-    const controller = new AbortController();
-    void load(controller.signal);
-    // No guardamos controller porque es una recarga puntual
-  }, [load]);
-
-  React.useEffect(() => {
-    const controller = new AbortController();
-    void load(controller.signal);
-    return () => controller.abort();
-  }, [load]);
+    setReloadKey((k) => k + 1);
+  }, []);
 
   const onDelete = async (id: number) => {
     if (!confirm('¿Eliminar este equipo?')) return;
@@ -179,7 +229,7 @@ export default function EquiposList() {
       alert(res.error.message || 'No se pudo eliminar');
       return;
     }
-    loadNow();
+    loadNow(); // Recarga usando reloadKey
   };
 
   const totalPages = Math.max(1, Math.ceil(count / pageSize));
@@ -190,6 +240,13 @@ export default function EquiposList() {
     setPage(1);
   };
   const hayFiltros = q || estadoId !== '' || respId;
+
+  // Log cuando se renderiza con loading
+  React.useEffect(() => {
+    if (loading) {
+      console.log('[EquiposList] Renderizando fila "Cargando…" porque loading === true');
+    }
+  }, [loading]);
 
   return (
     <div className="space-y-6">

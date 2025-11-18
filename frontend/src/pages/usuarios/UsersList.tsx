@@ -67,8 +67,23 @@ function FancySelect({ id, value, onChange, placeholder, icon, children }: Fancy
   );
 }
 
+// ID único de instancia para debugging
+let instanceIdCounter = 0;
+
 export default function UsersList() {
   const location = useLocation();
+
+  // ID de esta instancia del componente
+  const instanceId = React.useRef(++instanceIdCounter).current;
+  const mountCount = React.useRef(0);
+
+  React.useEffect(() => {
+    mountCount.current++;
+    console.log('[UsersList] Instancia#' + instanceId + ' montada (mount#' + mountCount.current + ')');
+    return () => {
+      console.log('[UsersList] Instancia#' + instanceId + ' desmontada');
+    };
+  }, [instanceId]);
   
   // filtros
   const [search, setSearch] = React.useState('');
@@ -83,79 +98,76 @@ export default function UsersList() {
   const pageSize = 10;
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [reloadKey, setReloadKey] = React.useState(0);
 
   const totalPages = Math.max(1, Math.ceil(count / pageSize));
 
-  // Función para cargar todos los usuarios usando el endpoint del backend
-  const loadAllUsers = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getUsers();
-      setRows(data);
-      setCount(data.length);
-    } catch (e: any) {
-      setError(e?.message || 'Error al cargar usuarios');
-      setRows([]);
-      setCount(0);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // ✅ Carga de usuarios: useEffect directo sin useCallback
+  React.useEffect(() => {
+    let mounted = true;
+    const controller = new AbortController();
+    
+    (async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const res = await listUsers({
+          page,
+          pageSize,
+          search,
+          role,
+          active,
+          department,
+        });
+        
+        // Verificar si fue abortado o desmontado antes de actualizar estado
+        if (controller.signal.aborted || !mounted) {
+          return;
+        }
 
-  const load = React.useCallback(async (signal?: AbortSignal) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await listUsers({
-        page,
-        pageSize,
-        search,
-        role,
-        active,
-        department,
-      });
-      if (signal?.aborted) return;
-
-      if (res.error) {
-        setError(res.error.message || 'Error al listar usuarios');
+        if (res.error) {
+          setError(res.error.message || 'Error al listar usuarios');
+          setRows([]);
+          setCount(0);
+        } else {
+          setRows(res.data);
+          setCount(res.count);
+        }
+      } catch (e: any) {
+        // Solo manejar error si no fue abortado y el componente sigue montado
+        if (controller.signal.aborted || !mounted) {
+          return;
+        }
+        setError(e?.message || 'Error al listar usuarios');
         setRows([]);
         setCount(0);
-      } else {
-        setRows(res.data);
-        setCount(res.count);
+      } finally {
+        // ✅ SIEMPRE poner loading en false si el componente sigue montado
+        if (mounted) {
+          setLoading(false);
+        }
       }
-    } catch (e: any) {
-      if (signal?.aborted) return;
-      setError(e?.message || 'Error al listar usuarios');
-      setRows([]);
-      setCount(0);
-    } finally {
-      if (!signal?.aborted) {
-        setLoading(false); // 🔑 garantizado
-      }
-    }
-  }, [page, pageSize, search, role, active, department]);
+    })();
 
-  // wrapper sin argumentos para usar en onClick
-  const loadNow = React.useCallback(() => {
-    const controller = new AbortController();
-    void load(controller.signal);
-    // No guardamos controller porque es una recarga puntual
-  }, [load]);
+    return () => {
+      mounted = false;
+      controller.abort();
+    };
+  }, [page, pageSize, search, role, active, department, reloadKey]); // ✅ Dependencias directas, no de useCallback
 
-  React.useEffect(() => {
-    const controller = new AbortController();
-    void load(controller.signal);
-    return () => controller.abort();
-  }, [load]);
+  // ✅ Función para recarga manual
+  const reload = React.useCallback(() => {
+    setReloadKey((k) => k + 1);
+  }, []);
 
   // Refetch cuando se regresa desde la creación de usuarios
   React.useEffect(() => {
     if (location.state?.refreshUsers) {
-      loadAllUsers();
+      // Usar reloadKey para forzar recarga
+      setReloadKey((k) => k + 1);
     }
-  }, [location.state, loadAllUsers]);
+  }, [location.state]);
 
   const onToggleActive = async (u: UserRow) => {
     const ok = await ConfirmDialog({
@@ -167,7 +179,7 @@ export default function UsersList() {
     if (!ok) return;
     try {
       await toggleUserActive(u.user_id, !u.active);
-      loadNow();
+      reload(); // Usar reloadKey para recargar
     } catch (e: any) {
       alert(e?.message ?? 'No se pudo actualizar el estado');
     }
@@ -449,7 +461,7 @@ export default function UsersList() {
             variant="outline"
             size="sm"
             className="rounded-lg"
-            onClick={loadNow}
+            onClick={reload}
           >
             Refrescar
           </Button>

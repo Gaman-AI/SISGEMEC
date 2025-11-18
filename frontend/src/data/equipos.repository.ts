@@ -87,11 +87,26 @@ export async function listEquipos(args: ListArgs = {}) {
 
   query = query.range(from, to);
 
+  console.log('[listEquipos] Ejecutando query a Supabase con filtros:', {
+    page,
+    size: pageSize,
+    estadoId: args.estado_equipo_id,
+    responsableId: args.responsable_id,
+    q: args.search,
+  });
   const { data, error, count } = await query;
+  console.log('[listEquipos] Query completada', {
+    hasData: !!data,
+    dataLength: data?.length,
+    count,
+    error: error?.message ?? null,
+  });
   if (error) return { data: [], count: 0, error };
 
   // enriquecer con nombres (sin joins)
+  console.log('[listEquipos] Enriqueciendo resultados con estados y responsables...');
   const [estadosRes, respRes] = await Promise.all([listEstados(), listResponsables()]);
+  console.log('[listEquipos] Enriquecimiento completado');
   const estadosMap = new Map(estadosRes.data.map((e: any) => [e.id, e.nombre]));
   const respMap = new Map(respRes.data.map((r: any) => [r.user_id, r.full_name]));
 

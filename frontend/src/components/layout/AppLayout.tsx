@@ -4,9 +4,19 @@ import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/hooks/useSidebar";
+import { useAuth } from "@/auth/auth.store";
 
-export default function AppLayout() {
+// Contador de renders para debugging
+let renderCount = 0;
+
+function AppLayout() {
   const { collapsed } = useSidebar();
+  const { state } = useAuth();
+
+  // Log de renders para confirmar que se redujo la frecuencia
+  React.useEffect(() => {
+    console.log('[AppLayout] Render #' + (++renderCount) + ', auth.status =', state.status);
+  });
 
   return (
     <div className="flex">
@@ -22,4 +32,12 @@ export default function AppLayout() {
     </div>
   );
 }
+
+// ✅ Memorizar AppLayout para evitar re-renders innecesarios
+// Solo re-renderizar si collapsed cambia (sidebar) o si auth.status cambia
+export default React.memo(AppLayout, (prevProps, nextProps) => {
+  // AppLayout no recibe props, así que siempre es "igual"
+  // Dejamos que los hooks internos manejen sus propios cambios
+  return true; // No re-renderizar por cambios de props (no hay props)
+});
 

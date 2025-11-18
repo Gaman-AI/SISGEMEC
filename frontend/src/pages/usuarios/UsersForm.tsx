@@ -142,24 +142,35 @@ export default function UsersForm() {
 
   // Cargar datos en edición (hidratar el form de una sola vez)
   React.useEffect(() => {
+    let mounted = true;
+
     (async () => {
       if (!isEdit || !userId) {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
         return;
       }
 
       if (hydratedRef.current === userId) {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
         return; // ya hidratado
       }
 
+      setLoading(true);
+
       try {
         const { data, error } = await getUserById(userId);
+        
+        if (!mounted) return;
+
         if (error) {
           show(error.message || 'No se pudo cargar el usuario', 'error');
-          setLoading(false);
           return;
         }
+        
         if (data) {
           // Mapeo estricto para tipos correctos del form
           const mapped: FormInput = {
@@ -176,13 +187,23 @@ export default function UsersForm() {
           hydratedRef.current = userId;
         }
       } catch (e: any) {
+        if (!mounted) return;
+        console.error('[UsersForm:load] Error:', e);
         show(e?.message || 'Error al cargar el usuario', 'error');
       } finally {
-        setLoading(false);
+        // ✅ SIEMPRE poner loading en false si el componente sigue montado
+        if (mounted) {
+          setLoading(false);
+        }
       }
     })();
+
+    return () => {
+      mounted = false;
+    };
     // OJO: no metemos `show` en deps para evitar re-ejecuciones inestables
-  }, [isEdit, userId, reset, show]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit, userId, reset]);
 
   const onSubmit: SubmitHandler<FormInput> = async (values) => {
     // Prevenir doble submit

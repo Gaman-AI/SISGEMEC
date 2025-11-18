@@ -163,53 +163,77 @@ export default function EquiposForm() {
   const hydratedRef = React.useRef<number | null>(null); // guarda el id ya hidratado
 
   React.useEffect(() => {
+    let mounted = true;
+
     (async () => {
       if (!isEdit) {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
         hydratedRef.current = null;
         return;
       }
 
       // Evita rehidratar repetidamente el mismo id
       if (hydratedRef.current === equipoId) {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
         return;
       }
 
       setLoading(true);
-      const { data, error } = await getEquipoById(equipoId!);
-      if (error) {
-        setLoading(false);
-        show(error.message || 'No se pudo cargar el equipo', 'error');
-        return;
-      }
-      if (data) {
-        const mapped: EquipoFormValues = {
-          tipo_equipo: data.tipo_equipo ?? '',
-          marca: data.marca ?? '',
-          modelo: data.modelo ?? '',
-          num_serie: data.num_serie ?? '',
-          procesador: data.procesador ?? '',
-          ram: data.ram ?? '',
-          disco: data.disco ?? '',
-          sistema_operativo: data.sistema_operativo ?? '',
-          ubicacion_actual: data.ubicacion_actual ?? '',
-          estado_equipo_id:
-            data.estado_equipo_id == null ? undefined : Number(data.estado_equipo_id),
-          responsable_id:
-            data.responsable_id == null || data.responsable_id === ''
-              ? undefined
-              : String(data.responsable_id),
-          fecha_ingreso: toDateInput(data.fecha_ingreso),
-          fecha_salida: toDateInput(data.fecha_salida),
-          observaciones: data.observaciones ?? '',
-        };
+      
+      try {
+        const { data, error } = await getEquipoById(equipoId!);
+        
+        if (!mounted) return;
 
-        reset(mapped);                 // <- hidrata una sola vez
-        hydratedRef.current = equipoId!;
+        if (error) {
+          show(error.message || 'No se pudo cargar el equipo', 'error');
+          return;
+        }
+        
+        if (data) {
+          const mapped: EquipoFormValues = {
+            tipo_equipo: data.tipo_equipo ?? '',
+            marca: data.marca ?? '',
+            modelo: data.modelo ?? '',
+            num_serie: data.num_serie ?? '',
+            procesador: data.procesador ?? '',
+            ram: data.ram ?? '',
+            disco: data.disco ?? '',
+            sistema_operativo: data.sistema_operativo ?? '',
+            ubicacion_actual: data.ubicacion_actual ?? '',
+            estado_equipo_id:
+              data.estado_equipo_id == null ? undefined : Number(data.estado_equipo_id),
+            responsable_id:
+              data.responsable_id == null || data.responsable_id === ''
+                ? undefined
+                : String(data.responsable_id),
+            fecha_ingreso: toDateInput(data.fecha_ingreso),
+            fecha_salida: toDateInput(data.fecha_salida),
+            observaciones: data.observaciones ?? '',
+          };
+
+          reset(mapped);                 // <- hidrata una sola vez
+          hydratedRef.current = equipoId!;
+        }
+      } catch (e: any) {
+        if (!mounted) return;
+        console.error('[EquiposForm:load] Error:', e);
+        show(e?.message || 'Error al cargar el equipo', 'error');
+      } finally {
+        // ✅ SIEMPRE poner loading en false si el componente sigue montado
+        if (mounted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     })();
+
+    return () => {
+      mounted = false;
+    };
     // OJO: NO incluir `show` aquí; puede ser inestable y re-disparar el efecto.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEdit, equipoId, reset]); // deps mínimas y seguras
