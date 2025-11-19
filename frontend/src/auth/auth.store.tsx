@@ -33,6 +33,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   console.log('[AuthProvider:render] Render inicial de AuthProvider (estado local aún no inicializado completamente)');
   // 🔬 EXPERIMENTO A2: Referencia para rastrear si ya procesamos el primer SIGNED_IN
   const hasHandledInitialSignInRef = React.useRef(false);
+  // 🔬 Control de hidratación inicial: getSession() es la fuente de verdad al recargar.
+  // Este flag evita que eventos de auth automáticos (SIGNED_IN/INITIAL_SESSION) que llegan
+  // al montar compitan con getSession(), eliminando la condición de carrera en reload.
+  const isHydratedRef = React.useRef(false);
   const [state, setState] = React.useState<AuthState>({ status: "loading" });
 
   React.useEffect(() => {
@@ -57,6 +61,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             reason: 'no-session-or-error',
           });
           if (mounted) setState({ status: "unauthenticated" });
+          isHydratedRef.current = true;
+          console.log('[AuthProvider:init] Hidratación inicial completada, isHydratedRef =', isHydratedRef.current);
           return;
         }
         const session = sessionData.session;
@@ -83,6 +89,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             reason: 'no-profile-or-error',
           });
           if (mounted) setState({ status: "unauthenticated" });
+          isHydratedRef.current = true;
+          console.log('[AuthProvider:init] Hidratación inicial completada, isHydratedRef =', isHydratedRef.current);
           return;
         }
         const role = (profileData.role || "").toUpperCase();
@@ -95,6 +103,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
           await supabase.auth.signOut();
           if (mounted) setState({ status: "unauthenticated" });
+          isHydratedRef.current = true;
+          console.log('[AuthProvider:init] Hidratación inicial completada, isHydratedRef =', isHydratedRef.current);
           return;
         }
         
@@ -109,11 +119,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('[AuthProvider:init] setState({ status: "authenticated" })');
         if (mounted) setState({ status: "authenticated", profile });
         console.log('[AuthProvider:init] DESPUÉS de setState(authenticated) DESDE getSession()');
+        isHydratedRef.current = true;
+        console.log('[AuthProvider:init] Hidratación inicial completada, isHydratedRef =', isHydratedRef.current);
       } catch (err: any) {
         // Cualquier error (incluyendo timeout) debe resultar en unauthenticated
         console.error('[AuthProvider:init] Error no capturado en init:', err);
         console.warn('[AuthProvider] Error en inicialización:', err?.message || err);
         if (mounted) setState({ status: "unauthenticated" });
+        isHydratedRef.current = true;
+        console.log('[AuthProvider:init] Hidratación inicial completada (con error), isHydratedRef =', isHydratedRef.current);
       }
     })();
 
@@ -137,11 +151,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         if (!mounted) return; // Evitar setState después de unmount
         
-        if (event === 'INITIAL_SESSION') {
-          console.log('[AuthProvider:onAuthStateChange] ⚠️ Evento INITIAL_SESSION detectado (recarga de página / sesión previa)', {
+        // 🔬 Control de hidratación: Si todavía no hemos completado la hidratación inicial
+        // con getSession(), ignoramos los eventos automáticos de auth (INITIAL_SESSION o SIGNED_IN)
+        // que pueden llegar justo al montar, para evitar condiciones de carrera.
+        if (!isHydratedRef.current && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+          console.log('[AuthProvider:onAuthStateChange] Ignorando evento de auth antes de hidratación inicial (getSession es la fuente de verdad).', {
+            event,
             hasSession: !!session,
-            mounted,
+            isHydratedRef: isHydratedRef.current,
           });
+          return;
         }
         
         // 🔬 EXPERIMENTO A2: Filtrar SIGNED_IN duplicados

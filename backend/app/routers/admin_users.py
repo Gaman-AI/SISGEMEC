@@ -272,11 +272,15 @@ def _upsert_profile_simple(supabase, user_id: str, full_name: Optional[str], rol
 
 def _upsert_profile(supabase, user_id: str, payload: Any) -> dict:
     """UPSERT en profiles por user_id. Evita el 23505."""
+    # Normalizar el rol para asegurar consistencia con la BD
+    role_raw = getattr(payload, "role", None)
+    role_canonical = _normalize_role(role_raw) if role_raw else None
+    
     profile_data = {
         "user_id": user_id,
         "full_name": getattr(payload, "full_name", None),
         "email": getattr(payload, "email", None),
-        "role": getattr(payload, "role", None),
+        "role": role_canonical,
         "department": getattr(payload, "department", None),
         "phone": getattr(payload, "phone", None),
         "location": getattr(payload, "location", None),
@@ -297,7 +301,7 @@ def _upsert_profile(supabase, user_id: str, payload: Any) -> dict:
             return {"ok": True, "profile": None, "note": "duplicate ignored via idempotency"}
         raise
 
-def _ensure_user_and_profile(supabase, email: str, password: Optional[str], full_name: Optional[str], role_canonical: str) -> tuple[str, bool]:
+def _ensure_user_and_profile(supabase, email: str, password: Optional[str], full_name: Optional[str], role_canonical: str, profile_payload: Optional[Any] = None) -> tuple[str, bool]:
     """
     Orquesta todo el flujo con reintentos a nivel transacción completa:
     - Intenta encontrar; si no existe, crea.
@@ -305,6 +309,12 @@ def _ensure_user_and_profile(supabase, email: str, password: Optional[str], full
     - Upsert profile.
     Devuelve (user_id, created).
     Lanza HTTPException con mensajes claros si falla.
+    
+    Args:
+        profile_payload: Payload completo del usuario (opcional). Si se proporciona,
+                         se usa _upsert_profile para persistir todos los campos
+                         (department, phone, location, active, etc.).
+                         Si es None, se usa _upsert_profile_simple (compatibilidad hacia atrás).
     """
     max_attempts = 3
     for attempt in range(1, max_attempts + 1):
@@ -342,7 +352,13 @@ def _ensure_user_and_profile(supabase, email: str, password: Optional[str], full
 
             # 3) pequeña espera y upsert con reintento local si hay borde de consistencia
             time.sleep(0.05 * attempt)
-            _upsert_profile_simple(supabase, user_id, full_name, role_canonical, email)
+            
+            if profile_payload is not None:
+                # Usa la versión completa que respeta department/phone/location/active
+                _upsert_profile(supabase, user_id, profile_payload)
+            else:
+                # Compatibilidad hacia atrás: conserva el comportamiento anterior
+                _upsert_profile_simple(supabase, user_id, full_name, role_canonical, email)
 
             return user_id, created
 
@@ -386,6 +402,7 @@ def create_user(payload: UserCreateRequest):
         password=password,
         full_name=full_name,
         role_canonical=role_canonical,
+        profile_payload=payload,
     )
 
     resp = {
