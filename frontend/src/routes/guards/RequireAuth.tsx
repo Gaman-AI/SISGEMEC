@@ -9,6 +9,7 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   console.log('[RequireAuth] Renderizando con state.status =', state.status);
 
   if (state.status === "loading") {
+    console.log('[RequireAuth] Bloqueando acceso porque state.status === "loading" (recarga o auth pendiente)');
     console.warn('[RequireAuth] Mostrando "Cargando..." porque state.status === "loading"');
     return <div className="p-4 text-sm text-slate-600">Cargando...</div>;
   }

@@ -30,16 +30,24 @@ let authSubscriptionCounter = 0;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   console.log('[EXPERIMENTO C] 🔁 Render de AuthProvider');
+  console.log('[AuthProvider:render] Render inicial de AuthProvider (estado local aún no inicializado completamente)');
   // 🔬 EXPERIMENTO A2: Referencia para rastrear si ya procesamos el primer SIGNED_IN
   const hasHandledInitialSignInRef = React.useRef(false);
   const [state, setState] = React.useState<AuthState>({ status: "loading" });
 
   React.useEffect(() => {
+    console.log('[AuthProvider:useEffect] Iniciando efecto de auth, timestamp =', Date.now());
     let mounted = true;
     (async () => {
       try {
+        console.log('[AuthProvider:init] getSession() INICIADO, timestamp =', Date.now());
         console.log('[AuthProvider:init] Iniciando getSession()...');
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        console.log('[AuthProvider:init] getSession() COMPLETADO', {
+          hasSession: !!sessionData?.session,
+          error: sessionError,
+          mounted,
+        });
         console.log('[AuthProvider:init] getSession() completado', {
           hasSession: !!sessionData?.session,
           error: sessionError?.message ?? null,
@@ -54,12 +62,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const session = sessionData.session;
         // Obtener perfil
         const userId = session.user.id;
+        console.log('[AuthProvider:init] Consultando profiles DESDE getSession() para user_id =', userId, 'mounted =', mounted);
         console.log('[AuthProvider:init] Consultando profiles para user_id =', userId);
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("user_id, full_name, email, role, active")
           .eq("user_id", userId)
           .maybeSingle();
+        console.log('[AuthProvider:init] Profiles DESDE getSession() completado', {
+          hasProfile: !!profileData,
+          error: profileError,
+          mounted,
+        });
         console.log('[AuthProvider:init] Profiles query completado', {
           hasProfile: !!profileData,
           error: profileError?.message ?? null,
@@ -91,8 +105,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: role as UserRole,
           active: !!profileData.active,
         };
+        console.log('[AuthProvider:init] ANTES de setState(authenticated) DESDE getSession(), mounted =', mounted);
         console.log('[AuthProvider:init] setState({ status: "authenticated" })');
         if (mounted) setState({ status: "authenticated", profile });
+        console.log('[AuthProvider:init] DESPUÉS de setState(authenticated) DESDE getSession()');
       } catch (err: any) {
         // Cualquier error (incluyendo timeout) debe resultar en unauthenticated
         console.error('[AuthProvider:init] Error no capturado en init:', err);
@@ -109,11 +125,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
       try {
+        console.log('[AuthProvider:onAuthStateChange] Evento recibido =', event, {
+          hasSession: !!session,
+          mounted,
+          currentStatus: state.status,
+          timestamp: Date.now(),
+        });
         console.log('[EXPERIMENTO C] 📩 Suscripción #' + subscriptionId + ' recibió evento:', event, 'hasSession =', !!session);
         console.log('[AuthProvider:onAuthStateChange] Evento:', event, {
           hasSession: !!session,
         });
         if (!mounted) return; // Evitar setState después de unmount
+        
+        if (event === 'INITIAL_SESSION') {
+          console.log('[AuthProvider:onAuthStateChange] ⚠️ Evento INITIAL_SESSION detectado (recarga de página / sesión previa)', {
+            hasSession: !!session,
+            mounted,
+          });
+        }
         
         // 🔬 EXPERIMENTO A2: Filtrar SIGNED_IN duplicados
         if (event === 'SIGNED_IN') {
@@ -163,6 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const userId = session.user.id;
+        console.log('[AuthProvider:onAuthStateChange] Consultando profiles DESDE onAuthStateChange para user_id =', userId, 'event =', event, 'mounted =', mounted);
         console.log('[AuthProvider:onAuthStateChange] Consultando profiles en onAuthStateChange para user_id =', userId);
         const { data, error } = await supabase
           .from("profiles")
@@ -170,6 +200,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq("user_id", userId)
           .maybeSingle();
         
+        console.log('[AuthProvider:onAuthStateChange] Profiles DESDE onAuthStateChange completado', {
+          hasProfile: !!data,
+          error,
+          mounted,
+          event,
+        });
         console.log('[AuthProvider:onAuthStateChange] Profiles query completado en onAuthStateChange', {
           hasProfile: !!data,
           error: error?.message ?? null,
@@ -237,6 +273,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
 
         setState(prev => {
+          console.log('[AuthProvider:onAuthStateChange] ANTES de setState(authenticated) DESDE onAuthStateChange', {
+            prevStatus: prev.status,
+            prevUser: prev.status === 'authenticated' ? prev.profile?.user_id : null,
+            nextUser: nextProfile?.user_id,
+            event,
+          });
           // ✅ CRÍTICO: Comparar valores y REUSAR objeto anterior si son iguales
           const sameStatus = prev.status === "authenticated";
           const sameUser = prev.status === "authenticated" && 
@@ -247,6 +289,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             prev.profile.role === nextProfile.role;
 
           if (sameStatus && sameUser && sameRole) {
+            console.log('[AuthProvider:onAuthStateChange] Perfil sin cambios, REUSANDO estado anterior (state#' + getStateId(prev) + ') desde evento =', event);
             console.log('[AuthProvider:onAuthStateChange] ✅ Perfil sin cambios, REUSANDO objeto anterior (state#' + getStateId(prev) + ')');
             return prev; // ✅ MISMO objeto, NO crear uno nuevo
           }
@@ -255,10 +298,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             status: "authenticated" as const,
             profile: nextProfile,
           };
+          console.log('[AuthProvider:onAuthStateChange] Perfil CAMBIÓ, creando nuevo estado (state#' + getStateId(newState) + ') desde evento =', event);
           console.log('[AuthProvider:onAuthStateChange] ✅ Perfil cambió, creando NUEVO state (state#' + getStateId(newState) + ')');
           return newState;
         });
+        console.log('[AuthProvider:onAuthStateChange] DESPUÉS de setState(authenticated) DESDE onAuthStateChange, evento =', event);
       } catch (err) {
+        console.error('[AuthProvider:onAuthStateChange] ERROR en handler', {
+          error: err,
+          event,
+          hasSession: !!session,
+          mounted,
+        });
         console.error('[AuthProvider:onAuthStateChange] Error no capturado:', err);
         // Si no hay sesión, marcar unauthenticated
         if (!session) {
@@ -287,6 +338,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
+      console.log('[AuthProvider:useEffect] Cleanup ejecutado, mounted =', mounted);
       console.log('[EXPERIMENTO C] 🧹 Cleanup de suscripción #' + subscriptionId + ' en AuthProvider');
       mounted = false;
       sub.subscription.unsubscribe();
