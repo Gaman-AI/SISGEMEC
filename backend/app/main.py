@@ -99,11 +99,14 @@ FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173").rstrip("
 # Puertos usados durante desarrollo:
 # - 5173 → Vite Dev
 # - 4173 → Vite Preview
+# - 8080 → Frontend en Docker local
 allow_origins = [
     FRONTEND_ORIGIN,
     "http://127.0.0.1:5173",
     "http://localhost:4173",     # Preview
-    "http://127.0.0.1:4173"      # Variante 127.0.0.1
+    "http://127.0.0.1:4173",      # Variante 127.0.0.1
+    "http://localhost:8080",      # Frontend en Docker local
+    "http://127.0.0.1:8080"       # Variante 127.0.0.1
 ]
 
 # 1) CORSMiddleware oficial (único y al inicio)

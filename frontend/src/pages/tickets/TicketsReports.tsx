@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { apiGet } from '@/services/api';
 
 export default function TicketsReports() {
   const [dateFrom, setDateFrom] = React.useState('');
@@ -13,12 +14,11 @@ export default function TicketsReports() {
   const fetchMetrics = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (dateFrom) params.append('date_from', dateFrom);
-      if (dateTo) params.append('date_to', dateTo);
+      const params: Record<string, string> = {};
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
       
-      const res = await fetch(`/api/tickets/reports?${params}`);
-      const data = await res.json();
+      const data = await apiGet('/tickets/reports', { params });
       setMetrics(data);
     } catch (e) {
       console.error(e);
