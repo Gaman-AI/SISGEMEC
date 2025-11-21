@@ -75,145 +75,235 @@ export default function Sidebar() {
     <aside
       className={cn(
         // fondo corporativo
-        "h-dvh border-r bg-[#208692] text-white",
+        "flex flex-col h-dvh border-r border-[#164F5B]/30 bg-[#208692] text-white",
         collapsed ? "w-[80px]" : "w-64",
         "transition-[width] duration-200 ease-in-out sticky top-0"
       )}
     >
-      <div className="flex h-14 items-center justify-between px-3">
+      <div className={cn(
+        "flex items-center h-14",
+        collapsed ? "justify-center px-2" : "justify-between px-4"
+      )}>
         <Brand compact={collapsed} />
-        <Button variant="ghost" size="icon" onClick={toggle} aria-label={collapsed ? "Expandir sidebar" : "Colapsar sidebar"}>
-          {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={toggle} 
+          aria-label={collapsed ? "Expandir sidebar" : "Colapsar sidebar"}
+          className={cn(
+            "h-9 w-9 rounded-full text-white hover:bg-white/15 transition-all duration-200",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#208692]",
+            !collapsed && "ml-auto"
+          )}
+        >
+          <ChevronsLeft className={cn(
+            "h-4 w-4 transition-transform duration-200",
+            collapsed && "rotate-180"
+          )} />
         </Button>
       </div>
 
-      <Separator />
+      <Separator className="bg-white/20" />
 
       <TooltipProvider delayDuration={100}>
-        <nav className="mt-2 px-2 space-y-1">
-          {navItems.map(({ label, to, icon: Icon }) => {
-            const item = (
-              <NavLink
-                key={to}
-                to={to}
-                onClick={handleNavClick}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white",
-                    "hover:bg-white/20 hover:text-white transition-colors",
-                    isActive && "bg-white/20 text-white"
-                  )
-                }
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className={cn("truncate", collapsed && "sr-only")}>{label}</span>
-              </NavLink>
-            );
-            return collapsed ? (
-              <Tooltip key={to}>
-                <TooltipTrigger asChild>{item}</TooltipTrigger>
-                <TooltipContent side="right">{label}</TooltipContent>
-              </Tooltip>
-            ) : (
-              item
-            );
-          })}
+        <nav className={cn(
+          "flex-1 overflow-y-auto flex flex-col",
+          collapsed ? "px-2 py-3 gap-1" : "px-3 py-4 space-y-2"
+        )}>
+          <div className={cn("space-y-1")}>
+            {navItems.map(({ label, to, icon: Icon }) => {
+              const item = (
+                <NavLink
+                  key={to}
+                  to={to}
+                  onClick={handleNavClick}
+                  aria-label={collapsed ? label : undefined}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center rounded-xl transition-colors duration-200 cursor-pointer",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#208692]",
+                      collapsed 
+                        ? "px-2 py-2.5 justify-center gap-0" 
+                        : "px-4 py-2.5 gap-3",
+                      !isActive && "text-white/90",
+                      isActive && "text-white",
+                      collapsed
+                        ? isActive 
+                          ? "bg-white/25" 
+                          : "hover:bg-white/15"
+                        : isActive
+                          ? "bg-white/25 relative before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[3px] before:rounded-full before:bg-white/60"
+                          : "hover:bg-white/15"
+                    )
+                  }
+                >
+                  <Icon className={cn(
+                    "h-5 w-5 shrink-0",
+                    collapsed && "mx-auto"
+                  )} />
+                  {!collapsed && (
+                    <span className="text-sm font-semibold truncate">{label}</span>
+                  )}
+                </NavLink>
+              );
+              return collapsed ? (
+                <Tooltip key={to}>
+                  <TooltipTrigger asChild>{item}</TooltipTrigger>
+                  <TooltipContent side="right">{label}</TooltipContent>
+                </Tooltip>
+              ) : (
+                item
+              );
+            })}
+          </div>
           
           {/* Licencias condicionales por feature flag */}
           {ffOn && isAuthenticated(state) && state.profile.role === 'ADMIN' && (
-            <>
-              <NavLink
-                to="/licenses"
-                onClick={handleNavClick}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white",
-                    "hover:bg-white/20 hover:text-white transition-colors",
-                    isActive && "bg-white/20 text-white"
-                  )
-                }
-              >
-                <FileText className="h-4 w-4 shrink-0" />
-                <span className={cn("truncate", collapsed && "sr-only")}>Licencias</span>
-              </NavLink>
-              <div className={cn("ml-4 space-y-1", collapsed && "hidden")}>
-                <NavLink
-                  to="/licenses/vendors"
-                  onClick={handleNavClick}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white/80",
-                      "hover:bg-white/10 hover:text-white transition-colors",
-                      isActive && "bg-white/10 text-white"
-                    )
-                  }
-                >
-                  <span className="text-xs">•</span>
-                  <span className="truncate">Proveedores</span>
-                </NavLink>
-                <NavLink
-                  to="/licenses/products"
-                  onClick={handleNavClick}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white/80",
-                      "hover:bg-white/10 hover:text-white transition-colors",
-                      isActive && "bg-white/10 text-white"
-                    )
-                  }
-                >
-                  <span className="text-xs">•</span>
-                  <span className="truncate">Productos</span>
-                </NavLink>
-                <NavLink
-                  to="/licenses/plans"
-                  onClick={handleNavClick}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white/80",
-                      "hover:bg-white/10 hover:text-white transition-colors",
-                      isActive && "bg-white/10 text-white"
-                    )
-                  }
-                >
-                  <span className="text-xs">•</span>
-                  <span className="truncate">Planes</span>
-                </NavLink>
-                <NavLink
-                  to="/licenses/assignments"
-                  onClick={handleNavClick}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white/80",
-                      "hover:bg-white/10 hover:text-white transition-colors",
-                      isActive && "bg-white/10 text-white"
-                    )
-                  }
-                >
-                  <span className="text-xs">•</span>
-                  <span className="truncate">Asignaciones</span>
-                </NavLink>
-              </div>
-            </>
+            <div className="space-y-1">
+              {(() => {
+                const licensesItem = (
+                  <NavLink
+                    to="/licenses"
+                    onClick={handleNavClick}
+                    aria-label={collapsed ? "Licencias" : undefined}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center rounded-xl transition-colors duration-200 cursor-pointer",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#208692]",
+                        collapsed 
+                          ? "px-2 py-2.5 justify-center gap-0" 
+                          : "px-4 py-2.5 gap-3",
+                        !isActive && "text-white/90",
+                        isActive && "text-white",
+                        collapsed
+                          ? isActive 
+                            ? "bg-white/25" 
+                            : "hover:bg-white/15"
+                          : isActive
+                            ? "bg-white/25 relative before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[3px] before:rounded-full before:bg-white/60"
+                            : "hover:bg-white/15"
+                      )
+                    }
+                  >
+                    <FileText className={cn(
+                      "h-5 w-5 shrink-0",
+                      collapsed && "mx-auto"
+                    )} />
+                    {!collapsed && (
+                      <span className="text-sm font-semibold truncate">Licencias</span>
+                    )}
+                  </NavLink>
+                );
+                return collapsed ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>{licensesItem}</TooltipTrigger>
+                    <TooltipContent side="right">Licencias</TooltipContent>
+                  </Tooltip>
+                ) : licensesItem;
+              })()}
+              {!collapsed && (
+                <div className="ml-4 space-y-1">
+                  <NavLink
+                    to="/licenses/vendors"
+                    onClick={handleNavClick}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium transition-colors duration-200 cursor-pointer",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#208692]",
+                        !isActive && "text-white/90",
+                        isActive ? "bg-white/15 text-white" : "hover:bg-white/10 hover:text-white"
+                      )
+                    }
+                  >
+                    <span className="text-xs">•</span>
+                    <span className="truncate">Proveedores</span>
+                  </NavLink>
+                  <NavLink
+                    to="/licenses/products"
+                    onClick={handleNavClick}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium transition-colors duration-200 cursor-pointer",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#208692]",
+                        !isActive && "text-white/90",
+                        isActive ? "bg-white/15 text-white" : "hover:bg-white/10 hover:text-white"
+                      )
+                    }
+                  >
+                    <span className="text-xs">•</span>
+                    <span className="truncate">Productos</span>
+                  </NavLink>
+                  <NavLink
+                    to="/licenses/plans"
+                    onClick={handleNavClick}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium transition-colors duration-200 cursor-pointer",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#208692]",
+                        !isActive && "text-white/90",
+                        isActive ? "bg-white/15 text-white" : "hover:bg-white/10 hover:text-white"
+                      )
+                    }
+                  >
+                    <span className="text-xs">•</span>
+                    <span className="truncate">Planes</span>
+                  </NavLink>
+                  <NavLink
+                    to="/licenses/assignments"
+                    onClick={handleNavClick}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium transition-colors duration-200 cursor-pointer",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#208692]",
+                        !isActive && "text-white/90",
+                        isActive ? "bg-white/15 text-white" : "hover:bg-white/10 hover:text-white"
+                      )
+                    }
+                  >
+                    <span className="text-xs">•</span>
+                    <span className="truncate">Asignaciones</span>
+                  </NavLink>
+                </div>
+              )}
+            </div>
           )}
           
           {/* Separador antes del logout */}
           <div className="my-2">
-            <Separator />
+            <Separator className="bg-white/20" />
           </div>
           
           {/* Botón de logout */}
-          <Button
-            variant="ghost"
-            onClick={handleLogout}
-            className={cn(
-              "w-full justify-start gap-3 px-3 py-2 text-sm text-white",
-              "hover:bg-white/20 hover:text-white transition-colors"
-            )}
-          >
-            <LogOut className="h-4 w-4 shrink-0" />
-            <span className={cn("truncate", collapsed && "sr-only")}>Cerrar sesión</span>
-          </Button>
+          <div className={cn(collapsed ? "px-2" : "px-3")}>
+            {(() => {
+              const logoutButton = (
+                <Button
+                  variant="ghost"
+                  onClick={handleLogout}
+                  aria-label={collapsed ? "Cerrar sesión" : undefined}
+                  className={cn(
+                    "w-full flex items-center rounded-xl transition-colors duration-200 cursor-pointer",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#208692]",
+                    collapsed 
+                      ? "px-2 py-2.5 justify-center gap-0" 
+                      : "px-4 py-2.5 justify-start gap-3",
+                    "text-white/90 hover:bg-white/15 hover:text-white text-sm font-medium"
+                  )}
+                >
+                  <LogOut className="h-5 w-5 shrink-0" />
+                  {!collapsed && (
+                    <span className="truncate">Cerrar sesión</span>
+                  )}
+                </Button>
+              );
+              return collapsed ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>{logoutButton}</TooltipTrigger>
+                  <TooltipContent side="right">Cerrar sesión</TooltipContent>
+                </Tooltip>
+              ) : logoutButton;
+            })()}
+          </div>
         </nav>
       </TooltipProvider>
     </aside>
