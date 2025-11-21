@@ -41,38 +41,96 @@ export default function DashboardPage() {
   const [usrWeek, setUsrWeek] = React.useState(0);
   const [ticketsWeek, setTicketsWeek] = React.useState(0);
 
+  // métricas con tickets abiertos
+  const [equiposConTickets, setEquiposConTickets] = React.useState<number | null>(null);
+  const [responsablesConTickets, setResponsablesConTickets] = React.useState<number | null>(null);
+  const [loadingTicketsDashboard, setLoadingTicketsDashboard] = React.useState(false);
+
+  // métricas de tickets para el resumen
+  const [ticketsEnAtencion, setTicketsEnAtencion] = React.useState<number>(0);
+  const [ticketsCerrados, setTicketsCerrados] = React.useState<number>(0);
+
   // actividad reciente
-  const [recent, setRecent] = React.useState<{ts:string,label:string}[]>([]);
+  const [recent, setRecent] = React.useState<{ts:string,label:string,module?:string}[]>([]);
 
   /* ⬇️ NUEVO: hook para navegar */
   const navigate = useNavigate();
 
   async function getRecentActivity() {
-    // TODO: Unificar completamente actividad reciente con tickets. Módulos antiguos removidos.
     const pulls = [
       supabase.from('equipos').select('equipo_id, num_serie, created_at, fecha_ingreso').order('created_at', { ascending: false }).limit(5),
       supabase.from('profiles').select('user_id, full_name, role, created_at').order('created_at', { ascending: false }).limit(5),
       supabase.from('tickets').select('ticket_id, estado, descripcion, received_at, created_at').order('received_at', { ascending: false }).limit(5),
+      // Intentar obtener licencias (si la tabla existe)
+      supabase.from('licenses').select('license_id, code, created_at').order('created_at', { ascending: false }).limit(5),
+      // Intentar obtener asignaciones de licencias (si la tabla existe)
+      supabase.from('license_assignments').select('assignment_id, license_id, user_id, assigned_at').order('assigned_at', { ascending: false }).limit(5),
     ];
 
     const results = await Promise.allSettled(pulls);
-    const items:any[] = [];
+    const items: Array<{ts: string, label: string, module?: string}> = [];
     const pickDate = (row:any, candidates:string[]) => candidates.find(c => row?.[c]) ? row[candidates.find(c => row?.[c]) as string] : null;
 
+    // Equipos
     if (results[0].status === 'fulfilled' && results[0].value.data) {
-      for (const r of results[0].value.data as any[]) items.push({ ts: pickDate(r, ['created_at','fecha_ingreso']), label: `Equipo agregado: ${r.num_serie ?? r.equipo_id}` });
-    }
-    if (results[1].status === 'fulfilled' && results[1].value.data) {
-      for (const r of results[1].value.data as any[]) items.push({ ts: r.created_at, label: `Usuario ${r.role ?? ''} agregado: ${r.full_name ?? r.user_id}` });
-    }
-    if (results[2].status === 'fulfilled' && results[2].value.data) {
-      for (const r of results[2].value.data as any[]) {
-        const fecha = pickDate(r, ['received_at', 'created_at']);
-        items.push({ ts: fecha, label: `Ticket ${r.estado ?? 'Pendiente'}: #${r.ticket_id}` });
+      for (const r of results[0].value.data as any[]) {
+        items.push({ 
+          ts: pickDate(r, ['created_at','fecha_ingreso']) || '', 
+          label: `Equipo agregado: ${r.num_serie ?? r.equipo_id}`,
+          module: 'equipos'
+        });
       }
     }
 
-    return items.filter(i => !!i.ts).sort((a,b) => new Date(b.ts).getTime() - new Date(a.ts).getTime()).slice(0, 6);
+    // Usuarios
+    if (results[1].status === 'fulfilled' && results[1].value.data) {
+      for (const r of results[1].value.data as any[]) {
+        items.push({ 
+          ts: r.created_at || '', 
+          label: `Usuario ${r.role ?? ''} agregado: ${r.full_name ?? r.user_id}`,
+          module: 'usuarios'
+        });
+      }
+    }
+
+    // Tickets
+    if (results[2].status === 'fulfilled' && results[2].value.data) {
+      for (const r of results[2].value.data as any[]) {
+        const fecha = pickDate(r, ['received_at', 'created_at']);
+        items.push({ 
+          ts: fecha || '', 
+          label: `Ticket ${r.estado ?? 'Pendiente'}: #${r.ticket_id}`,
+          module: 'tickets'
+        });
+      }
+    }
+
+    // Licencias
+    if (results[3].status === 'fulfilled' && results[3].value.data) {
+      for (const r of results[3].value.data as any[]) {
+        items.push({ 
+          ts: r.created_at || '', 
+          label: `Licencia creada: ${r.code ?? `#${r.license_id}`}`,
+          module: 'licencias'
+        });
+      }
+    }
+
+    // Asignaciones de licencias
+    if (results[4].status === 'fulfilled' && results[4].value.data) {
+      for (const r of results[4].value.data as any[]) {
+        items.push({ 
+          ts: r.assigned_at || r.created_at || '', 
+          label: `Licencia asignada: #${r.license_id}`,
+          module: 'licencias'
+        });
+      }
+    }
+
+    return items
+      .filter(i => !!i.ts)
+      .sort((a,b) => new Date(b.ts).getTime() - new Date(a.ts).getTime())
+      .slice(0, 8);
   }
 
   // Helper para contar tickets pendientes
@@ -114,6 +172,66 @@ export default function DashboardPage() {
     }
   }
 
+  // Helper para calcular equipos y responsables con tickets abiertos
+  async function calcularEquiposYResponsablesConTickets() {
+    setLoadingTicketsDashboard(true);
+    try {
+      // Obtener tickets pendientes y en atención
+      const [pendientesRes, enAtencionRes] = await Promise.all([
+        fetchTickets({ estado: 'Pendiente', page: 1, size: 500 }),
+        fetchTickets({ estado: 'En atención', page: 1, size: 500 }),
+      ]);
+
+      // Combinar items sin duplicar por ticket_id
+      const allTickets = new Map<number, typeof pendientesRes.items[0]>();
+      pendientesRes.items.forEach(t => allTickets.set(t.ticket_id, t));
+      enAtencionRes.items.forEach(t => allTickets.set(t.ticket_id, t));
+      const allItems = Array.from(allTickets.values());
+
+      // Equipos con tickets abiertos
+      const equiposIds = new Set(
+        allItems
+          .filter(t => t.equipo_id != null)
+          .map(t => t.equipo_id as number)
+      );
+      setEquiposConTickets(equiposIds.size);
+
+      // Responsables/usuarios con tickets abiertos
+      const solicitantesIds = new Set(
+        allItems
+          .filter(t => t.solicitante_id != null)
+          .map(t => t.solicitante_id as string)
+      );
+      setResponsablesConTickets(solicitantesIds.size);
+    } catch (error) {
+      console.error('Error calculando equipos/responsables con tickets abiertos', error);
+      setEquiposConTickets(null);
+      setResponsablesConTickets(null);
+    } finally {
+      setLoadingTicketsDashboard(false);
+    }
+  }
+
+  // Helper para contar tickets en atención
+  async function countTicketsEnAtencion(): Promise<number> {
+    try {
+      const result = await fetchTickets({ estado: 'En atención', page: 1, size: 1 });
+      return result.total || 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  // Helper para contar tickets cerrados
+  async function countTicketsCerrados(): Promise<number> {
+    try {
+      const result = await fetchTickets({ estado: 'Cerrado', page: 1, size: 1 });
+      return result.total || 0;
+    } catch {
+      return 0;
+    }
+  }
+
   React.useEffect(() => {
     let mounted = true;
     (async () => {
@@ -126,6 +244,8 @@ export default function DashboardPage() {
           responsablesActivosRes,
           ticketsPendientesRes,
           ticketsAbiertosRes,
+          ticketsEnAtencionRes,
+          ticketsCerradosRes,
           eqNew,
           usrNew,
           ticketsNew,
@@ -136,11 +256,16 @@ export default function DashboardPage() {
           countResponsablesActivos(),
           countTicketsPendientes(),
           countTicketsAbiertos(),
+          countTicketsEnAtencion(),
+          countTicketsCerrados(),
           countEquiposNuevosSemana(),
           countResponsablesNuevosSemana(),
           countTicketsNuevosSemana(),
           getRecentActivity(),
         ]);
+
+        // Calcular equipos y responsables con tickets (en paralelo pero separado para no bloquear)
+        calcularEquiposYResponsablesConTickets();
 
         if (!mounted) return;
 
@@ -155,6 +280,10 @@ export default function DashboardPage() {
 
         // Tickets abiertos (pendientes + en atención)
         setTicketsAbiertos(ticketsAbiertosRes);
+
+        // Tickets en atención y cerrados (para el resumen)
+        setTicketsEnAtencion(ticketsEnAtencionRes);
+        setTicketsCerrados(ticketsCerradosRes);
 
         // Métricas semanales
         setEqWeek(eqNew?.count ?? 0);
@@ -221,8 +350,10 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-4xl lg:text-5xl font-bold text-[#164F5B]">{equiposTotal.toLocaleString()}</div>
-                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold text-white bg-[#527779] mt-2">
-                  {eqWeek} esta semana
+                <span className="inline-flex items-center rounded-full bg-[#E5EADF] px-3 py-1 text-xs font-semibold text-[#164F5B] mt-2">
+                  {loadingTicketsDashboard && equiposConTickets === null
+                    ? 'Calculando...'
+                    : `${equiposConTickets ?? 0} con tickets`}
                 </span>
                 <div className="text-xs lg:text-sm text-[#26272A] mt-1">
                   Equipos registrados en el sistema
@@ -238,8 +369,10 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-4xl lg:text-5xl font-bold text-[#164F5B]">{usuariosActivos}</div>
-                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold text-white bg-[#527779] mt-2">
-                  {usrWeek} esta semana
+                <span className="inline-flex items-center rounded-full bg-[#E5EADF] px-3 py-1 text-xs font-semibold text-[#164F5B] mt-2">
+                  {loadingTicketsDashboard && responsablesConTickets === null
+                    ? 'Calculando...'
+                    : `${responsablesConTickets ?? 0} con tickets`}
                 </span>
                 <div className="text-xs lg:text-sm text-[#26272A] mt-1">
                   Usuarios responsables activos
@@ -316,7 +449,14 @@ export default function DashboardPage() {
                     <span className="text-[#527779] text-xs font-medium min-w-[140px]">
                       {new Date(i.ts).toLocaleString()}
                     </span>
-                    <span className="text-[#26272A]">{i.label}</span>
+                    <div className="flex items-center gap-2 flex-1">
+                      {i.module && (
+                        <span className="inline-flex items-center rounded-full bg-[#E5EADF] text-xs text-[#527779] px-2 py-0.5 font-medium">
+                          {i.module}
+                        </span>
+                      )}
+                      <span className="text-[#26272A]">{i.label}</span>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -324,32 +464,40 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl">
+        <Card className="rounded-2xl border border-[#CFD0BF] bg-white shadow-sm">
           <CardHeader>
-            <CardTitle className="text-sm font-semibold text-[#164F5B]">Resumen</CardTitle>
+            <CardTitle className="text-base font-semibold text-[#164F5B]">
+              Tickets por estado
+            </CardTitle>
+            <p className="text-sm text-[#527779] mt-1">
+              Distribución actual de tickets en el sistema.
+            </p>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <section className="mt-6">
-              <h3 className="text-sm font-semibold mb-2">Estado del sistema</h3>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span>Equipos totales</span>
-                  <span className="font-medium">{equiposTotal}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span>Usuarios activos</span>
-                  <span className="font-medium">{usuariosActivos}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span>Tickets pendientes</span>
-                  <span className="font-medium">{ticketsPendientes}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span>Tickets abiertos</span>
-                  <span className="font-medium">{ticketsAbiertos}</span>
-                </div>
-              </div>
-            </section>
+          <CardContent className="space-y-3">
+            {[
+              { label: 'Pendientes', value: ticketsPendientes, color: 'bg-[#208692]' },
+              { label: 'En atención', value: ticketsEnAtencion, color: 'bg-[#D4D970]' },
+              { label: 'Cerrados', value: ticketsCerrados, color: 'bg-[#527779]' },
+            ]
+              .filter(item => item.value != null && item.value >= 0)
+              .map(item => {
+                const total = (ticketsPendientes ?? 0) + (ticketsEnAtencion ?? 0) + (ticketsCerrados ?? 0);
+                const pct = total > 0 ? (item.value! / total) * 100 : 0;
+                return (
+                  <div key={item.label} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs text-[#26272A]">
+                      <span className="font-medium">{item.label}</span>
+                      <span className="tabular-nums">{item.value} ({pct.toFixed(0)}%)</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-[#E5EADF]">
+                      <div
+                        className={`h-2 rounded-full ${item.color} transition-all`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
           </CardContent>
         </Card>
       </div>

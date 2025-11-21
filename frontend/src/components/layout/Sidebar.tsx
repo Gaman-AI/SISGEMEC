@@ -107,10 +107,12 @@ export default function Sidebar() {
 
       <TooltipProvider delayDuration={100}>
         <nav className={cn(
-          "flex-1 overflow-y-auto flex flex-col",
-          collapsed ? "px-2 py-3 gap-1" : "px-3 py-4 space-y-2"
+          "flex-1 overflow-y-auto pb-4",
+          collapsed 
+            ? "flex flex-col items-center gap-4 px-2 py-3" 
+            : "flex flex-col px-3 py-4 space-y-2"
         )}>
-          <div className={cn("space-y-1")}>
+          <div className={cn(collapsed ? "flex flex-col items-center gap-4 w-full" : "space-y-1")}>
             {navItems.map(({ label, to, icon: Icon }) => {
               const item = (
                 <NavLink
@@ -123,7 +125,7 @@ export default function Sidebar() {
                       "flex items-center rounded-xl transition-colors duration-200 cursor-pointer",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#208692]",
                       collapsed 
-                        ? "px-2 py-2.5 justify-center gap-0" 
+                        ? "px-2 py-3.5 justify-center gap-0" 
                         : "px-4 py-2.5 gap-3",
                       !isActive && "text-white/90",
                       isActive && "text-white",
@@ -159,7 +161,7 @@ export default function Sidebar() {
           
           {/* Licencias condicionales por feature flag */}
           {ffOn && isAuthenticated(state) && state.profile.role === 'ADMIN' && (
-            <div className="space-y-1">
+            <div className={cn(collapsed ? "flex flex-col items-center gap-4 w-full" : "space-y-1")}>
               {(() => {
                 const licensesItem = (
                   <NavLink
@@ -171,7 +173,7 @@ export default function Sidebar() {
                         "flex items-center rounded-xl transition-colors duration-200 cursor-pointer",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#208692]",
                         collapsed 
-                          ? "px-2 py-2.5 justify-center gap-0" 
+                          ? "px-2 py-3.5 justify-center gap-0" 
                           : "px-4 py-2.5 gap-3",
                         !isActive && "text-white/90",
                         isActive && "text-white",
@@ -274,7 +276,7 @@ export default function Sidebar() {
           </div>
           
           {/* Botón de logout */}
-          <div className={cn(collapsed ? "px-2" : "px-3")}>
+          <div className={cn(collapsed ? "px-2 w-full flex justify-center" : "px-3")}>
             {(() => {
               const logoutButton = (
                 <Button
@@ -282,11 +284,11 @@ export default function Sidebar() {
                   onClick={handleLogout}
                   aria-label={collapsed ? "Cerrar sesión" : undefined}
                   className={cn(
-                    "w-full flex items-center rounded-xl transition-colors duration-200 cursor-pointer",
+                    "flex items-center rounded-xl transition-colors duration-200 cursor-pointer",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#208692]",
                     collapsed 
-                      ? "px-2 py-2.5 justify-center gap-0" 
-                      : "px-4 py-2.5 justify-start gap-3",
+                      ? "px-2 py-3.5 justify-center gap-0" 
+                      : "w-full px-4 py-2.5 justify-start gap-3",
                     "text-white/90 hover:bg-white/15 hover:text-white text-sm font-medium"
                   )}
                 >
