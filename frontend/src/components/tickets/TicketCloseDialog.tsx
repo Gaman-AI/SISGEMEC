@@ -34,7 +34,7 @@ export default function TicketCloseDialog({ open, onClose, onConfirm, loading }:
         
         <div className="space-y-4">
           <div>
-            <Label htmlFor="resultado">Resultado del Servicio *</Label>
+            <Label htmlFor="resultado" className="mb-1 block text-sm font-medium text-[#26272A]">Resultado del Servicio *</Label>
             <Textarea
               id="resultado"
               value={resultado}
@@ -43,16 +43,33 @@ export default function TicketCloseDialog({ open, onClose, onConfirm, loading }:
               rows={4}
               className="mt-1"
             />
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-[#527779] mt-1">
               Este campo es obligatorio para cerrar el ticket.
             </p>
           </div>
           
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={handleClose} disabled={loading}>
+            <Button 
+              variant="outline"
+              className="
+                inline-flex items-center gap-2 rounded-xl
+                border border-[#CFD0BF] text-[#164F5B]
+                hover:bg-[#E5EADF] transition-colors
+                px-4 py-2.5 text-sm font-semibold
+              "
+              onClick={handleClose} 
+              disabled={loading}
+            >
               Cancelar
             </Button>
             <Button 
+              className="
+                inline-flex items-center gap-2 rounded-xl
+                bg-[#208692] hover:bg-[#164F5B] text-white
+                transition-colors duration-200 shadow-sm
+                px-4 py-2.5 text-sm font-semibold
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#208692]/30
+              "
               onClick={handleSubmit} 
               disabled={loading || !resultado.trim()}
             >

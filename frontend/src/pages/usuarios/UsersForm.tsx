@@ -296,27 +296,27 @@ export default function UsersForm() {
     <div className="mx-auto w-full max-w-6xl p-6">
       {/* Header sin botones (para evitar duplicados) */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">
+        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[#164F5B]">
           {isEdit ? 'Editar usuario' : 'Nuevo usuario'}
         </h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Captura la información del usuario. Los campos marcados con <span className="text-slate-900">*</span> son obligatorios.
+        <p className="mt-1 text-sm lg:text-base text-[#26272A]">
+          Captura la información del usuario. Los campos marcados con <span className="text-[#26272A]">*</span> son obligatorios.
         </p>
       </div>
 
       {/* Card del formulario */}
       <form
         id="users-form"
-        className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-6 shadow-sm"
+        className="rounded-2xl border border-[#CFD0BF] bg-white p-6 shadow-sm"
         onSubmit={handleSubmit(onSubmit)}
       >
         {/* ---- Identidad ---- */}
         <div className="mb-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Identidad</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[#164F5B]">Identidad</h2>
           <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label htmlFor="full_name" className="mb-1 block text-sm font-medium text-slate-700">
-                Nombre completo <span className="text-slate-900">*</span>
+              <label htmlFor="full_name" className="mb-1 block text-sm font-medium text-[#26272A]">
+                Nombre completo <span className="text-[#26272A]">*</span>
               </label>
               <div className="relative">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
@@ -335,8 +335,8 @@ export default function UsersForm() {
             </div>
 
             <div>
-              <label htmlFor="email" className="mb-1 block text-sm font-medium text-slate-700">
-                Email <span className="text-slate-900">*</span>
+              <label htmlFor="email" className="mb-1 block text-sm font-medium text-[#26272A]">
+                Email <span className="text-[#26272A]">*</span>
               </label>
               <div className="relative">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
@@ -357,8 +357,8 @@ export default function UsersForm() {
 
             {!isEdit && (
               <div className="md:col-span-2">
-                <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
-                  Contraseña (mín. 8) <span className="text-slate-900">*</span>
+                <label htmlFor="password" className="mb-1 block text-sm font-medium text-[#26272A]">
+                  Contraseña (mín. 8) <span className="text-[#26272A]">*</span>
                 </label>
                 <div className="relative">
                   <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
@@ -379,10 +379,10 @@ export default function UsersForm() {
 
         {/* ---- Perfil ---- */}
         <div className="mb-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Perfil</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[#164F5B]">Perfil</h2>
           <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-              <label htmlFor="department" className="mb-1 block text-sm font-medium text-slate-700">
+              <label htmlFor="department" className="mb-1 block text-sm font-medium text-[#26272A]">
                 Departamento
               </label>
               <div className="relative">
@@ -399,7 +399,7 @@ export default function UsersForm() {
             </div>
 
             <div>
-              <label htmlFor="location" className="mb-1 block text-sm font-medium text-slate-700">
+              <label htmlFor="location" className="mb-1 block text-sm font-medium text-[#26272A]">
                 Ubicación
               </label>
               <div className="relative">
@@ -416,7 +416,7 @@ export default function UsersForm() {
             </div>
 
             <div>
-              <label htmlFor="phone" className="mb-1 block text-sm font-medium text-slate-700">
+              <label htmlFor="phone" className="mb-1 block text-sm font-medium text-[#26272A]">
                 Teléfono
               </label>
               <div className="relative">
@@ -436,11 +436,11 @@ export default function UsersForm() {
 
         {/* ---- Permisos ---- */}
         <div className="mb-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Permisos</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[#164F5B]">Permisos</h2>
           <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-              <label htmlFor="role" className="mb-1 block text-sm font-medium text-slate-700">
-                Rol <span className="text-slate-900">*</span>
+              <label htmlFor="role" className="mb-1 block text-sm font-medium text-[#26272A]">
+                Rol <span className="text-[#26272A]">*</span>
               </label>
               <FancySelect
                 id="role"
@@ -461,13 +461,13 @@ export default function UsersForm() {
             </div>
 
             <div className="flex items-end">
-              <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              <label className="inline-flex items-center gap-2 rounded-xl border border-[#CFD0BF] bg-white px-3 py-2 shadow-sm">
                 <input
                   type="checkbox"
                   className="h-4 w-4 accent-slate-700"
                   {...register('active')}
                 />
-                <span className="text-sm text-slate-700">Activo</span>
+                <span className="text-sm text-[#26272A]">Activo</span>
               </label>
             </div>
           </div>
@@ -487,7 +487,7 @@ export default function UsersForm() {
           <Button
             type="submit"
             disabled={isSubmitting || submitting}
-            className="rounded-xl bg-[#264a55] text-white hover:brightness-95 active:brightness-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#264a55]/30"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#208692] hover:bg-[#164F5B] text-white transition-colors duration-200 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#208692]/30 px-4 py-2.5 text-sm font-semibold"
           >
             {submitting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

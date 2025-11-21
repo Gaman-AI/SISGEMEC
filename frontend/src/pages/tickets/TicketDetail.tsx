@@ -29,7 +29,7 @@ function useToast() {
     msg ? (
       <div
         className={`fixed bottom-4 right-4 rounded-md px-4 py-2 text-sm shadow-md z-50 ${
-          type === "success" ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"
+          type === "success" ? "bg-[#208692] text-white" : "bg-rose-600 text-white"
         }`}
         role="status"
         aria-live="polite"
@@ -41,10 +41,47 @@ function useToast() {
 }
 
 function EstadoBadge({ estado }: { estado: string }) {
-  const color = estado === 'Pendiente' ? 'bg-amber-100 text-amber-700'
-    : estado === 'En atención' ? 'bg-blue-100 text-blue-700'
-    : 'bg-emerald-100 text-emerald-700';
-  return <Badge className={color}>{estado}</Badge>;
+  const ticketStatusConfig: Record<string, { bg: string; text: string; ring: string }> = {
+    PENDIENTE: {
+      bg: "bg-[#D4D970]",
+      text: "text-[#164F5B]",
+      ring: "ring-[#CFD0BF]",
+    },
+    EN_ATENCION: {
+      bg: "bg-[#208692]",
+      text: "text-white",
+      ring: "ring-[#164F5B]",
+    },
+    CERRADO: {
+      bg: "bg-[#E5EADF]",
+      text: "text-[#527779]",
+      ring: "ring-[#CFD0BF]",
+    },
+    DEFAULT: {
+      bg: "bg-[#E5EADF]",
+      text: "text-[#527779]",
+      ring: "ring-[#CFD0BF]",
+    },
+  };
+
+  const normalized = (estado || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  let cfg = ticketStatusConfig.DEFAULT;
+
+  if (normalized.startsWith("PENDIENTE")) cfg = ticketStatusConfig.PENDIENTE;
+  else if (normalized.startsWith("EN ATENCION")) cfg = ticketStatusConfig.EN_ATENCION;
+  else if (normalized.startsWith("CERRADO")) cfg = ticketStatusConfig.CERRADO;
+
+  return (
+    <span
+      className={`
+        inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+        ring-1 ring-inset ${cfg.bg} ${cfg.text} ${cfg.ring}
+      `}
+      role="status"
+    >
+      {estado || "-"}
+    </span>
+  );
 }
 
 export default function TicketDetail() {
@@ -101,16 +138,34 @@ export default function TicketDetail() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="p-4 space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">🎫 Ticket #{ticket.ticket_id}</h1>
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[#164F5B]">
+            Ticket #{ticket.ticket_id}
+          </h1>
+          <p className="text-sm lg:text-base text-[#26272A] mt-1">
+            Consulta el detalle, historial y acciones de este ticket.
+          </p>
+        </div>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={()=>nav(-1)}>Volver</Button>
+          <Button 
+            variant="outline"
+            className="
+              inline-flex items-center gap-2 rounded-xl
+              border border-[#CFD0BF] text-[#164F5B]
+              hover:bg-[#E5EADF] transition-colors
+              px-4 py-2.5 text-sm font-semibold
+            "
+            onClick={()=>nav(-1)}
+          >
+            Volver
+          </Button>
         </div>
       </div>
 
-      <div className="border rounded-lg p-3 bg-white">
-        <div className="grid md:grid-cols-2 gap-2 text-sm">
+      <div className="rounded-2xl border border-[#CFD0BF] bg-white p-4 shadow-sm md:p-5">
+        <div className="grid md:grid-cols-2 gap-2 text-sm text-[#26272A]">
           <div><b>Estado:</b> <EstadoBadge estado={ticket.estado} /></div>
           <div className="flex items-center gap-2">
             <b>Prioridad:</b>
@@ -140,8 +195,8 @@ export default function TicketDetail() {
 
       <div className="grid md:grid-cols-2 gap-4">
         <TicketFormNotes ticket={ticket} onSave={handleSaveNotes} loading={updater.loading} />
-        <div className="border rounded-lg p-3 bg-white">
-          <h3 className="font-semibold mb-2">Eventos</h3>
+        <div className="rounded-2xl border border-[#CFD0BF] bg-white p-4 shadow-sm md:p-5">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-[#164F5B] mb-2">Eventos</h3>
           <TicketEvents events={events} loading={eventsLoading} /> {/* ACTUALIZADO */}
         </div>
       </div>

@@ -31,7 +31,7 @@ function useToast() {
     msg ? (
       <div
         className={`fixed bottom-4 right-4 rounded-md px-4 py-2 text-sm shadow-md z-50 ${
-          type === "success" ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"
+          type === "success" ? "bg-[#208692] text-white" : "bg-rose-600 text-white"
         }`}
         role="status"
         aria-live="polite"
@@ -126,25 +126,43 @@ export default function ReportesPage() {
     
     return (
       <div className="space-y-4">
-        <h4 className="text-md font-semibold">Resumen</h4>
+        <h4 className="text-sm font-semibold uppercase tracking-wide text-[#164F5B]">
+          Resumen
+        </h4>
         <div className="flex flex-wrap gap-2">
           {summary.equipos_por_estado?.map((item, index) => (
-            <Badge key={index} variant="secondary">
+            <Badge 
+              key={index} 
+              variant="secondary"
+              className="inline-flex items-center rounded-full bg-[#E5EADF] px-3 py-1 text-xs font-medium text-[#527779] ring-1 ring-inset ring-[#CFD0BF]"
+            >
               {item.estado_equipo}: {item.total}
             </Badge>
           ))}
           {summary.servicios_por_tipo?.map((item, index) => (
-            <Badge key={index} variant="secondary">
+            <Badge 
+              key={index} 
+              variant="secondary"
+              className="inline-flex items-center rounded-full bg-[#E5EADF] px-3 py-1 text-xs font-medium text-[#527779] ring-1 ring-inset ring-[#CFD0BF]"
+            >
               {item.tipo_servicio}: {item.total}
             </Badge>
           ))}
           {summary.by_estado?.map((item, index) => (
-            <Badge key={index} variant="secondary">
+            <Badge 
+              key={index} 
+              variant="secondary"
+              className="inline-flex items-center rounded-full bg-[#E5EADF] px-3 py-1 text-xs font-medium text-[#527779] ring-1 ring-inset ring-[#CFD0BF]"
+            >
               {item.estado}: {item.total}
             </Badge>
           ))}
           {summary.by_priority?.map((item, index) => (
-            <Badge key={index} variant="secondary">
+            <Badge 
+              key={index} 
+              variant="secondary"
+              className="inline-flex items-center rounded-full bg-[#E5EADF] px-3 py-1 text-xs font-medium text-[#527779] ring-1 ring-inset ring-[#CFD0BF]"
+            >
               {item.priority}: {item.total}
             </Badge>
           ))}
@@ -156,16 +174,16 @@ export default function ReportesPage() {
   const renderTable = () => {
     if (loading) {
       return (
-        <Card className="p-8 text-center">
-          <p className="text-muted-foreground">Cargando datos...</p>
+        <Card className="rounded-2xl border border-[#CFD0BF] bg-white p-8 text-center shadow-sm">
+          <p className="text-[#26272A]">Cargando datos...</p>
         </Card>
       );
     }
 
     if (!data?.items) {
       return (
-        <Card className="p-8 text-center">
-          <p className="text-muted-foreground">Haga clic en "Buscar" para cargar los datos</p>
+        <Card className="rounded-2xl border border-[#CFD0BF] bg-white p-8 text-center shadow-sm">
+          <p className="text-[#26272A]">Haga clic en "Buscar" para cargar los datos</p>
         </Card>
       );
     }
@@ -173,8 +191,8 @@ export default function ReportesPage() {
     const items = data.items;
     if (items.length === 0) {
       return (
-        <Card className="p-8 text-center">
-          <p className="text-muted-foreground">No se encontraron registros</p>
+        <Card className="rounded-2xl border border-[#CFD0BF] bg-white p-8 text-center shadow-sm">
+          <p className="text-[#26272A]">No se encontraron registros</p>
         </Card>
       );
     }
@@ -183,25 +201,38 @@ export default function ReportesPage() {
     const columns = Object.keys(items[0]);
 
     return (
-      <Card>
+      <Card className="rounded-2xl border border-[#CFD0BF] bg-white shadow-sm">
         <div className="p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="text-base lg:text-lg font-semibold text-[#164F5B]">
               {reportType === 'equipos' ? 'Equipos' : 'Tickets'} ({data.total || 'N/A'})
               {/* DEPRECATED: Referencia a 'servicios' removida del título. */}
             </h3>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button 
-                variant="outline" 
                 size="sm"
+                className="
+                  inline-flex items-center gap-2 rounded-xl
+                  bg-[#208692] hover:bg-[#164F5B] text-white
+                  transition-colors duration-200 shadow-sm
+                  px-4 py-2.5 text-sm font-semibold
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#208692]/30
+                "
                 onClick={() => handleExport('excel')}
                 disabled={loading}
               >
                 Exportar Excel
               </Button>
               <Button 
-                variant="outline" 
+                variant="outline"
                 size="sm"
+                className="
+                  inline-flex items-center gap-2 rounded-xl
+                  border border-[#CFD0BF] text-[#164F5B]
+                  bg-white hover:bg-[#E5EADF]
+                  transition-colors duration-200 shadow-sm
+                  px-4 py-2.5 text-sm font-semibold
+                "
                 onClick={() => handleExport('pdf')}
                 disabled={loading}
               >
@@ -212,10 +243,10 @@ export default function ReportesPage() {
           
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
-                <TableRow>
+              <TableHeader className="bg-slate-100/90 border-b border-[#CFD0BF]">
+                <TableRow className="text-[13px] uppercase tracking-wide text-[#26272A] font-semibold">
                   {columns.map((column) => (
-                    <TableHead key={column} className="capitalize">
+                    <TableHead key={column} className="px-4 py-3 capitalize font-semibold">
                       {column.replace(/_/g, ' ')}
                     </TableHead>
                   ))}
@@ -223,9 +254,16 @@ export default function ReportesPage() {
               </TableHeader>
               <TableBody>
                 {items.map((item, index) => (
-                  <TableRow key={index}>
+                  <TableRow 
+                    key={index}
+                    className="
+                      transition
+                      bg-white
+                      hover:bg-slate-50 hover:shadow-sm
+                    "
+                  >
                     {columns.map((column) => (
-                      <TableCell key={column}>
+                      <TableCell key={column} className="px-4 py-3 text-sm text-[#26272A]">
                         {item[column] ? String(item[column]) : '-'}
                       </TableCell>
                     ))}
@@ -240,15 +278,20 @@ export default function ReportesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Reportes</h1>
+    <div className="space-y-8">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[#164F5B]">
+          Reportes
+        </h1>
+        <p className="text-sm lg:text-base text-[#26272A]">
+          Genera reportes detallados de equipos y tickets del sistema.
+        </p>
       </div>
 
       {/* Selector de tipo de reporte */}
-      <Card className="p-4">
+      <Card className="rounded-2xl border border-[#CFD0BF] bg-white p-4 shadow-sm">
         <div className="flex items-center gap-4">
-          <label className="text-sm font-medium">Tipo de Reporte:</label>
+          <label className="text-sm font-medium text-[#26272A]">Tipo de Reporte:</label>
           <Select value={reportType} onValueChange={(value: ReportType) => setReportType(value)}>
             <SelectTrigger className="w-48">
               <SelectValue />
@@ -280,8 +323,8 @@ export default function ReportesPage() {
 
       {/* Error */}
       {error && (
-        <Card className="p-4 border-red-200 bg-red-50">
-          <p className="text-red-600">{error}</p>
+        <Card className="rounded-2xl border border-red-200 bg-red-50/90 p-4 shadow-sm">
+          <p className="text-sm font-medium text-red-700">{error}</p>
         </Card>
       )}
 

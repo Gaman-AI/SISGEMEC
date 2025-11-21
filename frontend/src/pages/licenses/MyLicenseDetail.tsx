@@ -27,19 +27,26 @@ export default function MyLicenseDetail() {
   if (!hasRole(state, 'RESPONSABLE')) return <div className="p-4">No autorizado</div>;
 
   return (
-    <div className="p-4">
-      <h1 className="text-xl font-semibold mb-4">Licencia</h1>
+    <div className="p-4 space-y-8">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[#164F5B]">
+          Licencia
+        </h1>
+        <p className="text-sm lg:text-base text-[#26272A] mt-1">
+          Consulta el detalle y vigencia de esta licencia.
+        </p>
+      </div>
       {row && (
-        <Card className="p-4 space-y-2">
-          <div><span className="text-slate-500">Código:</span> {row.license_code || row.license_id}</div>
-          <div><span className="text-slate-500">Plan:</span> {row.plan_name || '-'}</div>
-          <div><span className="text-slate-500">Estado:</span> <AssignmentStatusBadge status={row.status} /></div>
-          <div><span className="text-slate-500">Asignada:</span> {new Date(row.assigned_at).toLocaleString()}</div>
-          <div><span className="text-slate-500">Revocada:</span> {row.revoked_at ? new Date(row.revoked_at).toLocaleString() : '-'}</div>
-          <div><span className="text-slate-500">Notas:</span> {row.notes || '-'}</div>
+        <Card className="rounded-2xl border border-[#CFD0BF] bg-white p-6 shadow-sm space-y-3">
+          <div><span className="text-[#527779] font-medium">Código:</span> <span className="text-[#26272A]">{row.license_code || row.license_id}</span></div>
+          <div><span className="text-[#527779] font-medium">Plan:</span> <span className="text-[#26272A]">{row.plan_name || '-'}</span></div>
+          <div><span className="text-[#527779] font-medium">Estado:</span> <AssignmentStatusBadge status={row.status} /></div>
+          <div><span className="text-[#527779] font-medium">Asignada:</span> <span className="text-[#26272A]">{new Date(row.assigned_at).toLocaleString()}</span></div>
+          <div><span className="text-[#527779] font-medium">Revocada:</span> <span className="text-[#26272A]">{row.revoked_at ? new Date(row.revoked_at).toLocaleString() : '-'}</span></div>
+          <div><span className="text-[#527779] font-medium">Notas:</span> <span className="text-[#26272A]">{row.notes || '-'}</span></div>
         </Card>
       )}
-      {!row && !loading && <div className="text-slate-500">No encontrada</div>}
+      {!row && !loading && <div className="text-[#527779]">No encontrada</div>}
     </div>
   );
 }

@@ -75,7 +75,7 @@ export default function Sidebar() {
     <aside
       className={cn(
         // fondo corporativo
-        "h-dvh border-r bg-[#317b86] text-white",
+        "h-dvh border-r bg-[#208692] text-white",
         collapsed ? "w-[80px]" : "w-64",
         "transition-[width] duration-200 ease-in-out sticky top-0"
       )}

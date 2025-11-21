@@ -5,6 +5,7 @@ import {
   listUsers,
   getUsers,
   toggleUserActive,
+  deleteUser,
 } from '../../data/users.repository';
 import type { UserRow, UserRole } from '../../data/users.types';
 import BadgeRole from '../../components/BadgeRole';
@@ -21,6 +22,7 @@ import {
   X,
   Building2,
   PencilLine,
+  Trash2,
 } from 'lucide-react';
 
 /* ---------- FancySelect: nativo con look shadcn + iconos ---------- */
@@ -185,6 +187,25 @@ export default function UsersList() {
     }
   };
 
+  const onDeleteUser = async (u: UserRow) => {
+    const ok = await ConfirmDialog({
+      title: 'Eliminar usuario',
+      description: `¿Seguro que deseas eliminar al usuario "${u.full_name}"? Esta acción solo está permitida si el usuario no tiene equipos, tickets, servicios o licencias asociadas. Esta acción no se puede deshacer.`,
+      confirmText: 'Eliminar',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await deleteUser(u.user_id);
+      // 🔥 FIX: refrescar la lista después de eliminar
+      reload(); // Incrementa reloadKey para disparar el useEffect
+    } catch (e: any) {
+      // Si el backend regresó 409, muestra mensaje claro
+      const msg = e?.message || 'No se pudo eliminar el usuario. Puede tener registros relacionados.';
+      alert(msg);
+    }
+  };
+
   const limpiarFiltros = () => {
     setSearch('');
     setRole('');
@@ -195,17 +216,22 @@ export default function UsersList() {
   const hayFiltros = search || role !== '' || active !== '' || department;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-bold tracking-tight">Usuarios</h1>
+        <div>
+          <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[#164F5B]">Usuarios</h1>
+          <p className="text-sm lg:text-base text-[#26272A] mt-1">
+            Gestiona los usuarios del sistema y sus permisos.
+          </p>
+        </div>
         <Link to="/usuarios/nuevo" aria-label="Registrar nuevo usuario">
           <Button
             className="
               group inline-flex items-center gap-2 rounded-xl
-              bg-[#264a55] text-white shadow-sm
-              hover:brightness-95 active:brightness-90
-              focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#264a55]/30
+              bg-[#208692] hover:bg-[#164F5B] text-white
+              transition-colors duration-200 shadow-sm
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#208692]/30
               px-4 py-2.5 text-sm font-semibold
             "
           >
@@ -216,7 +242,7 @@ export default function UsersList() {
       </div>
 
       {/* -------- Filtros (card slate) -------- */}
-      <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-4 shadow-sm md:p-5">
+      <div className="rounded-2xl border border-[#CFD0BF] bg-white p-4 shadow-sm md:p-5">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           {/* Buscar */}
           <div className="relative">
@@ -338,7 +364,7 @@ export default function UsersList() {
       </div>
 
       {/* -------------------- Tabla estilizada -------------------- */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="rounded-2xl border border-[#CFD0BF] bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full table-fixed text-sm">
             <colgroup>
@@ -357,10 +383,10 @@ export default function UsersList() {
               className="
                 sticky top-0 z-10 text-left
                 bg-slate-100/90 backdrop-blur
-                border-b border-slate-200
+                border-b border-[#CFD0BF]
               "
             >
-              <tr className="text-[13px] uppercase tracking-wide text-slate-600">
+              <tr className="text-[13px] uppercase tracking-wide text-[#26272A]">
                 <th className="px-4 py-3 font-semibold">Nombre</th>
                 <th className="px-4 py-3 font-semibold">Email</th>
                 <th className="px-4 py-3 font-semibold">Departamento</th>
@@ -368,7 +394,7 @@ export default function UsersList() {
                 <th className="px-4 py-3 font-semibold">Ubicación</th>
                 <th className="px-4 py-3 font-semibold">Rol</th>
                 <th className="px-4 py-3 font-semibold">Estado</th>
-                <th className="px-4 py-3 text-right font-semibold">Acciones</th>
+                <th className="w-[190px] px-4 py-3 text-right font-semibold">Acciones</th>
               </tr>
             </thead>
 
@@ -398,30 +424,37 @@ export default function UsersList() {
                     className={`
                       transition
                       ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}
-                      hover:bg-slate-50
+                      hover:bg-slate-50 hover:shadow-sm
                     `}
                   >
-                    <td className="px-4 py-3 text-slate-700">{u.full_name}</td>
-                    <td className="px-4 py-3 text-slate-700">{u.email ?? '-'}</td>
-                    <td className="px-4 py-3 text-slate-700">{u.department ?? '-'}</td>
-                    <td className="px-4 py-3 text-slate-700">{u.phone ?? '-'}</td>
-                    <td className="px-4 py-3 text-slate-700">{u.location ?? '-'}</td>
+                    <td className="px-4 py-3 text-[#26272A]">{u.full_name}</td>
+                    <td className="px-4 py-3 text-[#26272A]">{u.email ?? '-'}</td>
+                    <td className="px-4 py-3 text-[#26272A]">{u.department ?? '-'}</td>
+                    <td className="px-4 py-3 text-[#26272A]">{u.phone ?? '-'}</td>
+                    <td className="px-4 py-3 text-[#26272A]">{u.location ?? '-'}</td>
                     <td className="px-4 py-3"><BadgeRole role={u.role} /></td>
                     <td className="px-4 py-3"><BadgeActive active={u.active} /></td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-3">
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2">
                         <Link
                           to={`/usuarios/${u.user_id}/editar`}
-                          className="inline-flex items-center gap-1.5 text-sm text-slate-700 hover:text-slate-900"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-[#164F5B] bg-transparent hover:bg-[#E5EADF] transition-colors"
                         >
                           <PencilLine className="h-4 w-4" />
                           <span>Editar</span>
                         </Link>
                         <button
                           onClick={() => onToggleActive(u)}
-                          className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-700"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-[#164F5B] bg-transparent hover:bg-[#E5EADF] transition-colors"
                         >
                           <span>{u.active ? 'Desactivar' : 'Activar'}</span>
+                        </button>
+                        <button
+                          onClick={() => onDeleteUser(u)}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-[#527779] bg-transparent hover:bg-[#E5EADF] transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span>Eliminar</span>
                         </button>
                       </div>
                     </td>
@@ -435,7 +468,7 @@ export default function UsersList() {
 
       {/* Paginación */}
       <div className="flex items-center justify-between text-sm">
-        <div className="text-slate-600">
+        <div className="text-[#26272A]">
           Página {page} de {totalPages} · {count} registros
         </div>
         <div className="flex items-center gap-2">

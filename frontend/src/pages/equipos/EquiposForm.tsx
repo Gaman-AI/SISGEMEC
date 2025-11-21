@@ -269,27 +269,27 @@ export default function EquiposForm() {
     <div className="mx-auto w-full max-w-6xl p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">
+        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[#164F5B]">
           {isEdit ? 'Editar equipo' : 'Nuevo equipo'}
         </h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Completa los datos del equipo. Los campos marcados con <span className="text-slate-900">*</span> son obligatorios.
+        <p className="mt-1 text-sm lg:text-base text-[#26272A]">
+          Completa los datos del equipo. Los campos marcados con <span className="text-[#26272A]">*</span> son obligatorios.
         </p>
       </div>
 
       {/* Card del formulario */}
       <form
         id="equipos-form"
-        className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-6 shadow-sm"
+        className="rounded-2xl border border-[#CFD0BF] bg-white p-6 shadow-sm"
         onSubmit={handleSubmit(onSubmit)}
       >
         {/* ---- Sección: Identidad ---- */}
         <div className="mb-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Identidad</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[#164F5B]">Identidad</h2>
           <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-              <label htmlFor="tipo_equipo" className="mb-1 block text-sm font-medium text-slate-700">
-                Tipo de equipo <span className="text-slate-900">*</span>
+              <label htmlFor="tipo_equipo" className="mb-1 block text-sm font-medium text-[#26272A]">
+                Tipo de equipo <span className="text-[#26272A]">*</span>
               </label>
               <input
                 id="tipo_equipo"
@@ -303,7 +303,7 @@ export default function EquiposForm() {
             </div>
 
             <div>
-              <label htmlFor="marca" className="mb-1 block text-sm font-medium text-slate-700">
+              <label htmlFor="marca" className="mb-1 block text-sm font-medium text-[#26272A]">
                 Marca
               </label>
               <input
@@ -315,7 +315,7 @@ export default function EquiposForm() {
             </div>
 
             <div>
-              <label htmlFor="modelo" className="mb-1 block text-sm font-medium text-slate-700">
+              <label htmlFor="modelo" className="mb-1 block text-sm font-medium text-[#26272A]">
                 Modelo
               </label>
               <input
@@ -327,7 +327,7 @@ export default function EquiposForm() {
             </div>
 
             <div>
-              <label htmlFor="num_serie" className="mb-1 block text-sm font-medium text-slate-700">
+              <label htmlFor="num_serie" className="mb-1 block text-sm font-medium text-[#26272A]">
                 Número de serie
               </label>
               <input
@@ -339,7 +339,7 @@ export default function EquiposForm() {
             </div>
 
             <div>
-              <label htmlFor="ubicacion_actual" className="mb-1 block text-sm font-medium text-slate-700">
+              <label htmlFor="ubicacion_actual" className="mb-1 block text-sm font-medium text-[#26272A]">
                 Ubicación actual
               </label>
               <input
@@ -354,10 +354,10 @@ export default function EquiposForm() {
 
         {/* ---- Sección: Especificaciones ---- */}
         <div className="mb-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Especificaciones</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[#164F5B]">Especificaciones</h2>
           <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-              <label htmlFor="procesador" className="mb-1 block text-sm font-medium text-slate-700">
+              <label htmlFor="procesador" className="mb-1 block text-sm font-medium text-[#26272A]">
                 Procesador
               </label>
               <div className="relative">
@@ -374,7 +374,7 @@ export default function EquiposForm() {
             </div>
 
             <div>
-              <label htmlFor="ram" className="mb-1 block text-sm font-medium text-slate-700">
+              <label htmlFor="ram" className="mb-1 block text-sm font-medium text-[#26272A]">
                 RAM
               </label>
               <div className="relative">
@@ -391,7 +391,7 @@ export default function EquiposForm() {
             </div>
 
             <div>
-              <label htmlFor="disco" className="mb-1 block text-sm font-medium text-slate-700">
+              <label htmlFor="disco" className="mb-1 block text-sm font-medium text-[#26272A]">
                 Disco
               </label>
               <div className="relative">
@@ -408,7 +408,7 @@ export default function EquiposForm() {
             </div>
 
             <div>
-              <label htmlFor="sistema_operativo" className="mb-1 block text-sm font-medium text-slate-700">
+              <label htmlFor="sistema_operativo" className="mb-1 block text-sm font-medium text-[#26272A]">
                 Sistema Operativo
               </label>
               <input
@@ -423,12 +423,12 @@ export default function EquiposForm() {
 
         {/* ---- Sección: Estado & Responsable ---- */}
         <div className="mb-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Asignación</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[#164F5B]">Asignación</h2>
           <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
             {/* Estado (number) */}
             <div>
-              <label htmlFor="estado_equipo_id" className="mb-1 block text-sm font-medium text-slate-700">
-                Estado <span className="text-slate-900">*</span>
+              <label htmlFor="estado_equipo_id" className="mb-1 block text-sm font-medium text-[#26272A]">
+                Estado <span className="text-[#26272A]">*</span>
               </label>
               <FancySelect
                 id="estado_equipo_id"
@@ -457,7 +457,7 @@ export default function EquiposForm() {
 
             {/* Responsable (uuid string) */}
             <div>
-              <label htmlFor="responsable_id" className="mb-1 block text-sm font-medium text-slate-700">
+              <label htmlFor="responsable_id" className="mb-1 block text-sm font-medium text-[#26272A]">
                 Responsable
               </label>
               <FancySelect
@@ -484,7 +484,7 @@ export default function EquiposForm() {
             {/* Fechas */}
             <div className="grid grid-cols-1 gap-4 md:col-span-1">
               <div>
-                <label htmlFor="fecha_ingreso" className="mb-1 block text-sm font-medium text-slate-700">
+                <label htmlFor="fecha_ingreso" className="mb-1 block text-sm font-medium text-[#26272A]">
                   Fecha de ingreso
                 </label>
                 <input
@@ -495,7 +495,7 @@ export default function EquiposForm() {
                 />
               </div>
               <div>
-                <label htmlFor="fecha_salida" className="mb-1 block text-sm font-medium text-slate-700">
+                <label htmlFor="fecha_salida" className="mb-1 block text-sm font-medium text-[#26272A]">
                   Fecha de salida
                 </label>
                 <input
@@ -511,7 +511,7 @@ export default function EquiposForm() {
 
         {/* ---- Sección: Observaciones ---- */}
         <div className="mb-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Observaciones</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[#164F5B]">Observaciones</h2>
           <div className="mt-3">
             <textarea
               id="observaciones"
@@ -540,8 +540,11 @@ export default function EquiposForm() {
             type="submit"
             disabled={isSubmitting}
             className="
-              rounded-xl bg-[#264a55] text-white
-              hover:brightness-95 active:brightness-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#264a55]/30
+              inline-flex items-center gap-2 rounded-xl
+              bg-[#208692] hover:bg-[#164F5B] text-white
+              transition-colors duration-200 shadow-sm
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#208692]/30
+              px-4 py-2.5 text-sm font-semibold
             "
           >
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}

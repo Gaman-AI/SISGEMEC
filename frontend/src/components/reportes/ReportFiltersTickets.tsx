@@ -59,14 +59,16 @@ export default function ReportFiltersTickets({
   };
 
   return (
-    <Card className="p-6">
-      <h3 className="text-lg font-semibold mb-4">Filtros de Tickets</h3>
+    <Card className="rounded-2xl border border-[#CFD0BF] bg-white p-4 shadow-sm md:p-5">
+      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#164F5B]">
+        Filtros de tickets
+      </h3>
       
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Estado */}
           <div className="space-y-2">
-            <Label htmlFor="estado">Estado</Label>
+            <Label htmlFor="estado" className="text-sm font-medium text-[#26272A]">Estado</Label>
             <Select onValueChange={(value) => setValue('estado', value === 'all' ? undefined : value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar estado" />
@@ -82,7 +84,7 @@ export default function ReportFiltersTickets({
 
           {/* Prioridad */}
           <div className="space-y-2">
-            <Label htmlFor="priority">Prioridad</Label>
+            <Label htmlFor="priority" className="text-sm font-medium text-[#26272A]">Prioridad</Label>
             <Select onValueChange={(value) => setValue('priority', value === 'all' ? undefined : value as any)}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar prioridad" />
@@ -98,7 +100,7 @@ export default function ReportFiltersTickets({
 
           {/* Fuente */}
           <div className="space-y-2">
-            <Label htmlFor="fuente">Fuente</Label>
+            <Label htmlFor="fuente" className="text-sm font-medium text-[#26272A]">Fuente</Label>
             <Select onValueChange={(value) => setValue('fuente', value === 'all' ? undefined : value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar fuente" />
@@ -114,7 +116,7 @@ export default function ReportFiltersTickets({
 
           {/* Tipo de Servicio */}
           <div className="space-y-2">
-            <Label htmlFor="tipo_servicio_id">Tipo de Servicio</Label>
+            <Label htmlFor="tipo_servicio_id" className="text-sm font-medium text-[#26272A]">Tipo de Servicio</Label>
             <Select onValueChange={(value) => setValue('tipo_servicio_id', value === 'all' ? undefined : parseInt(value))}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar tipo de servicio" />
@@ -130,7 +132,7 @@ export default function ReportFiltersTickets({
 
           {/* Equipo */}
           <div className="space-y-2">
-            <Label htmlFor="equipo_id">Equipo</Label>
+            <Label htmlFor="equipo_id" className="text-sm font-medium text-[#26272A]">Equipo</Label>
             <Select onValueChange={(value) => setValue('equipo_id', value === 'all' ? undefined : parseInt(value))}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar equipo" />
@@ -146,7 +148,7 @@ export default function ReportFiltersTickets({
 
           {/* Fecha Desde */}
           <div className="space-y-2">
-            <Label htmlFor="from_dt">Fecha de Recepción Desde</Label>
+            <Label htmlFor="from_dt" className="text-sm font-medium text-[#26272A]">Fecha de Recepción Desde</Label>
             <Input
               id="from_dt"
               type="date"
@@ -154,13 +156,13 @@ export default function ReportFiltersTickets({
               placeholder={catalogs?.fecha_min ? `Desde: ${catalogs.fecha_min}` : 'Fecha desde'}
             />
             {catalogs?.fecha_min && (
-              <p className="text-xs text-gray-500">Rango disponible: {catalogs.fecha_min} - {catalogs.fecha_max}</p>
+              <p className="text-xs text-[#527779]">Rango disponible: {catalogs.fecha_min} - {catalogs.fecha_max}</p>
             )}
           </div>
 
           {/* Fecha Hasta */}
           <div className="space-y-2">
-            <Label htmlFor="to_dt">Fecha de Recepción Hasta</Label>
+            <Label htmlFor="to_dt" className="text-sm font-medium text-[#26272A]">Fecha de Recepción Hasta</Label>
             <Input
               id="to_dt"
               type="date"
@@ -172,7 +174,17 @@ export default function ReportFiltersTickets({
 
         {/* Botones */}
         <div className="flex gap-2 pt-4">
-          <Button type="submit" disabled={loading} className="bg-[#264a55] text-white hover:brightness-95 active:brightness-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#264a55]/30">
+          <Button 
+            type="submit" 
+            disabled={loading} 
+            className="
+              inline-flex items-center gap-2 rounded-xl
+              bg-[#208692] hover:bg-[#164F5B] text-white
+              transition-colors duration-200 shadow-sm
+              px-4 py-2.5 text-sm font-semibold
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#208692]/30
+            "
+          >
             {loading ? 'Buscando...' : 'Buscar'}
           </Button>
           <Button type="button" variant="outline" onClick={handleClear}>

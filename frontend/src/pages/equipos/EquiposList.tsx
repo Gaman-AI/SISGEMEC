@@ -77,24 +77,59 @@ function FancySelect({ id, value, onChange, placeholder, icon, children }: Fancy
   );
 }
 
-/* ---------- EstadoPill: mapea nombre de estado a colores tipo shadcn ---------- */
+/* ---------- EstadoPill: mapea nombre de estado a colores AOSENUMA ---------- */
 function EstadoPill({ nombre }: { nombre: string | null }) {
+  const estadoConfig = {
+    ACTIVO: {
+      bg: 'bg-[#208692]',
+      text: 'text-white',
+      ring: 'ring-[#164F5B]',
+    },
+    DE_BAJA: {
+      bg: 'bg-[#E5EADF]',
+      text: 'text-[#527779]',
+      ring: 'ring-[#CFD0BF]',
+    },
+    EN_MANTENIMIENTO: {
+      bg: 'bg-[#C7D8D0]',
+      text: 'text-[#164F5B]',
+      ring: 'ring-[#CFD0BF]',
+    },
+    FALLBACK: {
+      bg: 'bg-[#E5EADF]',
+      text: 'text-[#527779]',
+      ring: 'ring-[#CFD0BF]',
+    },
+  };
+
   const n = (nombre || '').toUpperCase().trim();
-  let classes =
-    'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium';
+
+  let config = estadoConfig.FALLBACK;
 
   if (n === 'ACTIVO') {
-    classes += ' border-emerald-200 bg-emerald-50 text-emerald-700';
-  } else if (n === 'DE BAJA' || n === 'DE_BAJA' || n === 'DE-BAJA') {
-    classes += ' border-rose-200 bg-rose-50 text-rose-700';
-  } else if (n === 'EN MANTENIMIENTO' || n === 'EN_MANTENIMIENTO' || n === 'MANTENIMIENTO') {
-    classes += ' border-amber-200 bg-amber-50 text-amber-700';
-  } else {
-    // fallback neutro
-    classes += ' border-slate-200 bg-slate-50 text-slate-700';
+    config = estadoConfig.ACTIVO;
+  } else if (['DE BAJA', 'DE_BAJA', 'DE-BAJA'].includes(n)) {
+    config = estadoConfig.DE_BAJA;
+  } else if (
+    ['EN MANTENIMIENTO', 'EN_MANTENIMIENTO', 'MANTENIMIENTO'].includes(n)
+  ) {
+    config = estadoConfig.EN_MANTENIMIENTO;
   }
 
-  return <span className={classes}>{nombre || '-'}</span>;
+  return (
+    <span
+      className={`
+        inline-flex items-center rounded-full 
+        px-2.5 py-0.5 text-xs font-medium 
+        ring-1 ring-inset 
+        ${config.bg} ${config.text} ${config.ring}
+      `}
+      role="status"
+      aria-label={`Estado: ${nombre || 'desconocido'}`}
+    >
+      {nombre || '-'}
+    </span>
+  );
 }
 
 // ID único de instancia para debugging
@@ -249,18 +284,23 @@ export default function EquiposList() {
   }, [loading]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header + acción */}
       <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-bold tracking-tight">Equipos</h1>
+        <div>
+          <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[#164F5B]">Equipos</h1>
+          <p className="text-sm lg:text-base text-[#26272A] mt-1">
+            Gestiona los equipos registrados en el sistema.
+          </p>
+        </div>
 
         <Link to="/equipos/nuevo" aria-label="Registrar nuevo equipo">
           <Button
             className="
               group inline-flex items-center gap-2 rounded-xl
-              bg-[#264a55] text-white shadow-sm
-              hover:brightness-95 active:brightness-90
-              focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#264a55]/30
+              bg-[#208692] hover:bg-[#164F5B] text-white
+              transition-colors duration-200 shadow-sm
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#208692]/30
               px-4 py-2.5 text-sm font-semibold
             "
           >
@@ -271,7 +311,7 @@ export default function EquiposList() {
       </div>
 
       {/* -------- Filtros (card slate) -------- */}
-      <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-4 shadow-sm md:p-5">
+      <div className="rounded-2xl border border-[#CFD0BF] bg-white p-4 shadow-sm md:p-5">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {/* Buscar */}
           <div className="relative">
@@ -370,7 +410,7 @@ export default function EquiposList() {
       </div>
 
       {/* -------------------- Tabla estilizada -------------------- */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="rounded-2xl border border-[#CFD0BF] bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full table-fixed text-sm">
             <colgroup>
@@ -387,12 +427,12 @@ export default function EquiposList() {
 
             <thead
               className="
-                sticky top-0 z-10 text-left text-slate-700
+                sticky top-0 z-10 text-left
                 bg-slate-50/95 backdrop-blur
-                border-b border-slate-200
+                border-b border-[#CFD0BF]
               "
             >
-              <tr className="text-[13px] uppercase tracking-wide text-slate-500">
+              <tr className="text-[13px] uppercase tracking-wide text-[#26272A] font-semibold">
                 <th className="px-4 py-3 font-semibold">ID</th>
                 <th className="px-4 py-3 font-semibold">Tipo</th>
                 <th className="px-4 py-3 font-semibold">Marca</th>
@@ -401,14 +441,14 @@ export default function EquiposList() {
                 <th className="px-4 py-3 font-semibold">Ingreso</th>
                 <th className="px-4 py-3 font-semibold">Responsable</th>
                 <th className="px-4 py-3 font-semibold">Estado</th>
-                <th className="px-4 py-3 text-right font-semibold">Acciones</th>
+                <th className="w-[190px] px-4 py-3 text-right font-semibold">Acciones</th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td className="px-4 py-8 text-center text-slate-500" colSpan={9}>
+                  <td className="px-4 py-8 text-center text-[#26272A]" colSpan={9}>
                     Cargando…
                   </td>
                 </tr>
@@ -420,7 +460,7 @@ export default function EquiposList() {
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-10 text-center text-slate-500" colSpan={9}>
+                  <td className="px-4 py-10 text-center text-[#26272A]" colSpan={9}>
                     No se encontraron equipos con los filtros aplicados.
                   </td>
                 </tr>
@@ -431,44 +471,44 @@ export default function EquiposList() {
                     className={`
                       transition
                       ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}
-                      hover:bg-slate-50
+                      hover:bg-slate-50 hover:shadow-sm
                     `}
                   >
-                    <td className="px-4 py-3 text-slate-700">{r.equipo_id}</td>
-                    <td className="px-4 py-3 text-slate-700">{r.tipo_equipo || '-'}</td>
-                    <td className="px-4 py-3 text-slate-700">{r.marca || '-'}</td>
-                    <td className="px-4 py-3 text-slate-700">
+                    <td className="px-4 py-3 text-[#26272A]">{r.equipo_id}</td>
+                    <td className="px-4 py-3 text-[#26272A]">{r.tipo_equipo || '-'}</td>
+                    <td className="px-4 py-3 text-[#26272A]">{r.marca || '-'}</td>
+                    <td className="px-4 py-3 text-[#26272A]">
                       <span className="line-clamp-1">{r.modelo || '-'}</span>
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
+                    <td className="px-4 py-3 text-[#26272A]">
                       <span className="line-clamp-1">{r.num_serie || '-'}</span>
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{r.fecha_ingreso?.slice(0, 10) || '-'}</td>
-                    <td className="px-4 py-3 text-slate-700">
+                    <td className="px-4 py-3 text-[#26272A]">{r.fecha_ingreso?.slice(0, 10) || '-'}</td>
+                    <td className="px-4 py-3 text-[#26272A]">
                       <span className="line-clamp-1">{r.responsable_nombre || '-'}</span>
                     </td>
                     <td className="px-4 py-3">
                       {/* Píldora con colores por estado */}
                       <EstadoPill nombre={r.estado_nombre || null} />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 rounded-lg px-2 text-slate-600 hover:bg-slate-100"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-[#164F5B] bg-transparent hover:bg-[#E5EADF] transition-colors"
                           onClick={() => nav(`/equipos/${r.equipo_id}/editar`)}
                         >
-                          <PencilLine className="mr-1 h-4 w-4" />
+                          <PencilLine className="h-4 w-4" />
                           Editar
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 rounded-lg px-2 text-slate-600 hover:bg-slate-100"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-[#527779] bg-transparent hover:bg-[#E5EADF] transition-colors"
                           onClick={() => onDelete(r.equipo_id)}
                         >
-                          <Trash2 className="mr-1 h-4 w-4" />
+                          <Trash2 className="h-4 w-4" />
                           Eliminar
                         </Button>
                       </div>
@@ -483,7 +523,7 @@ export default function EquiposList() {
 
       {/* Paginación */}
       <div className="flex items-center justify-between text-sm">
-        <div className="text-slate-600">
+        <div className="text-[#26272A]">
           Página {page} de {totalPages} · {count} registros
         </div>
         <div className="flex items-center gap-2">

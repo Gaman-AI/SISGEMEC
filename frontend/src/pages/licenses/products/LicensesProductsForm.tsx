@@ -26,7 +26,7 @@ function useToast() {
     msg ? (
       <div
         className={`fixed bottom-4 right-4 rounded-md px-4 py-2 text-sm shadow-md z-50 ${
-          type === "success" ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"
+          type === "success" ? "bg-[#208692] text-white" : "bg-rose-600 text-white"
         }`}
         role="status"
         aria-live="polite"
@@ -100,14 +100,19 @@ export default function LicensesProductsForm() {
   if (!hasRole(state, 'ADMIN')) return <div className="p-4">No autorizado</div>;
 
   return (
-    <div className="p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{isEdit ? 'Editar' : 'Nuevo'} Producto</h1>
+    <div className="p-4 space-y-8">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[#164F5B]">
+          {isEdit ? 'Editar' : 'Nuevo'} Producto
+        </h1>
+        <p className="text-sm lg:text-base text-[#26272A] mt-1">
+          Registra o actualiza un producto de software.
+        </p>
       </div>
-      <Card className="p-4 max-w-xl">
+      <Card className="rounded-2xl border border-[#CFD0BF] bg-white p-6 shadow-sm max-w-xl">
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm mb-1">Proveedor</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Proveedor</label>
             <select className="w-full border rounded h-9 px-2" value={vendorId} onChange={e => setVendorId(e.target.value ? Number(e.target.value) : '')}>
               <option value="">Seleccione</option>
               {vendors.map(v => <option key={v.vendor_id} value={v.vendor_id}>{v.name}</option>)}
@@ -115,16 +120,28 @@ export default function LicensesProductsForm() {
             {errors.vendor_id && <div className="text-sm text-red-600 mt-1">{errors.vendor_id}</div>}
           </div>
           <div>
-            <label className="block text-sm mb-1">Nombre</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Nombre</label>
             <Input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre del producto" />
             {errors.name && <div className="text-sm text-red-600 mt-1">{errors.name}</div>}
           </div>
           <div>
-            <label className="block text-sm mb-1">Descripción</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Descripción</label>
             <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Descripción" />
           </div>
           <div className="flex items-center gap-2">
-            <Button type="submit" disabled={loading}>{isEdit ? 'Guardar' : 'Crear'}</Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="
+                inline-flex items-center gap-2 rounded-xl
+                bg-[#208692] hover:bg-[#164F5B] text-white
+                transition-colors duration-200 shadow-sm
+                px-4 py-2.5 text-sm font-semibold
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#208692]/30
+              "
+            >
+              {isEdit ? 'Guardar' : 'Crear'}
+            </Button>
             <Button type="button" variant="outline" onClick={() => nav('/licenses/products')}>Cancelar</Button>
           </div>
         </form>

@@ -230,11 +230,30 @@ export async function apiDelete(path: string, customHeaders?: Record<string, str
     headers,
     credentials: "include",
   });
+  
+  // Si la respuesta no es OK, manejar error como antes
   if (!res.ok) {
     const t = await res.text();
     throw new Error(`DELETE ${path} ${res.status} ${t}`);
   }
-  return res.json();
+
+  // 🔥 FIX: evitar parsear JSON cuando la respuesta es 204 o 205
+  if (res.status === 204 || res.status === 205) {
+    return null; // No content → no intentar res.json()
+  }
+
+  // Si la respuesta tiene JSON válido, intentar parsearlo
+  const text = await res.text();
+  if (text) {
+    try {
+      return JSON.parse(text);
+    } catch {
+      return null; // Body no es JSON; regresar null
+    }
+  }
+
+  // Si no hay body, regresar null
+  return null;
 }
 
 // eslint-disable-next-line no-console

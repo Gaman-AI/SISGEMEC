@@ -25,7 +25,7 @@ function useToast() {
     msg ? (
       <div
         className={`fixed bottom-4 right-4 rounded-md px-4 py-2 text-sm shadow-md z-50 ${
-          type === "success" ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"
+          type === "success" ? "bg-[#208692] text-white" : "bg-rose-600 text-white"
         }`}
         role="status"
         aria-live="polite"
@@ -123,9 +123,16 @@ export default function TicketsList() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="p-4 space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">🎫 Tickets</h1>
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[#164F5B]">
+            Tickets
+          </h1>
+          <p className="text-sm lg:text-base text-[#26272A] mt-1">
+            Gestiona y administra los tickets de soporte del sistema.
+          </p>
+        </div>
       </div>
       <TicketFilters initial={filters} onSubmit={apply} onClear={clear} loading={loading} />
                   <TicketsTable

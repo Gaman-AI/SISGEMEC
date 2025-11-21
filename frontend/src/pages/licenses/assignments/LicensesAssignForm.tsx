@@ -84,14 +84,19 @@ export default function LicensesAssignForm() {
   if (!hasRole(state, 'ADMIN')) return <div className="p-4">No autorizado</div>;
 
   return (
-    <div className="p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Asignar Licencia</h1>
+    <div className="p-4 space-y-8">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[#164F5B]">
+          Asignar Licencia
+        </h1>
+        <p className="text-sm lg:text-base text-[#26272A] mt-1">
+          Asigna una licencia disponible a un usuario del sistema.
+        </p>
       </div>
-      <Card className="p-4 max-w-2xl">
+      <Card className="rounded-2xl border border-[#CFD0BF] bg-white p-6 shadow-sm max-w-2xl">
         <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
-            <label className="block text-sm mb-1">Licencia</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Licencia</label>
             <select className="w-full border rounded h-9 px-2" value={licenseId} onChange={e => setLicenseId(e.target.value ? Number(e.target.value) : '')}>
               <option value="">Seleccione</option>
               {licenses.map(l => {
@@ -116,11 +121,11 @@ export default function LicensesAssignForm() {
             {errors.user_id && <div className="text-sm text-red-600 mt-1">{errors.user_id}</div>}
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm mb-1">Notas</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Notas</label>
             <textarea className="w-full border rounded p-2 text-sm" value={notes} onChange={e => setNotes(e.target.value)} />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm mb-1">Identificador de operación (opcional)</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Identificador de operación (opcional)</label>
             <Input value={idempotencyKey} onChange={e => setIdempotencyKey(e.target.value)} placeholder="Para evitar duplicados" />
           </div>
           
@@ -132,7 +137,17 @@ export default function LicensesAssignForm() {
           )}
           
           <div className="md:col-span-2 flex items-center gap-2">
-            <Button type="submit" disabled={submitting || Boolean(noSeatsMsg)}>
+            <Button
+              type="submit"
+              disabled={submitting || Boolean(noSeatsMsg)}
+              className="
+                inline-flex items-center gap-2 rounded-xl
+                bg-[#208692] hover:bg-[#164F5B] text-white
+                transition-colors duration-200 shadow-sm
+                px-4 py-2.5 text-sm font-semibold
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#208692]/30
+              "
+            >
               {submitting ? 'Asignando…' : 'Asignar'}
             </Button>
             <Button type="button" variant="outline" onClick={() => nav('/licenses/assignments')}>Cancelar</Button>

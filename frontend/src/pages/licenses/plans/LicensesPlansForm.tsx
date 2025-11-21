@@ -27,7 +27,7 @@ function useToast() {
     msg ? (
       <div
         className={`fixed bottom-4 right-4 rounded-md px-4 py-2 text-sm shadow-md z-50 ${
-          type === "success" ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"
+          type === "success" ? "bg-[#208692] text-white" : "bg-rose-600 text-white"
         }`}
         role="status"
         aria-live="polite"
@@ -126,14 +126,19 @@ export default function LicensesPlansForm() {
   if (!hasRole(state, 'ADMIN')) return <div className="p-4">No autorizado</div>;
 
   return (
-    <div className="p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{isEdit ? 'Editar' : 'Nuevo'} Plan</h1>
+    <div className="p-4 space-y-8">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[#164F5B]">
+          {isEdit ? 'Editar' : 'Nuevo'} Plan
+        </h1>
+        <p className="text-sm lg:text-base text-[#26272A] mt-1">
+          Crea o edita un plan de licencias con sus características.
+        </p>
       </div>
-      <Card className="p-4 max-w-2xl">
+      <Card className="rounded-2xl border border-[#CFD0BF] bg-white p-6 shadow-sm max-w-2xl">
         <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
-            <label className="block text-sm mb-1">Producto</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Producto</label>
             <select className="w-full border rounded h-9 px-2" value={productId} onChange={e => setProductId(e.target.value ? Number(e.target.value) : '')}>
               <option value="">Seleccione</option>
               {products.map(p => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
@@ -141,12 +146,12 @@ export default function LicensesPlansForm() {
             {errors.product_id && <div className="text-sm text-red-600 mt-1">{errors.product_id}</div>}
           </div>
           <div>
-            <label className="block text-sm mb-1">Nombre del plan</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Nombre del plan</label>
             <Input value={planName} onChange={e => setPlanName(e.target.value)} placeholder="Plan" />
             {errors.plan_name && <div className="text-sm text-red-600 mt-1">{errors.plan_name}</div>}
           </div>
           <div>
-            <label className="block text-sm mb-1">Ciclo</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Ciclo</label>
             <select className="w-full border rounded h-9 px-2" value={billing} onChange={e => setBilling(e.target.value as any)}>
               <option value="">Seleccione</option>
               <option value="annual">Anual</option>
@@ -155,12 +160,12 @@ export default function LicensesPlansForm() {
             {errors.billing_cycle && <div className="text-sm text-red-600 mt-1">{errors.billing_cycle}</div>}
           </div>
           <div>
-            <label className="block text-sm mb-1">Límite de asientos</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Límite de asientos</label>
             <Input type="number" value={seatLimit} onChange={e => setSeatLimit(e.target.value)} placeholder="Opcional" />
             {errors.seat_limit && <div className="text-sm text-red-600 mt-1">{errors.seat_limit}</div>}
           </div>
           <div>
-            <label className="block text-sm mb-1">Moneda</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Moneda</label>
             <select className="w-full border rounded h-9 px-2" value={currency} onChange={e => setCurrency(e.target.value as any)}>
               <option value="">Seleccione</option>
               <option value="MXN">MXN</option>
@@ -168,7 +173,7 @@ export default function LicensesPlansForm() {
             </select>
           </div>
           <div>
-            <label className="block text-sm mb-1">Costo por ciclo</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Costo por ciclo</label>
             <Input type="number" value={costPerCycle} onChange={e => setCostPerCycle(e.target.value)} placeholder="Opcional" />
             {errors.cost_per_cycle && <div className="text-sm text-red-600 mt-1">{errors.cost_per_cycle}</div>}
           </div>
@@ -182,7 +187,19 @@ export default function LicensesPlansForm() {
             {errors.features && <div className="text-sm text-red-600 mt-1">{errors.features}</div>}
           </div>
           <div className="md:col-span-2 flex items-center gap-2">
-            <Button type="submit" disabled={loading}>{isEdit ? 'Guardar' : 'Crear'}</Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="
+                inline-flex items-center gap-2 rounded-xl
+                bg-[#208692] hover:bg-[#164F5B] text-white
+                transition-colors duration-200 shadow-sm
+                px-4 py-2.5 text-sm font-semibold
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#208692]/30
+              "
+            >
+              {isEdit ? 'Guardar' : 'Crear'}
+            </Button>
             <Button type="button" variant="outline" onClick={() => nav('/licenses/plans')}>Cancelar</Button>
           </div>
         </form>

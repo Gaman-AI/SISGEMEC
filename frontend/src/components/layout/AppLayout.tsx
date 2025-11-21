@@ -23,7 +23,7 @@ function AppLayout() {
       <Sidebar />
       <div className={cn("flex min-h-dvh flex-1 flex-col")}>
         <Topbar />
-        <main className="flex-1 p-4">
+        <main className="flex-1 p-4 bg-[#F4F5F0]">
           <div className="mx-auto w-full max-w-[1400px]">
             <Outlet />
           </div>

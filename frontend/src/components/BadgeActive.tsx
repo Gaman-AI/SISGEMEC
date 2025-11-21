@@ -9,7 +9,7 @@ export default function BadgeActive({ active, className = '' }: BadgeActiveProps
   if (active) {
     return (
       <span
-        className={`inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200 ${className}`}
+        className={`inline-flex items-center rounded-full bg-[#208692] px-2.5 py-0.5 text-xs font-medium text-white ring-1 ring-inset ring-[#164F5B] ${className}`}
         role="status"
         aria-label="Usuario activo"
       >
@@ -20,7 +20,7 @@ export default function BadgeActive({ active, className = '' }: BadgeActiveProps
 
   return (
     <span
-      className={`inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-200 ${className}`}
+      className={`inline-flex items-center rounded-full bg-[#E5EADF] px-2.5 py-0.5 text-xs font-medium text-[#527779] ring-1 ring-inset ring-[#CFD0BF] ${className}`}
       role="status"
       aria-label="Usuario inactivo"
     >

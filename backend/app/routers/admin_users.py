@@ -6,8 +6,9 @@ Usa Service Role para operaciones admin
 """
 import os
 import time
-from fastapi import APIRouter, HTTPException, status, Header, Depends
-from fastapi.responses import JSONResponse
+from uuid import UUID
+from fastapi import APIRouter, HTTPException, status, Header, Depends, Path
+from fastapi.responses import JSONResponse, Response
 from typing import Optional, Dict, Any, Iterable, Callable, Type, Sequence
 from pydantic import BaseModel, EmailStr, field_validator
 import logging
@@ -270,6 +271,46 @@ def _upsert_profile_simple(supabase, user_id: str, full_name: Optional[str], rol
         on_conflict="user_id",
     ).execute()
 
+def _count_user_relations(supabase, user_id: str) -> dict:
+    """
+    Verifica si el usuario tiene relaciones en tablas críticas.
+    Solo necesitamos saber si existe al menos un registro en cada tabla.
+    Devuelve un dict con los conteos por tabla y un total.
+    """
+    tables_checks = {
+        "equipos_as_responsable": ("equipos", "responsable_id"),
+        "tickets_como_solicitante": ("tickets", "solicitante_id"),
+        "tickets_como_tecnico": ("tickets", "tecnico_id"),
+        "ticket_events_como_actor": ("ticket_events", "actor_id"),
+        "license_assignments": ("license_assignments", "user_id"),
+    }
+
+    result: dict[str, int] = {}
+    total = 0
+
+    for key, (table, column) in tables_checks.items():
+        try:
+            res = (
+                supabase.table(table)
+                .select(column)
+                .eq(column, user_id)
+                .limit(1)
+                .execute()
+            )
+            data = getattr(res, "data", None) or []
+            count = 1 if data else 0
+        except (APIError, Exception) as e:
+            # En caso de error inesperado en alguna tabla, preferimos ser conservadores:
+            # asumimos que hay relación para no permitir el delete.
+            logger.warning(f"[DELETE USER] Error checking {table}.{column}: {e}")
+            count = 1
+
+        result[key] = count
+        total += count
+
+    result["total"] = total
+    return result
+
 def _upsert_profile(supabase, user_id: str, payload: Any) -> dict:
     """UPSERT en profiles por user_id. Evita el 23505."""
     # Normalizar el rol para asegurar consistencia con la BD
@@ -462,3 +503,75 @@ async def get_user_template():
             "role": "ADMIN, TECNICO o RESPONSABLE"
         }
     }
+
+@router.delete("/{user_id}", dependencies=[Depends(require_admin_user)])
+def delete_user(user_id: UUID):
+    """
+    Elimina un usuario de forma segura:
+
+    - Verifica si el usuario tiene relaciones en:
+      equipos, tickets, eventos, licencias.
+    - Si tiene relaciones: devuelve 409 (Conflict) con mensaje claro.
+    - Si NO tiene relaciones:
+        1) Elimina auth.users (ON DELETE CASCADE borra profiles).
+    """
+    supabase = get_supabase()
+    user_id_str = str(user_id)
+
+    # 1) Verificar que el profile exista
+    res = (
+        supabase.table("profiles")
+        .select("user_id, full_name, email, role")
+        .eq("user_id", user_id_str)
+        .limit(1)
+        .execute()
+    )
+    profile_data = getattr(res, "data", None) or []
+    if not profile_data:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    # 2) Verificar relaciones
+    relations = _count_user_relations(supabase, user_id_str)
+    if relations.get("total", 0) > 0:
+        # Construimos un mensaje amigable indicando qué tablas tienen relaciones
+        related_sources = [
+            name for name, count in relations.items()
+            if name != "total" and count > 0
+        ]
+        # Mapear nombres técnicos a mensajes amigables
+        friendly_names = {
+            "equipos_as_responsable": "equipos asignados",
+            "tickets_como_solicitante": "tickets como solicitante",
+            "tickets_como_tecnico": "tickets como técnico",
+            "ticket_events_como_actor": "eventos de tickets",
+            "license_assignments": "licencias asignadas",
+        }
+        friendly_list = [friendly_names.get(name, name) for name in related_sources]
+        detail = (
+            "No se puede eliminar el usuario porque tiene registros relacionados en: "
+            + ", ".join(friendly_list)
+        )
+        raise HTTPException(status_code=409, detail=detail)
+
+    # 3) Sin relaciones: eliminar auth.user (lo que a su vez borra profiles por ON DELETE CASCADE)
+    try:
+        supabase.auth.admin.delete_user(user_id_str)
+    except AuthApiError as e:
+        # Si por algún motivo ya no existe en auth, tratamos de manera idempotente
+        error_info = e.args[0] if e.args else {}
+        if isinstance(error_info, dict):
+            error_code = error_info.get("error", {}).get("code") if isinstance(error_info.get("error"), dict) else None
+            if error_code == "user_not_found":
+                # Usuario ya no existe, consideramos éxito idempotente
+                logger.info(f"[DELETE USER] User {user_id_str} already deleted from auth.users")
+            else:
+                # Cualquier otro error sí lo propagamos
+                logger.error(f"[DELETE USER] Error deleting user {user_id_str}: {e}")
+                raise HTTPException(status_code=500, detail="No se pudo eliminar el usuario") from e
+        else:
+            # Si no podemos parsear el error, lo propagamos
+            logger.error(f"[DELETE USER] Unexpected error format deleting user {user_id_str}: {e}")
+            raise HTTPException(status_code=500, detail="No se pudo eliminar el usuario") from e
+
+    # 4) Responder 204 sin contenido
+    return Response(status_code=204)

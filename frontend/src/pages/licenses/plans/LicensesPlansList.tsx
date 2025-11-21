@@ -61,25 +61,43 @@ export default function LicensesPlansList() {
   if (!hasRole(state, 'ADMIN')) return <div className="p-4">No autorizado</div>;
 
   return (
-    <div className="p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Planes</h1>
-        <Button onClick={() => nav('/licenses/plans/nuevo')}>Nuevo</Button>
+    <div className="p-4 space-y-8">
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[#164F5B]">
+            Planes
+          </h1>
+          <p className="text-sm lg:text-base text-[#26272A] mt-1">
+            Administra los planes de licencias y su capacidad.
+          </p>
+        </div>
+        <Button
+          onClick={() => nav('/licenses/plans/nuevo')}
+          className="
+            inline-flex items-center gap-2 rounded-xl
+            bg-[#208692] hover:bg-[#164F5B] text-white
+            transition-colors duration-200 shadow-sm
+            px-4 py-2.5 text-sm font-semibold
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#208692]/30
+          "
+        >
+          Nuevo
+        </Button>
       </div>
-      <Card className="p-4 mb-4 grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+      <Card className="rounded-2xl border border-[#CFD0BF] bg-white p-4 shadow-sm md:p-5 mb-4 grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
         <div className="md:col-span-2">
-          <label className="block text-sm mb-1">Buscar</label>
+          <label className="block text-sm font-medium text-[#26272A] mb-1">Buscar</label>
           <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Plan, características" />
         </div>
         <div>
-          <label className="block text-sm mb-1">Producto</label>
+          <label className="block text-sm font-medium text-[#26272A] mb-1">Producto</label>
           <select className="w-full border rounded h-9 px-2" value={productId} onChange={e => setProductId(e.target.value ? Number(e.target.value) : '')}>
             <option value="">Todos</option>
             {products.map(p => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-sm mb-1">Ciclo</label>
+          <label className="block text-sm font-medium text-[#26272A] mb-1">Ciclo</label>
           <select className="w-full border rounded h-9 px-2" value={billing} onChange={e => setBilling(e.target.value)}>
             <option value="">Todos</option>
             <option value="annual">Anual</option>
@@ -87,7 +105,7 @@ export default function LicensesPlansList() {
           </select>
         </div>
         <div>
-          <label className="block text-sm mb-1">Moneda</label>
+          <label className="block text-sm font-medium text-[#26272A] mb-1">Moneda</label>
           <select className="w-full border rounded h-9 px-2" value={currency} onChange={e => setCurrency(e.target.value)}>
             <option value="">Todas</option>
             <option value="MXN">MXN</option>
@@ -96,11 +114,11 @@ export default function LicensesPlansList() {
         </div>
         <div className="flex gap-2">
           <div>
-            <label className="block text-sm mb-1">Precio min</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Precio min</label>
             <Input value={priceMin} onChange={e => setPriceMin(e.target.value)} placeholder="0" type="number" />
           </div>
           <div>
-            <label className="block text-sm mb-1">Precio max</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Precio max</label>
             <Input value={priceMax} onChange={e => setPriceMax(e.target.value)} placeholder="1000" type="number" />
           </div>
         </div>
@@ -109,39 +127,42 @@ export default function LicensesPlansList() {
         </div>
       </Card>
 
-      <Card className="overflow-x-auto">
+      <Card className="rounded-2xl border border-[#CFD0BF] bg-white shadow-sm overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead>
-            <tr className="border-b bg-slate-50 text-slate-600">
-              <th className="text-left p-2">Plan</th>
-              <th className="text-left p-2">Producto</th>
-              <th className="text-left p-2">Proveedor</th>
-              <th className="text-left p-2">Ciclo</th>
-              <th className="text-left p-2">Precio</th>
-              <th className="text-right p-2">Acciones</th>
+          <thead className="sticky top-0 z-10 text-left bg-slate-100/90 backdrop-blur border-b border-[#CFD0BF]">
+            <tr className="text-[13px] uppercase tracking-wide text-[#26272A] font-semibold">
+              <th className="px-4 py-3 font-semibold">Plan</th>
+              <th className="px-4 py-3 font-semibold">Producto</th>
+              <th className="px-4 py-3 font-semibold">Proveedor</th>
+              <th className="px-4 py-3 font-semibold">Ciclo</th>
+              <th className="px-4 py-3 font-semibold">Precio</th>
+              <th className="px-4 py-3 font-semibold text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map(r => (
-              <tr key={r.plan_id} className="border-b hover:bg-slate-50">
-                <td className="p-2">{r.plan_name}</td>
-                <td className="p-2">{r.product_name || '-'}</td>
-                <td className="p-2">{r.vendor_name || '-'}</td>
-                <td className="p-2">{r.billing_cycle === 'annual' ? 'Anual' : 'Mensual'}</td>
-                <td className="p-2">{r.cost_per_cycle ? `${r.currency || ''} ${r.cost_per_cycle}` : '-'}</td>
-                <td className="p-2 text-right">
+            {rows.map((r, idx) => (
+              <tr
+                key={r.plan_id}
+                className={`transition ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'} hover:bg-slate-50 hover:shadow-sm`}
+              >
+                <td className="px-4 py-3 text-sm text-[#26272A]">{r.plan_name}</td>
+                <td className="px-4 py-3 text-sm text-[#26272A]">{r.product_name || '-'}</td>
+                <td className="px-4 py-3 text-sm text-[#26272A]">{r.vendor_name || '-'}</td>
+                <td className="px-4 py-3 text-sm text-[#26272A]">{r.billing_cycle === 'annual' ? 'Anual' : 'Mensual'}</td>
+                <td className="px-4 py-3 text-sm text-[#26272A]">{r.cost_per_cycle ? `${r.currency || ''} ${r.cost_per_cycle}` : '-'}</td>
+                <td className="px-4 py-3 text-sm text-[#26272A] text-right">
                   <Button size="sm" variant="ghost" onClick={() => nav(`/licenses/plans/${r.plan_id}/editar`)}>Editar</Button>
                 </td>
               </tr>
             ))}
             {!rows.length && !loading && (
-              <tr><td className="p-3 text-slate-500" colSpan={6}>Sin resultados</td></tr>
+              <tr><td className="px-4 py-3 text-sm text-[#527779]" colSpan={6}>Sin resultados</td></tr>
             )}
           </tbody>
         </table>
       </Card>
 
-      <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
+      <div className="mt-4 flex items-center justify-between text-sm text-[#26272A]">
         <div>Mostrando {rows.length} de {total}</div>
         <div className="flex items-center gap-2">
           <Button variant="outline" disabled={page<=1} onClick={() => setPage(p => Math.max(1, p-1))}>Anterior</Button>

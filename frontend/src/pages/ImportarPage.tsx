@@ -5,60 +5,74 @@ import { Users, Monitor, ArrowRight } from "lucide-react";
 
 export default function ImportarPage() {
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-8">
       <div>
-        <h1 className="text-4xl font-bold tracking-tight">Importar</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Importa datos desde archivos Excel a la base de datos
+        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[#164F5B]">
+          Importar
+        </h1>
+        <p className="text-sm lg:text-base text-[#26272A] mt-1">
+          Importa datos desde archivos Excel a la base de datos del sistema.
         </p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Tarjeta Importar Usuarios */}
-        <div className="rounded-2xl border-none p-5 shadow-sm bg-[#CFD0BF]">
+        <div className="rounded-2xl border border-[#CFD0BF] bg-white p-4 shadow-sm md:p-5">
           <div className="flex items-center gap-2 mb-2">
-            <Users className="h-5 w-5 text-slate-800" />
-            <div className="text-lg font-medium text-slate-800">Importar Usuarios</div>
+            <Users className="h-5 w-5 text-[#208692]" />
+            <h2 className="text-lg font-medium text-[#164F5B]">Importar Usuarios</h2>
           </div>
-          <p className="text-sm text-slate-600 mb-4">
-            Importa responsables desde Excel con la hoja <b>"Usuarios"</b>.<br/>
+          <p className="text-sm text-[#26272A] mb-4">
+            Importa responsables desde un archivo Excel ya estructurado con la hoja <b>"Usuarios"</b>.<br/>
             Columnas requeridas: <i>First Name, Last Name, Email Address</i>.
           </p>
           <Link
             to="/import-usuarios"
-            className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-[#CFD0BF] text-slate-800 border border-slate-300 hover:opacity-90 transition-colors"
+            className="
+              inline-flex items-center gap-2 rounded-xl
+              bg-[#208692] hover:bg-[#164F5B] text-white
+              transition-colors duration-200 shadow-sm
+              px-4 py-2.5 text-sm font-semibold
+            "
           >
-            <Users className="h-4 w-4 mr-2" />
-            Importar Usuarios
-            <ArrowRight className="h-4 w-4 ml-2" />
+            <Users className="h-4 w-4" />
+            Importar usuarios
+            <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
         {/* Tarjeta Importar Equipos */}
-        <div className="rounded-2xl border-none p-5 shadow-sm bg-[#C7D8D0]">
+        <div className="rounded-2xl border border-[#CFD0BF] bg-white p-4 shadow-sm md:p-5">
           <div className="flex items-center gap-2 mb-2">
-            <Monitor className="h-5 w-5 text-slate-800" />
-            <div className="text-lg font-medium text-slate-800">Importar Equipos</div>
+            <Monitor className="h-5 w-5 text-[#208692]" />
+            <h2 className="text-lg font-medium text-[#164F5B]">Importar Equipos</h2>
           </div>
-          <p className="text-sm text-slate-600 mb-4">
-            Importa equipos desde Excel con la hoja <b>"Equipos"</b>.<br/>
+          <p className="text-sm text-[#26272A] mb-4">
+            Importa equipos desde un archivo Excel ya estructurado con la hoja <b>"Equipos"</b>.<br/>
             Requiere que los usuarios ya existan. Columnas: <i>Número de serie, Estado, Responsable email</i>.
           </p>
           <Link
             to="/import-equipos"
-            className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-[#C7D8D0] text-slate-800 border border-slate-300 hover:opacity-90 transition-colors"
+            className="
+              inline-flex items-center gap-2 rounded-xl
+              bg-[#208692] hover:bg-[#164F5B] text-white
+              transition-colors duration-200 shadow-sm
+              px-4 py-2.5 text-sm font-semibold
+            "
           >
-            <Monitor className="h-4 w-4 mr-2" />
-            Importar Equipos
-            <ArrowRight className="h-4 w-4 ml-2" />
+            <Monitor className="h-4 w-4" />
+            Importar equipos
+            <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </div>
 
       {/* Información adicional */}
-      <div className="mt-8 p-4 bg-slate-50 rounded-lg">
-        <h3 className="font-medium text-slate-900 mb-2">Información Importante</h3>
-        <ul className="text-sm text-slate-600 space-y-1">
+      <div className="mt-8 rounded-2xl border border-[#CFD0BF] bg-white p-4 shadow-sm md:p-5">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-[#164F5B] mb-2">
+          Información importante
+        </h3>
+        <ul className="text-sm text-[#26272A] space-y-1">
           <li>• <strong>Orden recomendado:</strong> Importa usuarios primero, luego equipos</li>
           <li>• <strong>Formatos soportados:</strong> .xlsx, .xls</li>
           <li>• <strong>Plantillas:</strong> Descarga las plantillas desde cada página de importación</li>

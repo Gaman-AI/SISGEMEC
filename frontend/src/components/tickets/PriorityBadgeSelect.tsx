@@ -2,11 +2,65 @@ import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { PriorityType } from '@/types/tickets';
 
+const priorityConfig: Record<string, { bg: string; text: string; ring: string; label: string; icon: string }> = {
+  URGENT: {
+    bg: "bg-[#D4D970]",
+    text: "text-[#164F5B]",
+    ring: "ring-[#CFD0BF]",
+    label: 'Urgente',
+    icon: '🛎️',
+  },
+  IMPORTANT: {
+    bg: "bg-[#208692]",
+    text: "text-white",
+    ring: "ring-[#164F5B]",
+    label: 'Importante',
+    icon: '❗',
+  },
+  MEDIUM: {
+    bg: "bg-[#C7D8D0]",
+    text: "text-[#164F5B]",
+    ring: "ring-[#CFD0BF]",
+    label: 'Media',
+    icon: '●',
+  },
+  LOW: {
+    bg: "bg-[#E5EADF]",
+    text: "text-[#527779]",
+    ring: "ring-[#CFD0BF]",
+    label: 'Baja',
+    icon: '↧',
+  },
+  DEFAULT: {
+    bg: "bg-[#E5EADF]",
+    text: "text-[#527779]",
+    ring: "ring-[#CFD0BF]",
+    label: 'Media',
+    icon: '●',
+  },
+};
+
 const PRIORITY_CONFIG = {
-  Urgent: { label: 'Urgente', icon: '🛎️', color: 'bg-red-100 text-red-700 border-red-300' },
-  Important: { label: 'Importante', icon: '❗', color: 'bg-amber-100 text-amber-700 border-amber-300' },
-  Medium: { label: 'Media', icon: '●', color: 'bg-green-100 text-green-700 border-green-300' },
-  Low: { label: 'Baja', icon: '↧', color: 'bg-blue-100 text-blue-700 border-blue-300' }
+  Urgent: { 
+    label: priorityConfig.URGENT.label, 
+    icon: priorityConfig.URGENT.icon, 
+    color: `${priorityConfig.URGENT.bg} ${priorityConfig.URGENT.text} ${priorityConfig.URGENT.ring}` 
+  },
+  Important: { 
+    label: priorityConfig.IMPORTANT.label, 
+    icon: priorityConfig.IMPORTANT.icon, 
+    color: `${priorityConfig.IMPORTANT.bg} ${priorityConfig.IMPORTANT.text} ${priorityConfig.IMPORTANT.ring}` 
+  },
+  Medium: { 
+    label: priorityConfig.MEDIUM.label, 
+    icon: priorityConfig.MEDIUM.icon, 
+    color: `${priorityConfig.MEDIUM.bg} ${priorityConfig.MEDIUM.text} ${priorityConfig.MEDIUM.ring}` 
+  },
+  Low: { 
+    label: priorityConfig.LOW.label, 
+    icon: priorityConfig.LOW.icon, 
+    color: `${priorityConfig.LOW.bg} ${priorityConfig.LOW.text} ${priorityConfig.LOW.ring}` 
+  }
 };
 
 interface Props {
@@ -20,7 +74,7 @@ export default function PriorityBadgeSelect({ value, onChange, disabled }: Props
   
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className={`w-36 border ${config.color}`}>
+      <SelectTrigger className={`w-36 border border-[#CFD0BF] ring-1 ring-inset ${config.color}`}>
         <SelectValue>
           <span className="flex items-center gap-2">
             <span>{config.icon}</span>

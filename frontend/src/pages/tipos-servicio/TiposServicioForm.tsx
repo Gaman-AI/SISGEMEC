@@ -127,23 +127,23 @@ export default function TiposServicioForm() {
   return (
     <div className="mx-auto w-full max-w-6xl p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">
+        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[#164F5B]">
           {isEdit ? "Editar tipo de servicio" : "Nuevo tipo de servicio"}
         </h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm lg:text-base text-[#26272A]">
           Completa la información del tipo de servicio.
         </p>
       </div>
 
       <form
-        className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-6 shadow-sm"
+        className="rounded-2xl border border-[#CFD0BF] bg-white p-6 shadow-sm"
         onSubmit={handleSubmit(onSubmit)}
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
             <label
               htmlFor="nombre"
-              className="mb-1 block text-sm font-medium text-slate-700"
+              className="mb-1 block text-sm font-medium text-[#26272A]"
             >
               Nombre *
             </label>
@@ -167,7 +167,7 @@ export default function TiposServicioForm() {
           <div className="md:col-span-2">
             <label
               htmlFor="descripcion"
-              className="mb-1 block text-sm font-medium text-slate-700"
+              className="mb-1 block text-sm font-medium text-[#26272A]"
             >
               Descripción
             </label>
@@ -186,13 +186,13 @@ export default function TiposServicioForm() {
           </div>
 
           <div className="md:col-span-2">
-            <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+            <label className="inline-flex items-center gap-2 rounded-xl border border-[#CFD0BF] bg-white px-3 py-2 shadow-sm">
               <input
                 type="checkbox"
-                className="h-4 w-4 accent-slate-700"
+                className="h-4 w-4 accent-[#164F5B]"
                 {...register("activo")}
               />
-              <span className="text-sm text-slate-700">Activo</span>
+              <span className="text-sm text-[#26272A]">Activo</span>
             </label>
             {errors.activo && (
               <p className="mt-1 text-xs text-rose-600">
@@ -211,7 +211,13 @@ export default function TiposServicioForm() {
           >
             Cancelar
           </Button>
-          <Button type="submit" disabled={isSubmitting} className="rounded-xl bg-[#264a55] text-white hover:brightness-95 active:brightness-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#264a55]/30">
+          <Button type="submit" disabled={isSubmitting} className="
+            inline-flex items-center gap-2 rounded-xl
+            bg-[#208692] hover:bg-[#164F5B] text-white
+            transition-colors duration-200 shadow-sm
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#208692]/30
+            px-4 py-2.5 text-sm font-semibold
+          ">
             {isEdit ? "Guardar cambios" : "Crear tipo"}
           </Button>
         </div>

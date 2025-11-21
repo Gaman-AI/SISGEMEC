@@ -26,7 +26,7 @@ function useToast() {
     msg ? (
       <div
         className={`fixed bottom-4 right-4 rounded-md px-4 py-2 text-sm shadow-md z-50 ${
-          type === "success" ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"
+          type === "success" ? "bg-[#208692] text-white" : "bg-rose-600 text-white"
         }`}
         role="status"
         aria-live="polite"
@@ -184,14 +184,19 @@ export default function LicensesForm() {
   if (!hasRole(state, 'ADMIN')) return <div className="p-4">No autorizado</div>;
 
   return (
-    <div className="p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{isEdit ? 'Editar' : 'Nueva'} Licencia</h1>
+    <div className="p-4 space-y-8">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[#164F5B]">
+          {isEdit ? 'Editar' : 'Nueva'} Licencia
+        </h1>
+        <p className="text-sm lg:text-base text-[#26272A] mt-1">
+          Crea o edita una licencia para asignarla a los usuarios del sistema.
+        </p>
       </div>
-      <Card className="p-4 max-w-2xl">
+      <Card className="rounded-2xl border border-[#CFD0BF] bg-white p-6 shadow-sm max-w-2xl">
         <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
-            <label className="block text-sm mb-1">Plan *</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Plan *</label>
             <select 
               className="w-full border rounded h-9 px-2" 
               value={planId} 
@@ -204,7 +209,7 @@ export default function LicensesForm() {
             {errors.plan_id && <div className="text-sm text-red-600 mt-1">{errors.plan_id}</div>}
           </div>
           <div>
-            <label className="block text-sm mb-1">Código</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Código</label>
             <Input 
               value={code} 
               onChange={e => setCode(e.target.value)} 
@@ -213,7 +218,7 @@ export default function LicensesForm() {
             />
           </div>
           <div>
-            <label className="block text-sm mb-1">Asientos totales *</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Asientos totales *</label>
             <Input 
               type="number" 
               min="1"
@@ -225,7 +230,7 @@ export default function LicensesForm() {
             {errors.seats_total && <div className="text-sm text-red-600 mt-1">{errors.seats_total}</div>}
           </div>
           <div>
-            <label className="block text-sm mb-1">Inicio</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Inicio</label>
             <Input 
               type="date" 
               value={startDate} 
@@ -234,7 +239,7 @@ export default function LicensesForm() {
             />
           </div>
           <div>
-            <label className="block text-sm mb-1">Fin</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Fin</label>
             <Input 
               type="date" 
               value={endDate} 
@@ -244,7 +249,7 @@ export default function LicensesForm() {
             {errors.end_date && <div className="text-sm text-red-600 mt-1">{errors.end_date}</div>}
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm mb-1">Renovación</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Renovación</label>
             <Input 
               type="date" 
               value={renewalDate} 
@@ -254,7 +259,7 @@ export default function LicensesForm() {
             {errors.renewal_date && <div className="text-sm text-red-600 mt-1">{errors.renewal_date}</div>}
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm mb-1">Notas</label>
+            <label className="block text-sm font-medium text-[#26272A] mb-1">Notas</label>
             <textarea 
               className="w-full border rounded p-2 text-sm" 
               value={notes} 
@@ -263,7 +268,17 @@ export default function LicensesForm() {
             />
           </div>
           <div className="md:col-span-2 flex items-center gap-2">
-            <Button type="submit" disabled={loading}>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="
+                inline-flex items-center gap-2 rounded-xl
+                bg-[#208692] hover:bg-[#164F5B] text-white
+                transition-colors duration-200 shadow-sm
+                px-4 py-2.5 text-sm font-semibold
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#208692]/30
+              "
+            >
               {loading ? 'Guardando...' : (isEdit ? 'Guardar' : 'Crear')}
             </Button>
             <Button type="button" variant="outline" onClick={() => nav('/licenses')} disabled={loading}>

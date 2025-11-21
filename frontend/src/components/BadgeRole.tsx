@@ -8,21 +8,21 @@ type BadgeRoleProps = {
 
 const roleConfig = {
   ADMIN: {
-    bg: 'bg-rose-50',
-    text: 'text-rose-700',
-    ring: 'ring-rose-200',
+    bg: 'bg-[#D4D970]',
+    text: 'text-[#164F5B]',
+    ring: 'ring-[#CFD0BF]',
     label: 'Administrador',
   },
   TECNICO: {
-    bg: 'bg-indigo-50',
-    text: 'text-indigo-700',
-    ring: 'ring-indigo-200',
+    bg: 'bg-[#E5EADF]',
+    text: 'text-[#527779]',
+    ring: 'ring-[#CFD0BF]',
     label: 'Técnico',
   },
   RESPONSABLE: {
-    bg: 'bg-sky-50',
-    text: 'text-sky-700',
-    ring: 'ring-sky-200',
+    bg: 'bg-[#C7D8D0]',
+    text: 'text-[#164F5B]',
+    ring: 'ring-[#CFD0BF]',
     label: 'Responsable',
   },
 };

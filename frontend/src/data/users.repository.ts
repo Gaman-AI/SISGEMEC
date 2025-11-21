@@ -1,7 +1,7 @@
 // FILE: frontend/src/data/users.repository.ts
 // fix: refactorizar siguiendo el patrón del módulo de equipos que funciona correctamente
 import { supabase } from '@/lib/supabase';
-import { apiPost } from '@/services/api';
+import { apiPost, apiDelete } from '@/services/api';
 import type { ListFiltros, UserRow, UserRole } from './users.types';
 import { nullify } from './users.types';
 
@@ -126,4 +126,29 @@ export async function toggleUserActive(user_id: string, active: boolean) {
     .single();
   if (error) throw error;
   return data as UserRow;
+}
+
+/* ------------------------------- ELIMINAR ----------------------------------- */
+export async function deleteUser(user_id: string): Promise<void> {
+  try {
+    await apiDelete(`/users/${user_id}`);
+  } catch (err: any) {
+    // Enhanced error handling
+    let errorMessage = err.message;
+    if (err.response?.data?.detail) {
+      errorMessage = typeof err.response.data.detail === "string" ? err.response.data.detail : JSON.stringify(err.response.data.detail);
+    } else if (err.response?.data?.message) {
+      errorMessage = typeof err.response.data.message === "string" ? err.response.data.message : JSON.stringify(err.response.data.message);
+    }
+    
+    // Log para debugging
+    console.error("[DELETE USER ERROR]", {
+      status: err.response?.status,
+      statusText: err.response?.statusText,
+      data: err.response?.data,
+      message: errorMessage
+    });
+    
+    throw new Error(errorMessage);
+  }
 }

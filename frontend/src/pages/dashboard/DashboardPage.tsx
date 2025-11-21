@@ -2,7 +2,7 @@ import * as React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Separator } from "../../components/ui/separator";
-import { Monitor, Users as UsersIcon, Wrench, Ticket } from "lucide-react";
+import { Monitor, Users as UsersIcon, Wrench, Ticket, Activity } from "lucide-react";
 import { listEquipos, countEquiposNuevosSemana } from "../../data/equipos.repository";
 import { countResponsablesActivos, countResponsablesNuevosSemana } from "../../data/usuarios.repository";
 // DEPRECATED: imports de repositorios antiguos de servicios/solicitudes
@@ -196,17 +196,17 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Panel Principal</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[#164F5B]">Panel Principal</h1>
+          <p className="text-sm lg:text-base text-[#26272A]">
             Resumen de actividad y salud del sistema.
           </p>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {loading ? (
           <>
             <SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard />
@@ -214,57 +214,57 @@ export default function DashboardPage() {
         ) : (
           <>
             {/* Total de Equipos (REAL) */}
-            <Card className="rounded-2xl">
+            <Card className="rounded-2xl hover:shadow-md transition-shadow duration-200">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total de Equipos</CardTitle>
-                <Monitor className="h-5 w-5 opacity-70" />
+                <CardTitle className="text-sm font-semibold text-[#164F5B]">Total de Equipos</CardTitle>
+                <Monitor className="h-5 w-5 text-[#208692]" />
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold text-[#264a55]">{equiposTotal.toLocaleString()}</div>
-                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white bg-[#527779] mt-2">
+                <div className="text-4xl lg:text-5xl font-bold text-[#164F5B]">{equiposTotal.toLocaleString()}</div>
+                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold text-white bg-[#527779] mt-2">
                   {eqWeek} esta semana
                 </span>
-                <div className="text-xs text-muted-foreground mt-1">
+                <div className="text-xs lg:text-sm text-[#26272A] mt-1">
                   Equipos registrados en el sistema
                 </div>
               </CardContent>
             </Card>
 
             {/* Usuarios Activos (conectar repo cuando lo tengas) */}
-            <Card className="rounded-2xl">
+            <Card className="rounded-2xl hover:shadow-md transition-shadow duration-200">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Usuarios Activos</CardTitle>
-                <UsersIcon className="h-5 w-5 opacity-70" />
+                <CardTitle className="text-sm font-semibold text-[#164F5B]">Usuarios Activos</CardTitle>
+                <UsersIcon className="h-5 w-5 text-[#208692]" />
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold text-[#264a55]">{usuariosActivos}</div>
-                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white bg-[#527779] mt-2">
+                <div className="text-4xl lg:text-5xl font-bold text-[#164F5B]">{usuariosActivos}</div>
+                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold text-white bg-[#527779] mt-2">
                   {usrWeek} esta semana
                 </span>
-                <div className="text-xs text-muted-foreground mt-1">
+                <div className="text-xs lg:text-sm text-[#26272A] mt-1">
                   Usuarios responsables activos
                 </div>
               </CardContent>
             </Card>
 
             {/* Tickets Pendientes */}
-            <Card className="rounded-2xl">
+            <Card className="rounded-2xl hover:shadow-md transition-shadow duration-200">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Tickets Pendientes</CardTitle>
-                <Ticket className="h-5 w-5 opacity-70" />
+                <CardTitle className="text-sm font-semibold text-[#164F5B]">Tickets Pendientes</CardTitle>
+                <Ticket className="h-5 w-5 text-[#208692]" />
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold text-[#264a55]">{ticketsPendientes}</div>
-                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white bg-[#527779] mt-2">
+                <div className="text-4xl lg:text-5xl font-bold text-[#164F5B]">{ticketsPendientes}</div>
+                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold text-white bg-[#527779] mt-2">
                   {ticketsWeek} esta semana
                 </span>
-                <div className="text-xs text-muted-foreground mt-1">
+                <div className="text-xs lg:text-sm text-[#26272A] mt-1">
                   Tickets pendientes de atención
                 </div>
 
                 {/* Botón de acceso directo a la bandeja */}
                 <div className="mt-4">
-                  <Button className="rounded-xl bg-[#264a55] hover:opacity-90" onClick={() => navigate("/tickets")}>
+                  <Button className="rounded-xl bg-[#208692] hover:bg-[#164F5B] text-white transition-colors duration-200" onClick={() => navigate("/tickets")}>
                     Abrir bandeja
                   </Button>
                 </div>
@@ -272,17 +272,17 @@ export default function DashboardPage() {
             </Card>
 
             {/* Tickets Abiertos */}
-            <Card className="rounded-2xl">
+            <Card className="rounded-2xl hover:shadow-md transition-shadow duration-200">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Tickets Abiertos</CardTitle>
-                <Wrench className="h-5 w-5 opacity-70" />
+                <CardTitle className="text-sm font-semibold text-[#164F5B]">Tickets Abiertos</CardTitle>
+                <Wrench className="h-5 w-5 text-[#208692]" />
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold text-[#264a55]">{ticketsAbiertos}</div>
-                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white bg-[#527779] mt-2">
+                <div className="text-4xl lg:text-5xl font-bold text-[#164F5B]">{ticketsAbiertos}</div>
+                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold text-white bg-[#527779] mt-2">
                   Pendientes + En atención
                 </span>
-                <div className="text-xs text-muted-foreground mt-1">
+                <div className="text-xs lg:text-sm text-[#26272A] mt-1">
                   Tickets en proceso de resolución
                 </div>
               </CardContent>
@@ -296,30 +296,37 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="rounded-2xl">
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Actividad reciente</CardTitle>
+            <CardTitle className="text-sm font-semibold text-[#164F5B]">Actividad reciente</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <section className="mt-6">
-              <h3 className="text-sm font-semibold mb-2">Actividad reciente</h3>
-              {recent.length === 0 ? (
-                <div className="text-sm text-muted-foreground">Sin movimientos recientes.</div>
-              ) : (
-                <ul className="space-y-2">
-                  {recent.map((i, idx) => (
-                    <li key={idx} className="text-sm">
-                      <span className="text-slate-500 mr-2">{new Date(i.ts).toLocaleString()}</span>
-                      <span>{i.label}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
+          <CardContent>
+            {recent.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Activity className="h-12 w-12 text-[#CFD0BF] mb-3" />
+                <p className="text-sm font-semibold text-[#164F5B]">
+                  Sin actividad reciente
+                </p>
+                <p className="text-xs text-[#26272A] mt-1 opacity-70">
+                  Los nuevos eventos aparecerán aquí cuando se registren cambios en el sistema.
+                </p>
+              </div>
+            ) : (
+              <ul className="space-y-3">
+                {recent.map((i, idx) => (
+                  <li key={idx} className="text-sm flex items-start gap-2">
+                    <span className="text-[#527779] text-xs font-medium min-w-[140px]">
+                      {new Date(i.ts).toLocaleString()}
+                    </span>
+                    <span className="text-[#26272A]">{i.label}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
 
         <Card className="rounded-2xl">
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Resumen</CardTitle>
+            <CardTitle className="text-sm font-semibold text-[#164F5B]">Resumen</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
             <section className="mt-6">

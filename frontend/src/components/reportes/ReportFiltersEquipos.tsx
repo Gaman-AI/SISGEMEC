@@ -134,14 +134,16 @@ export default function ReportFiltersEquipos({
   };
 
   return (
-    <Card className="p-6">
-      <h3 className="text-lg font-semibold mb-4">Filtros de Equipos</h3>
+    <Card className="rounded-2xl border border-[#CFD0BF] bg-white p-4 shadow-sm md:p-5">
+      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[#164F5B]">
+        Filtros de equipos
+      </h3>
       
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Tipo de Equipo */}
           <div className="space-y-2">
-            <Label htmlFor="tipo_equipo">Tipo de Equipo</Label>
+            <Label htmlFor="tipo_equipo" className="text-sm font-medium text-[#26272A]">Tipo de Equipo</Label>
             <Input
               id="tipo_equipo"
               {...register('tipo_equipo')}
@@ -151,7 +153,7 @@ export default function ReportFiltersEquipos({
 
           {/* Marca */}
           <div className="space-y-2">
-            <Label htmlFor="marca">Marca</Label>
+            <Label htmlFor="marca" className="text-sm font-medium text-[#26272A]">Marca</Label>
             <Input
               id="marca"
               {...register('marca')}
@@ -161,7 +163,7 @@ export default function ReportFiltersEquipos({
 
           {/* Estado del Equipo */}
           <div className="space-y-2">
-            <Label htmlFor="estado_equipo">Estado del Equipo</Label>
+            <Label htmlFor="estado_equipo" className="text-sm font-medium text-[#26272A]">Estado del Equipo</Label>
             {catalogError || !catalogs ? (
               // Fallback a input si el catálogo falla
               <Input
@@ -189,7 +191,7 @@ export default function ReportFiltersEquipos({
 
           {/* Responsable (Autocomplete) */}
           <div className="space-y-2 relative" ref={responsableRef}>
-            <Label htmlFor="responsable">Responsable (nombre o correo)</Label>
+            <Label htmlFor="responsable" className="text-sm font-medium text-[#26272A]">Responsable (nombre o correo)</Label>
             <Input
               id="responsable"
               value={responsableSearch}
@@ -212,9 +214,9 @@ export default function ReportFiltersEquipos({
             {showResponsableDropdown && (
               <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
                 {responsableLoading ? (
-                  <div className="p-3 text-sm text-gray-500">Cargando...</div>
+                  <div className="p-3 text-sm text-[#527779]">Cargando...</div>
                 ) : responsableOptions.length === 0 ? (
-                  <div className="p-3 text-sm text-gray-500">
+                  <div className="p-3 text-sm text-[#527779]">
                     {responsableSearch ? 'No se encontraron resultados' : 'Escriba para buscar'}
                   </div>
                 ) : (
@@ -222,11 +224,11 @@ export default function ReportFiltersEquipos({
                     {responsableOptions.map((profile) => (
                       <li
                         key={profile.user_id}
-                        className="px-3 py-2 cursor-pointer text-sm hover:bg-gray-50"
+                        className="px-3 py-2 cursor-pointer text-sm hover:bg-[#E5EADF]"
                         onClick={() => handleResponsableSelect(profile)}
                       >
                         <div className="font-medium">{profile.full_name || '(Sin nombre)'}</div>
-                        <div className="text-xs text-gray-500">{profile.email || '(Sin correo)'}</div>
+                        <div className="text-xs text-[#527779]">{profile.email || '(Sin correo)'}</div>
                       </li>
                     ))}
                   </ul>
@@ -237,7 +239,7 @@ export default function ReportFiltersEquipos({
 
           {/* Número de Serie */}
           <div className="space-y-2">
-            <Label htmlFor="num_serie">Número de Serie</Label>
+            <Label htmlFor="num_serie" className="text-sm font-medium text-[#26272A]">Número de Serie</Label>
             <Input
               id="num_serie"
               {...register('num_serie')}
@@ -247,7 +249,7 @@ export default function ReportFiltersEquipos({
 
           {/* Ubicación Actual */}
           <div className="space-y-2">
-            <Label htmlFor="ubicacion_actual">Ubicación Actual</Label>
+            <Label htmlFor="ubicacion_actual" className="text-sm font-medium text-[#26272A]">Ubicación Actual</Label>
             <Input
               id="ubicacion_actual"
               {...register('ubicacion_actual')}
@@ -257,7 +259,7 @@ export default function ReportFiltersEquipos({
 
           {/* Fecha Desde */}
           <div className="space-y-2">
-            <Label htmlFor="from_dt">Fecha de Ingreso Desde</Label>
+            <Label htmlFor="from_dt" className="text-sm font-medium text-[#26272A]">Fecha de Ingreso Desde</Label>
             <Input
               id="from_dt"
               type="date"
@@ -267,7 +269,7 @@ export default function ReportFiltersEquipos({
 
           {/* Fecha Hasta */}
           <div className="space-y-2">
-            <Label htmlFor="to_dt">Fecha de Ingreso Hasta</Label>
+            <Label htmlFor="to_dt" className="text-sm font-medium text-[#26272A]">Fecha de Ingreso Hasta</Label>
             <Input
               id="to_dt"
               type="date"
@@ -278,7 +280,17 @@ export default function ReportFiltersEquipos({
 
         {/* Botones */}
         <div className="flex gap-2 pt-4">
-          <Button type="submit" disabled={loading} className="bg-[#264a55] text-white hover:brightness-95 active:brightness-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#264a55]/30">
+          <Button 
+            type="submit" 
+            disabled={loading} 
+            className="
+              inline-flex items-center gap-2 rounded-xl
+              bg-[#208692] hover:bg-[#164F5B] text-white
+              transition-colors duration-200 shadow-sm
+              px-4 py-2.5 text-sm font-semibold
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#208692]/30
+            "
+          >
             {loading ? 'Buscando...' : 'Buscar'}
           </Button>
           <Button type="button" variant="outline" onClick={handleClear}>

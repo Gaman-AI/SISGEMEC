@@ -114,7 +114,7 @@ export default function TicketClassifyDialog({
 
         <div className="space-y-4">
           <div>
-            <Label>Email Solicitante</Label>
+            <Label className="mb-1 block text-sm font-medium text-[#26272A]">Email Solicitante</Label>
             <Input
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -124,7 +124,7 @@ export default function TicketClassifyDialog({
           </div>
 
           <div>
-            <Label>Equipo</Label>
+            <Label className="mb-1 block text-sm font-medium text-[#26272A]">Equipo</Label>
             <select
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={equipoId ?? ''}
@@ -141,14 +141,14 @@ export default function TicketClassifyDialog({
               ))}
             </select>
             {!loadingEquipos && equipos.length === 0 && email && (
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-[#527779] mt-1">
                 No hay equipos asociados a este correo.
               </p>
             )}
           </div>
 
           <div>
-            <Label>Tipo Servicio *</Label>
+            <Label className="mb-1 block text-sm font-medium text-[#26272A]">Tipo Servicio *</Label>
             <select
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={tipoId ?? ''}
@@ -165,14 +165,14 @@ export default function TicketClassifyDialog({
               ))}
             </select>
             {!loadingTipos && tipos.length === 0 && (
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-[#527779] mt-1">
                 No hay tipos de servicio disponibles.
               </p>
             )}
           </div>
 
           <div>
-            <Label>Prioridad *</Label>
+            <Label className="mb-1 block text-sm font-medium text-[#26272A]">Prioridad *</Label>
             <div className="max-w-[220px]">
               <PriorityBadgeSelect
                 value={priority}
@@ -183,7 +183,7 @@ export default function TicketClassifyDialog({
           </div>
 
           <div>
-            <Label>Observaciones</Label>
+            <Label className="mb-1 block text-sm font-medium text-[#26272A]">Observaciones</Label>
             <Textarea
               placeholder="Notas adicionales..."
               value={obs}
@@ -194,10 +194,30 @@ export default function TicketClassifyDialog({
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={onClose} disabled={loading}>
+            <Button 
+              variant="outline"
+              className="
+                inline-flex items-center gap-2 rounded-xl
+                border border-[#CFD0BF] text-[#164F5B]
+                hover:bg-[#E5EADF] transition-colors
+                px-4 py-2.5 text-sm font-semibold
+              "
+              onClick={onClose} 
+              disabled={loading}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={!canSave || loading}>
+            <Button 
+              className="
+                inline-flex items-center gap-2 rounded-xl
+                bg-[#208692] hover:bg-[#164F5B] text-white
+                transition-colors duration-200 shadow-sm
+                px-4 py-2.5 text-sm font-semibold
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#208692]/30
+              "
+              onClick={handleSave} 
+              disabled={!canSave || loading}
+            >
               {loading ? 'Guardando...' : 'Guardar'}
             </Button>
           </div>

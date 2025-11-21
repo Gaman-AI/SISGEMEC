@@ -91,17 +91,29 @@ export default function TiposServicioList() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-bold tracking-tight">Tipos de Servicio</h1>
-        <Button onClick={() => navigate('/tipos-servicio/nuevo')} className="rounded-xl bg-[#264a55] text-white hover:brightness-95 active:brightness-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#264a55]/30">
+        <div>
+          <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[#164F5B]">Tipos de Servicio</h1>
+          <p className="text-sm lg:text-base text-[#26272A] mt-1">
+            Administra los tipos de servicio disponibles en el sistema.
+          </p>
+        </div>
+        <Button onClick={() => navigate('/tipos-servicio/nuevo')} className="
+          group inline-flex items-center gap-2 rounded-xl
+          bg-[#208692] hover:bg-[#164F5B] text-white
+          transition-colors duration-200 shadow-sm
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#208692]/30
+          px-4 py-2.5 text-sm font-semibold
+        ">
           + Nuevo tipo
         </Button>
       </div>
 
       {/* Filtros */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="rounded-2xl border border-[#CFD0BF] bg-white p-4 shadow-sm md:p-5">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <div className="relative">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><Search className="h-4 w-4" /></span>
           <input
@@ -125,18 +137,19 @@ export default function TiposServicioList() {
           <option value="1">Activos</option>
           <option value="0">Inactivos</option>
         </select>
+        </div>
       </div>
 
       {/* Tabla */}
-      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+      <div className="rounded-2xl border border-[#CFD0BF] bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
-            <thead className="sticky top-0 z-10 border-b bg-slate-100/90 text-left text-gray-700 backdrop-blur dark:border-gray-800 dark:bg-gray-900/70 dark:text-gray-300">
+            <thead className="sticky top-0 z-10 border-b border-[#CFD0BF] bg-slate-100/90 text-left text-[#26272A] backdrop-blur">
               <tr>
                 <th className="px-4 py-3">Nombre</th>
                 <th className="px-4 py-3">Descripción</th>
                 <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3 text-right">Acciones</th>
+                <th className="w-[190px] px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -150,27 +163,23 @@ export default function TiposServicioList() {
                 rows.map((r, i) => (
                   <tr
                     key={r.tipo_servicio_id}
-                    className="border-t border-gray-100 transition hover:bg-gray-50/80 even:bg-gray-50/60 dark:border-gray-800 dark:hover:bg-white/5 dark:even:bg-white/5"
+                    className="border-t border-gray-100 transition hover:bg-slate-50 hover:shadow-sm even:bg-gray-50/60"
                   >
                     <td className="px-4 py-3">{r.nombre}</td>
                     <td className="px-4 py-3">{r.descripcion ?? '-'}</td>
                     <td className="px-4 py-3"><BadgeActive active={r.activo} /></td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
                         <Link
                           to={`/tipos-servicio/${r.tipo_servicio_id}/editar`}
-                          className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-[#164F5B] bg-transparent hover:bg-[#E5EADF] transition-colors"
                         >
-                          <PencilLine className="mr-1 inline h-3.5 w-3.5" />
+                          <PencilLine className="h-4 w-4" />
                           Editar
                         </Link>
                         <button
                           onClick={() => onToggle(r)}
-                          className={`rounded-lg border px-2.5 py-1.5 text-xs ${
-                            r.activo
-                              ? 'border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/40'
-                              : 'border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/40'
-                          }`}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-[#527779] bg-transparent hover:bg-[#E5EADF] transition-colors"
                         >
                           {r.activo ? 'Desactivar' : 'Activar'}
                         </button>
@@ -186,23 +195,23 @@ export default function TiposServicioList() {
 
       {/* Paginación */}
       <div className="flex items-center justify-between text-sm">
-        <div>Página {page} de {totalPages} · {count} registros</div>
+        <div className="text-[#26272A]">Página {page} de {totalPages} · {count} registros</div>
         <div className="space-x-2">
           <button
-            className="rounded-lg border border-gray-300 px-3 py-1.5 disabled:opacity-50 dark:border-gray-700"
+            className="rounded-lg border border-[#CFD0BF] px-3 py-1.5 disabled:opacity-50"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
           >
             Anterior
           </button>
           <button
-            className="rounded-lg border border-gray-300 px-3 py-1.5 disabled:opacity-50 dark:border-gray-700"
+            className="rounded-lg border border-[#CFD0BF] px-3 py-1.5 disabled:opacity-50"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages}
           >
             Siguiente
           </button>
-          <button className="rounded-lg border border-gray-300 px-3 py-1.5 dark:border-gray-700" onClick={load}>
+          <button className="rounded-lg border border-[#CFD0BF] px-3 py-1.5" onClick={load}>
             Refrescar
           </button>
         </div>
