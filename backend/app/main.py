@@ -94,20 +94,26 @@ if getattr(settings, "ENVIRONMENT", "development") != "production":
     print(f"[BOOT] API_ADMIN_TOKEN: {masked}")
 
 # --- Config CORS ---
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173").rstrip("/")
 
-# Puertos usados durante desarrollo:
-# - 5173 → Vite Dev
-# - 4173 → Vite Preview
-# - 8080 → Frontend en Docker local
-allow_origins = [
-    FRONTEND_ORIGIN,
-    "http://127.0.0.1:5173",
-    "http://localhost:4173",     # Preview
-    "http://127.0.0.1:4173",      # Variante 127.0.0.1
-    "http://localhost:8080",      # Frontend en Docker local
-    "http://127.0.0.1:8080"       # Variante 127.0.0.1
-]
+# Construir allow_origins según ENVIRONMENT
+if ENVIRONMENT == "production":
+    # Producción: solo el origen del frontend configurado
+    allow_origins = [FRONTEND_ORIGIN] if FRONTEND_ORIGIN else []
+else:
+    # Desarrollo: incluir localhost y variantes
+    allow_origins = [
+        FRONTEND_ORIGIN,
+        "http://127.0.0.1:5173",
+        "http://localhost:4173",     # Preview
+        "http://127.0.0.1:4173",      # Variante 127.0.0.1
+        "http://localhost:8080",      # Frontend en Docker local
+        "http://127.0.0.1:8080"       # Variante 127.0.0.1
+    ]
+    # Filtrar duplicados y vacíos
+    allow_origins = [origin for origin in allow_origins if origin]
+    allow_origins = list(dict.fromkeys(allow_origins))  # Eliminar duplicados manteniendo orden
 
 # 1) CORSMiddleware oficial (único y al inicio)
 app.add_middleware(
@@ -130,13 +136,17 @@ async def cors_and_error_shield(request: Request, call_next):
     # OPTIONS (preflight) sale rápido con CORS - SIN AUTENTICACIÓN
     if request.method.upper() == "OPTIONS":
         resp = Response(status_code=204)
-        origin = request.headers.get("origin")
-        if origin in allow_origins:
+        origin = request.headers.get("origin", "").rstrip("/")
+        
+        if origin and origin in allow_origins:
             resp.headers["Access-Control-Allow-Origin"] = origin
             resp.headers["Vary"] = "Origin"
-        else:
-            # Permitir localhost y 127.0.0.1 por defecto
-            resp.headers["Access-Control-Allow-Origin"] = "http://localhost:5173"
+        elif allow_origins:
+            # Fallback: usar el primer origen permitido
+            resp.headers["Access-Control-Allow-Origin"] = allow_origins[0]
+            resp.headers["Vary"] = "Origin"
+        # Si no hay allow_origins, dejar que CORSMiddleware lo maneje
+        
         resp.headers["Access-Control-Allow-Credentials"] = "true"
         resp.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, X-Requested-With, Accept, Origin, Idempotency-Key"
         resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
@@ -157,13 +167,17 @@ async def cors_and_error_shield(request: Request, call_next):
         resp = JSONResponse(status_code=500, content={"detail": "Internal Server Error", "error_id": error_id})
 
     # Forzar CORS en toda respuesta
-    origin = request.headers.get("origin")
-    if origin in allow_origins:
+    origin = request.headers.get("origin", "").rstrip("/")
+    
+    if origin and origin in allow_origins:
         resp.headers["Access-Control-Allow-Origin"] = origin
         resp.headers["Vary"] = "Origin"
-    else:
-        # Fallback para desarrollo
-        resp.headers["Access-Control-Allow-Origin"] = "http://localhost:5173"
+    elif allow_origins:
+        # Fallback: usar el primer origen permitido
+        resp.headers["Access-Control-Allow-Origin"] = allow_origins[0]
+        resp.headers["Vary"] = "Origin"
+    # Si no hay allow_origins, dejar que CORSMiddleware lo maneje
+    
     resp.headers["Access-Control-Allow-Credentials"] = "true"
     resp.headers["Access-Control-Expose-Headers"] = "Content-Disposition, Idempotency-Key"
     return resp
