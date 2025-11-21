@@ -12,7 +12,10 @@ RUN pip install --upgrade pip && \
 
 COPY . .
 
-EXPOSE 8000
+# Ahora el contenedor expone el puerto 8080
+EXPOSE 8080
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Y uvicorn escucha en el 8080 dentro del contenedor
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+
 
