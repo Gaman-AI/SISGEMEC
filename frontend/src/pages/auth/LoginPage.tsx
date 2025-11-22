@@ -80,7 +80,7 @@ export default function LoginPage() {
         <div className="w-full max-w-lg rounded-3xl border border-black/5 bg-white/90 shadow-xl backdrop-blur-[2px]">
           <div className="p-8 space-y-6">
             <form onSubmit={handleSubmit}>
-              <h1 className="mb-2 text-xl font-semibold text-[#264a55] text-center">Iniciar sesión en numafix</h1> <br />
+              <h1 className="mb-2 text-xl font-semibold text-[#264a55] text-center">Iniciar sesión en SISGEMEC</h1> <br />
               <p className="mb-4 text-sm text-[#264a55] text-center">Accede al sistema y gestiona tus equipos de forma segura.</p>
               <div className="mb-3">
                 <label className="mb-1 block text-sm text-[#264a55]">Correo</label>

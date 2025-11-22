@@ -14,7 +14,7 @@ type Props = {
 
 /**
  * Componente de marca para la cabecera del sidebar.
- * - Muestra el logo (imagen) + el texto "Numafix" cuando no está colapsado.
+ * - Muestra el logo (imagen) + el texto "SISGEMEC" cuando no está colapsado.
  * - Cuando está colapsado (compact), muestra sólo el logo en tamaño reducido.
  * - Fallback seguro: si la imagen falla, se muestra el ícono + el texto (si no está compact).
  */
@@ -38,7 +38,7 @@ export function Brand({ compact = false, className }: Props) {
       {/* Texto sólo cuando no está colapsado */}
       {!compact && (
         <span className="font-semibold tracking-tight select-none">
-          Numafix
+          SISGEMEC
         </span>
       )}
     </div>

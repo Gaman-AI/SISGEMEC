@@ -1,5 +1,5 @@
 {% extends "email/base.html.j2" %}
-{% block title %}Nueva solicitud #{{ solicitud_id }} · Numafix{% endblock %}
+{% block title %}Nueva solicitud #{{ solicitud_id }} · SISGEMEC{% endblock %}
 
 {# Fallbacks robustos para asegurar datos sin tocar backend #}
 {% set v_equipo       = equipo_id or equipo_num_serie or num_serie or equipo or equipo_ref or '—' %}
