@@ -1,5 +1,10 @@
-﻿/* Tailwind v4 */
+/* Tailwind v4 */
 @import "tailwindcss";
+
+/* Force light mode globally - prevents browser dark mode override */
+:root {
+  color-scheme: light;
+}
 
 /* 1) Declara tokens del tema (shadcn) que generan utilidades como bg-background, border-border, etc. */
 @theme {

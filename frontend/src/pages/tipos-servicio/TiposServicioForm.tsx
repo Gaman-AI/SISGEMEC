@@ -151,8 +151,8 @@ export default function TiposServicioForm() {
               id="nombre"
               className={`h-11 w-full rounded-xl border px-3 text-sm shadow-sm outline-none transition ${
                 errors.nombre
-                  ? "border-rose-300 bg-rose-50"
-                  : "border-gray-300 bg-white dark:border-gray-700 dark:bg-gray-900"
+                  ? "border-rose-300 bg-rose-50 text-rose-900 placeholder:text-rose-400"
+                  : "border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 focus:border-gray-400"
               }`}
               placeholder="Nombre del tipo"
               {...register("nombre")}
@@ -174,7 +174,7 @@ export default function TiposServicioForm() {
             <textarea
               id="descripcion"
               rows={4}
-              className="w-full rounded-xl border border-gray-300 bg-white p-3 text-sm shadow-sm outline-none transition focus:border-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:focus:border-gray-600"
+              className="w-full rounded-xl border border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 p-3 text-sm shadow-sm outline-none transition focus:border-gray-400"
               placeholder="Descripción opcional"
               {...register("descripcion")}
             />

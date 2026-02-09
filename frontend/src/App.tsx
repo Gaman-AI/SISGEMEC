@@ -64,7 +64,7 @@ function RoleRedirect() {
 
 export default function App() {
   return (
-    <ThemeProvider defaultTheme="light">
+    <ThemeProvider defaultTheme="light" forceLightMode>
       <BrowserRouter>
         <AuthProvider>
           <Routes>

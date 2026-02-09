@@ -14,16 +14,28 @@ const ThemeContext = React.createContext<ThemeContextValue>({
 
 type ThemeProviderProps = {
   defaultTheme?: Theme;
+  forceLightMode?: boolean;
   children: React.ReactNode;
 };
 
-export function ThemeProvider({ defaultTheme = "system", children }: ThemeProviderProps) {
+export function ThemeProvider({ defaultTheme = "system", forceLightMode = false, children }: ThemeProviderProps) {
   const [theme, setTheme] = React.useState<Theme>(() => {
+    if (forceLightMode) return "light";
     const saved = localStorage.getItem("sisgemec.theme") as Theme | null;
     return saved ?? defaultTheme;
   });
 
   React.useEffect(() => {
+    // Force light mode: override everything and exit early
+    if (forceLightMode) {
+      const root = document.documentElement;
+      root.classList.remove("dark");
+      root.classList.add("light");
+      localStorage.setItem("sisgemec.theme", "light");
+      return;
+    }
+
+    // Normal theme logic when not forcing light mode
     localStorage.setItem("sisgemec.theme", theme);
     const root = document.documentElement;
     root.classList.remove("light", "dark");
@@ -33,7 +45,7 @@ export function ThemeProvider({ defaultTheme = "system", children }: ThemeProvid
     } else {
       root.classList.add(theme);
     }
-  }, [theme]);
+  }, [theme, forceLightMode]);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>

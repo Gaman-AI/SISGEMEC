@@ -117,7 +117,7 @@ export default function TiposServicioList() {
         <div className="relative">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><Search className="h-4 w-4" /></span>
           <input
-            className="h-11 w-full rounded-xl border border-gray-300 bg-white pl-10 pr-3 text-sm shadow-sm outline-none ring-0 focus:border-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:focus:border-gray-600"
+            className="h-11 w-full rounded-xl border border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 pl-10 pr-3 text-sm shadow-sm outline-none ring-0 focus:border-gray-400"
             placeholder="Buscar por nombre o descripción"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -125,7 +125,7 @@ export default function TiposServicioList() {
           />
         </div>
         <select
-          className="h-11 w-full rounded-xl border border-gray-300 bg-white px-3 text-sm shadow-sm dark:border-gray-700 dark:bg-gray-900"
+          className="h-11 w-full rounded-xl border border-gray-300 bg-white text-gray-900 px-3 text-sm shadow-sm outline-none focus:border-gray-400"
           value={active === '' ? '' : active ? '1' : '0'}
           onChange={(e) => {
             const v = e.target.value;
@@ -133,9 +133,9 @@ export default function TiposServicioList() {
             setPage(1);
           }}
         >
-          <option value="">Todos</option>
-          <option value="1">Activos</option>
-          <option value="0">Inactivos</option>
+          <option value="" className="bg-white text-gray-900">Todos</option>
+          <option value="1" className="bg-white text-gray-900">Activos</option>
+          <option value="0" className="bg-white text-gray-900">Inactivos</option>
         </select>
         </div>
       </div>
